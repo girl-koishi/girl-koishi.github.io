@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发电厂温度控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 粒子效果库 -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0ea5e9',
+                        secondary: '#0284c7',
+                        accent: '#38bdf8',
+                        dark: '#0f172a',
+                        'dark-blue': '#0f172a',
+                        'light-blue': '#38bdf8',
+                        'grid-color': 'rgba(56, 189, 248, 0.1)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            }
+            .grid-bg {
+                background-size: 50px 50px;
+                background-image: 
+                    linear-gradient(to right, theme('colors.grid-color') 1px, transparent 1px),
+                    linear-gradient(to bottom, theme('colors.grid-color') 1px, transparent 1px);
+            }
+            .node-pulse {
+                position: relative;
+            }
+            .node-pulse::before {
+                content: '';
+                position: absolute;
+                top: -20px;
+                left: -20px;
+                right: -20px;
+                bottom: -20px;
+                border-radius: 50%;
+                background: rgba(56, 189, 248, 0.3);
+                animation: pulse 2s infinite;
+                z-index: -1;
+            }
+            .power-line {
+                stroke-dasharray: 10;
+                animation: dash 1s linear infinite;
+            }
+            @keyframes dash {
+                to {
+                    stroke-dashoffset: -20;
+                }
+            }
+            .local-map {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                background-size: contain;
+                background-repeat: no-repeat;
+                background-position: center;
+            }
+            .city-node {
+                cursor: pointer;
+                transition: all 0.1s ease;
+                pointer-events: all;
+            }
+            .city-node:hover circle {
+                filter: brightness(1.2);
+            }
+            .city-label {
+                font-size: 12px;
+                font-weight: bold;
+                fill: white;
+                text-anchor: middle;
+                dominant-baseline: middle;
+                text-shadow: 0 0 5px rgba(0,0,0,0.8);
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark-blue text-white min-h-screen overflow-hidden">
+    <!-- 粒子背景 -->
+    <div id="particles-js" class="fixed inset-0 z-0"></div>
+    
+    <!-- 网格背景 -->
+    <div class="fixed inset-0 z-0 grid-bg opacity-50"></div>
+
+    <!-- 主容器 -->
+    <div class="relative z-10 flex flex-col h-screen">
+        <!-- 顶部导航栏 -->
+        <header class="bg-dark/80 backdrop-blur-md border-b border-accent/30 p-4 flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="text-primary text-2xl font-bold text-shadow">
+                    <i class="fa fa-bolt mr-2"></i>电网调度系统
+                </div>
+                <div class="hidden md:flex space-x-6 ml-10">
+                    <a href="#" class="text-accent hover:text-white transition-colors">首页</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">数据监控</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">故障分析</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">系统设置</a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-400">
+                    <span id="current-date-time">2024-01-01 00:00:00</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <i class="fa fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="flex-1 relative overflow-hidden bg-[#0f172a]">
+            <!-- 深蓝色背景填充 -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]"></div>
+            
+            <!-- 替换为局部地图背景（移除吉林省地图，改为局部区域背景） -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="max-w-[90vw] max-h-[85vh] w-full h-full bg-gradient-to-br from-[#111827] to-[#030712] rounded-lg border border-accent/20 flex items-center justify-center">
+                    <div class="w-full h-full flex items-center justify-center">
+                        <!-- 局部地图网格背景 -->
+                        <div class="w-full h-full absolute bg-grid opacity-30"></div>
+                        <!-- 局部区域标题 -->
+                        <div class="absolute top-4 text-xl font-bold text-accent text-shadow">
+                            局部电网监控区域
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 扩大的局部电网覆盖层（添加地图轮廓并分散节点） -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <svg width="1200" height="900" viewBox="0 0 1200 900" class="max-w-[95vw] max-h-[90vh] transform translate-x-20 scale-135">
+                    <!-- 添加更自然不规则的地图轮廓 -->
+                    <g class="map-contour">
+                        <!-- 主要区域轮廓 - 更复杂的地形形状 -->
+                        <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" 
+                              fill="rgba(34, 197, 94, 0.15)" 
+                              stroke="#22c55e" 
+                              stroke-width="2" 
+                              opacity="0.8" />
+                        <!-- 内部细节轮廓 - 模拟城市区域分布 -->
+                        <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 C280,250 280,250 280,250 Z" 
+                              fill="rgba(56, 189, 248, 0.08)" 
+                              stroke="#38bdf8" 
+                              stroke-width="1" 
+                              opacity="0.7" />
+                        <!-- 内部河流/道路轮廓 -->
+                        <path d="M300,270 C330,250 360,240 390,250 C420,260 450,280 480,300 C510,320 540,350 570,390 C600,430 590,460 570,480 C550,500 520,510 490,500 C460,490 430,480 400,490 C370,500 340,510 310,500 C280,490 260,470 250,440 C240,410 250,380 260,350 C270,320 280,290 300,270 Z" 
+                              fill="none" 
+                              stroke="#0ea5e9" 
+                              stroke-width="1.5" 
+                              opacity="0.5" 
+                              stroke-dasharray="5,3" />
+                        <!-- 额外的地形细节 -->
+                        <path d="M350,220 C370,200 400,190 430,200 C460,210 480,230 500,250 C520,270 530,300 520,320 C510,340 490,350 470,340 C450,330 430,310 410,320 C390,330 370,320 350,300 C330,280 320,250 330,230 C340,210 350,220 350,220 Z" 
+                              fill="rgba(34, 197, 94, 0.05)" 
+                              stroke="#22c55e" 
+                              stroke-width="1" 
+                              opacity="0.5" />
+                        <path d="M580,300 C600,280 630,270 660,280 C690,290 710,310 720,340 C730,370 720,400 700,420 C680,440 650,450 620,440 C590,430 570,410 560,380 C550,350 560,320 580,300 Z" 
+                              fill="rgba(34, 197, 94, 0.05)" 
+                              stroke="#22c55e" 
+                              stroke-width="1" 
+                              opacity="0.5" />
+                    </g>
+                    
+                    <!-- 优化的电网连接线（适配新的地点分布） -->
+                    <g class="power-lines">
+                        <!-- 发电厂与主要地点主线路 -->
+                        <path d="M250,500 L500,300" stroke="#38bdf8" stroke-width="4" class="power-line" />
+                        <path d="M250,500 L650,320" stroke="#38bdf8" stroke-width="4" class="power-line" />
+                        <path d="M500,300 L650,320" stroke="#f97316" stroke-width="3" class="power-line" />
+                        
+                        <!-- 主要地点之间的连接线 -->
+                        <path d="M500,300 L420,240" stroke="#f97316" stroke-width="3" class="power-line" />
+                        <path d="M500,300 L550,270" stroke="#f97316" stroke-width="3" class="power-line" />
+                        <path d="M650,320 L680,400" stroke="#f97316" stroke-width="3" class="power-line" />
+                        <path d="M650,320 L580,380" stroke="#f97316" stroke-width="3" class="power-line" />
+                        
+                        <!-- 次要连接线 -->
+                        <path d="M250,500 L350,450" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M250,500 L300,380" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M500,300 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M500,300 L380,320" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M650,320 L620,420" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M650,320 L600,320" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M500,300 L480,430" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        <path d="M650,320 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
+                        
+                        <!-- 密集网格线 -->
+                        <path d="M200,450 L500,300" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M300,550 L650,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M250,500 L450,350" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M420,240 L320,280" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M550,270 L600,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M620,420 L520,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M350,450 L480,430" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M300,380 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M450,350 L520,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M580,380 L680,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M420,240 L550,270" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M320,280 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M480,430 L620,420" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                    </g>
+                    
+                    <!-- 新增发电厂节点（左下角） -->
+                    <g class="city-node" id="power-plant-node" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
+                        <circle r="18" fill="#8b5cf6" />
+                        <circle r="10" fill="#ffffff" />
+                        <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
+                    </g>
+                    
+                    <!-- 万达商场 - 移至中心位置 -->
+                    <g class="city-node" id="changchun-node" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
+                        <circle r="15" fill="#0ea5e9" />
+                        <circle r="8" fill="#ffffff" />
+                        <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
+                    </g>
+                    
+                    <!-- 幸福小区 - 移至右上角 -->
+                    <g class="city-node" id="jilin-node" transform="translate(650, 320)" style="pointer-events: all; cursor: pointer;">
+                        <circle r="15" fill="#f97316" />
+                        <circle r="8" fill="#ffffff" />
+                        <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
+                    </g>
+                    
+                    <!-- 凑数地点节点（分散分布） -->
+                    <!-- 市政府 -->
+                    <g class="city-node" transform="translate(420, 240)">
+                        <circle r="10" fill="#6366f1" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">市政府</text>
+                    </g>
+                    
+                    <!-- 百货大楼 -->
+                    <g class="city-node" transform="translate(550, 270)">
+                        <circle r="10" fill="#ec4899" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">百货大楼</text>
+                    </g>
+                    
+                    <!-- 中心广场 -->
+                    <g class="city-node" transform="translate(450, 350)">
+                        <circle r="10" fill="#f59e0b" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">中心广场</text>
+                    </g>
+                    
+                    <!-- 金融中心写字楼 -->
+                    <g class="city-node" transform="translate(580, 380)">
+                        <circle r="10" fill="#8b5cf6" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">金融中心</text>
+                    </g>
+                    
+                    <!-- 吉林一中 -->
+                    <g class="city-node" transform="translate(380, 320)">
+                        <circle r="10" fill="#10b981" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">吉林一中</text>
+                    </g>
+                    
+                    <!-- 北山公园 -->
+                    <g class="city-node" transform="translate(320, 280)">
+                        <circle r="10" fill="#22c55e" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">北山公园</text>
+                    </g>
+                    
+                    <!-- 人民医院 -->
+                    <g class="city-node" transform="translate(620, 420)">
+                        <circle r="10" fill="#ef4444" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">人民医院</text>
+                    </g>
+                    
+                    <!-- 会展中心 -->
+                    <g class="city-node" transform="translate(350, 450)">
+                        <circle r="10" fill="#0ea5e9" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">会展中心</text>
+                    </g>
+                    
+                    <!-- 体育馆 -->
+                    <g class="city-node" transform="translate(680, 400)">
+                        <circle r="10" fill="#f97316" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">体育馆</text>
+                    </g>
+                    
+                    <!-- 科技园 -->
+                    <g class="city-node" transform="translate(480, 430)">
+                        <circle r="10" fill="#8b5cf6" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">科技园</text>
+                    </g>
+                    
+                    <!-- 传统电力设施节点 -->
+                    <!-- 调压站 -->
+                    <g class="city-node" transform="translate(300, 380)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">调压站</text>
+                    </g>
+                    
+                    <!-- 配电站 -->
+                    <g class="city-node" transform="translate(520, 400)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">配电站</text>
+                    </g>
+                    
+                    <!-- 变电站 -->
+                    <g class="city-node" transform="translate(600, 320)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">变电站</text>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- 悬浮信息面板 - 保留原样式和位置 -->
+            <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40">
+                <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
+                <div class="space-y-0.5 text-[10px]">
+                    <div class="flex justify-between">
+                        <span>总负载:</span>
+                        <span class="text-green-400">85%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>运行设备:</span>
+                        <span class="text-green-400">12/15</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>系统温度:</span>
+                        <span class="text-yellow-400">32°C</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>网络状态:</span>
+                        <span class="text-green-400">正常</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧信息面板 - 保留原样式和位置 -->
+            <div class="absolute top-2 right-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-48">
+                <h3 class="text-accent font-bold mb-1 text-xs">实时数据</h3>
+                <div class="space-y-2">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>万达商场温度</span>
+                            <span id="a-area-temp" class="text-primary">25°C</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="a-area-temp-bar" class="bg-primary h-1 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>幸福小区温度</span>
+                            <span id="b-area-temp" class="text-orange-500">38°C</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="b-area-temp-bar" class="bg-orange-500 h-1 rounded-full" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>电网负载</span>
+                            <span id="power-load" class="text-yellow-400">78%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="power-load-bar" class="bg-yellow-400 h-1 rounded-full" style="width: 78%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下方左侧信息框 -->
+            <div class="absolute bottom-4 left-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
+                <h3 class="text-accent font-bold mb-2 text-sm">电网调度</h3>
+                <div class="space-y-2 text-xs">
+                    <div class="flex justify-between">
+                        <span>当前频率:</span>
+                        <span class="text-green-400">50.02 Hz</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>电压水平:</span>
+                        <span class="text-green-400">220 kV</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>有功功率:</span>
+                        <span class="text-blue-400">1250 MW</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>无功功率:</span>
+                        <span class="text-blue-400">320 MVar</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下方右侧信息框 -->
+            <div class="absolute bottom-4 right-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
+                <h3 class="text-accent font-bold mb-2 text-sm">告警信息</h3>
+                <div class="space-y-1 text-xs">
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>万达商场冷却系统正常</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                        <span>幸福小区温度偏高</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>电网连接稳定</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>所有设备运行正常</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 底部状态栏 -->
+        <footer class="bg-dark/80 backdrop-blur-md border-t border-accent/30 p-2 text-sm text-gray-400 flex justify-between items-center">
+            <div>© 2024 电网调度系统</div>
+            <div class="flex space-x-4">
+                <span>状态: <span class="text-green-400">正常</span></span>
+                <span>版本: v1.0.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- 万达商场弹出菜单 -->
+    <div id="changchun-menu" class="hidden fixed z-50 bg-dark/90 backdrop-blur-md border border-primary rounded-lg shadow-lg p-4 w-48">
+        <h4 class="text-primary font-bold mb-2">万达商场</h4>
+        <div class="space-y-2">
+            <button id="a-area-temp-btn" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
+                <i class="fa fa-thermometer-half mr-2"></i>温度分析
+            </button>
+            <button id="a-cooling-btn" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
+                <i class="fa fa-snowflake-o mr-2"></i>制冷分析
+            </button>
+        </div>
+    </div>
+
+    <!-- 幸福小区弹出菜单 -->
+    <div id="jilin-menu" class="hidden fixed z-50 bg-dark/90 backdrop-blur-md border border-orange-500 rounded-lg shadow-lg p-4 w-48">
+        <h4 class="text-orange-500 font-bold mb-2">幸福小区</h4>
+        <div class="space-y-2">
+            <button id="b-area-temp-btn" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center">
+                <i class="fa fa-thermometer-half mr-2"></i>温度分析
+            </button>
+            <button id="b-cooling-btn" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center">
+                <i class="fa fa-snowflake-o mr-2"></i>制冷分析
+            </button>
+        </div>
+    </div>
+
+    <!-- 参数调整模态框 - 保留原功能 -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+        <div class="bg-dark border border-accent rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-accent">参数调整</h3>
+                <button id="close-settings" class="text-gray-400 hover:text-white">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">A地区目标温度</label>
+                    <input type="range" id="a-target-temp" min="15" max="35" value="25" class="w-full">
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>15°C</span>
+                        <span id="a-target-temp-value">25°C</span>
+                        <span>35°C</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">B地区目标温度</label>
+                    <input type="range" id="b-target-temp" min="15" max="35" value="25" class="w-full">
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>15°C</span>
+                        <span id="b-target-temp-value">25°C</span>
+                        <span>35°C</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">制冷功率</label>
+                    <input type="range" id="cooling-power" min="0" max="100" value="70" class="w-full">
+                    <div class="flex justify-between text-xs text-gray-400">
+                        <span>0%</span>
+                        <span id="cooling-power-value">70%</span>
+                        <span>100%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button id="reset-settings" class="px-4 py-2 border border-gray-600 rounded hover:bg-gray-700 transition-colors">
+                    重置
+                </button>
+                <button id="save-settings" class="px-4 py-2 bg-primary text-white rounded hover:bg-secondary transition-colors">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 修复节点点击事件的函数
+        function fixNodeClickEvents() {
+            console.log('开始修复节点点击事件...');
+            
+            // 重新绑定发电厂节点点击事件
+            const powerPlantNode = document.getElementById('power-plant-node');
+            if (powerPlantNode) {
+                powerPlantNode.style.pointerEvents = 'all';
+                powerPlantNode.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('发电厂节点被点击，跳转到 power-plant.html');
+                    window.location.href = 'power-plant.html';
+                };
+                console.log('发电厂节点点击事件已修复');
+            }
+
+            // 重新绑定万达商场节点点击事件
+            const changchunNode = document.getElementById('changchun-node');
+            const changchunMenu = document.getElementById('changchun-menu');
+            if (changchunNode && changchunMenu) {
+                changchunNode.style.pointerEvents = 'all';
+                changchunNode.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('万达商场节点被点击，显示菜单');
+                    const rect = changchunNode.getBoundingClientRect();
+                    changchunMenu.style.left = `${rect.left + rect.width}px`;
+                    changchunMenu.style.top = `${rect.top}px`;
+                    changchunMenu.classList.toggle('hidden');
+                    if (jilinMenu) jilinMenu.classList.add('hidden'); // 关闭其他菜单
+                };
+                console.log('万达商场节点点击事件已修复');
+            }
+
+            // 重新绑定幸福小区节点点击事件
+            const jilinNode = document.getElementById('jilin-node');
+            const jilinMenu = document.getElementById('jilin-menu');
+            if (jilinNode && jilinMenu) {
+                jilinNode.style.pointerEvents = 'all';
+                jilinNode.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('幸福小区节点被点击，显示菜单');
+                    const rect = jilinNode.getBoundingClientRect();
+                    jilinMenu.style.left = `${rect.left + rect.width}px`;
+                    jilinMenu.style.top = `${rect.top}px`;
+                    jilinMenu.classList.toggle('hidden');
+                    if (changchunMenu) changchunMenu.classList.add('hidden'); // 关闭其他菜单
+                };
+                console.log('幸福小区节点点击事件已修复');
+            }
+
+            // 确保菜单按钮点击事件正常
+            const aAreaTempBtn = document.getElementById('a-area-temp-btn');
+            if (aAreaTempBtn) {
+                aAreaTempBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('万达商场温度分析按钮被点击，跳转到 a-area.html');
+                    window.location.href = 'a-area.html';
+                };
+            }
+
+            const aCoolingBtn = document.getElementById('a-cooling-btn');
+            if (aCoolingBtn) {
+                aCoolingBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('万达商场制冷分析按钮被点击，跳转到 a-cooling-analysis.html');
+                    window.location.href = 'a-cooling-analysis.html';
+                };
+            }
+
+            const bAreaTempBtn = document.getElementById('b-area-temp-btn');
+            if (bAreaTempBtn) {
+                bAreaTempBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('幸福小区温度分析按钮被点击，跳转到 b-area.html');
+                    window.location.href = 'b-area.html';
+                };
+            }
+
+            const bCoolingBtn = document.getElementById('b-cooling-btn');
+            if (bCoolingBtn) {
+                bCoolingBtn.onclick = function(event) {
+                    event.stopPropagation();
+                    console.log('幸福小区制冷分析按钮被点击，跳转到 b-cooling-analysis.html');
+                    window.location.href = 'b-cooling-analysis.html';
+                };
+            }
+
+            console.log('所有节点点击事件修复完成！');
+        }
+
+        // 初始化粒子效果
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM加载完成，开始初始化...');
+            
+            // 先修复节点点击事件
+            fixNodeClickEvents();
+            
+            particlesJS('particles-js', {
+                particles: {
+                    number: { value: 80, density: { enable: true, value_area: 800 } },
+                    color: { value: '#38bdf8' },
+                    shape: {
+                        type: 'circle',
+                        stroke: { width: 0, color: '#000000' },
+                    },
+                    opacity: {
+                        value: 0.5,
+                        random: false,
+                        anim: { enable: false }
+                    },
+                    size: {
+                        value: 3,
+                        random: true,
+                        anim: { enable: false }
+                    },
+                    line_linked: {
+                        enable: true,
+                        distance: 150,
+                        color: '#38bdf8',
+                        opacity: 0.2,
+                        width: 1
+                    },
+                    move: {
+                        enable: true,
+                        speed: 1,
+                        direction: 'none',
+                        random: false,
+                        straight: false,
+                        out_mode: 'out',
+                        bounce: false,
+                    }
+                },
+                interactivity: {
+                    detect_on: 'canvas',
+                    events: {
+                        onhover: { enable: true, mode: 'grab' },
+                        onclick: { enable: true, mode: 'push' },
+                        resize: true
+                    },
+                    modes: {
+                        grab: { distance: 140, line_linked: { opacity: 0.5 } },
+                        push: { particles_nb: 4 }
+                    }
+                },
+                retina_detect: true
+            });
+
+            // 更新当前时间
+            function updateDateTime() {
+                const now = new Date();
+                const options = { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit',
+                    hour12: false
+                };
+                document.getElementById('current-date-time').textContent = 
+                    now.toLocaleString('zh-CN', options).replace(/\//g, '-');
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            // 点击其他地方关闭菜单
+            document.addEventListener('click', function(event) {
+                const changchunNode = document.getElementById('changchun-node');
+                const changchunMenu = document.getElementById('changchun-menu');
+                const jilinNode = document.getElementById('jilin-node');
+                const jilinMenu = document.getElementById('jilin-menu');
+                
+                if (changchunNode && changchunMenu && !changchunNode.contains(event.target) && !changchunMenu.contains(event.target)) {
+                    changchunMenu.classList.add('hidden');
+                }
+                if (jilinNode && jilinMenu && !jilinNode.contains(event.target) && !jilinMenu.contains(event.target)) {
+                    jilinMenu.classList.add('hidden');
+                }
+            });
+
+            // 参数调整模态框 - 保留原功能
+            const settingsModal = document.getElementById('settings-modal');
+            
+            // 快捷键 Ctrl+Shift+A 打开参数调整
+            document.addEventListener('keydown', function(event) {
+                if (event.ctrlKey && event.shiftKey && event.key === 'A') {
+                    event.preventDefault();
+                    settingsModal.classList.remove('hidden');
+                }
+                if (event.key === 'Escape') {
+                    settingsModal.classList.add('hidden');
+                }
+            });
+
+            document.getElementById('close-settings').addEventListener('click', function() {
+                settingsModal.classList.add('hidden');
+            });
+
+            // 参数调整逻辑 - 保留原功能
+            const aTargetTemp = document.getElementById('a-target-temp');
+            const aTargetTempValue = document.getElementById('a-target-temp-value');
+            const bTargetTemp = document.getElementById('b-target-temp');
+            const bTargetTempValue = document.getElementById('b-target-temp-value');
+            const coolingPower = document.getElementById('cooling-power');
+            const coolingPowerValue = document.getElementById('cooling-power-value');
+
+            aTargetTemp.addEventListener('input', function() {
+                aTargetTempValue.textContent = `${this.value}°C`;
+            });
+
+            bTargetTemp.addEventListener('input', function() {
+                bTargetTempValue.textContent = `${this.value}°C`;
+            });
+
+            coolingPower.addEventListener('input', function() {
+                coolingPowerValue.textContent = `${this.value}%`;
+            });
+
+            document.getElementById('save-settings').addEventListener('click', function() {
+                // 保存设置到 localStorage
+                const settings = {
+                    aTargetTemp: aTargetTemp.value,
+                    bTargetTemp: bTargetTemp.value,
+                    coolingPower: coolingPower.value
+                };
+                localStorage.setItem('controlSettings', JSON.stringify(settings));
+                
+                // 更新显示的数据
+                updateDisplayData();
+                
+                settingsModal.classList.add('hidden');
+                
+                // 显示保存成功提示
+                showNotification('设置已保存');
+            });
+
+            document.getElementById('reset-settings').addEventListener('click', function() {
+                aTargetTemp.value = 25;
+                aTargetTempValue.textContent = '25°C';
+                bTargetTemp.value = 25;
+                bTargetTempValue.textContent = '25°C';
+                coolingPower.value = 70;
+                coolingPowerValue.textContent = '70%';
+            });
+
+            // 显示通知 - 保留原功能
+            function showNotification(message) {
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            // 更新显示的数据 - 保留原功能
+            function updateDisplayData() {
+                const settings = JSON.parse(localStorage.getItem('controlSettings') || '{}');
+                
+                // 模拟温度数据
+                const aTemp = Math.round(parseInt(settings.aTargetTemp || 25) + (Math.random() * 4 - 2));
+                const bTemp = Math.round(parseInt(settings.bTargetTemp || 25) + (Math.random() * 6 - 1));
+                const powerLoad = Math.round(parseInt(settings.coolingPower || 70) + (Math.random() * 10 - 5));
+                
+                document.getElementById('a-area-temp').textContent = `${aTemp}°C`;
+                document.getElementById('a-area-temp-bar').style.width = `${Math.min(100, (aTemp / 40) * 100)}%`;
+                
+                document.getElementById('b-area-temp').textContent = `${bTemp}°C`;
+                document.getElementById('b-area-temp-bar').style.width = `${Math.min(100, (bTemp / 40) * 100)}%`;
+                
+                document.getElementById('power-load').textContent = `${powerLoad}%`;
+                document.getElementById('power-load-bar').style.width = `${powerLoad}%`;
+            }
+
+            // 初始化数据 - 保留原功能
+            updateDisplayData();
+            
+            // 定期更新数据 - 保留原功能
+            setInterval(updateDisplayData, 5000);
+
+            // 从 localStorage 加载设置 - 保留原功能
+            function loadSettings() {
+                const settings = JSON.parse(localStorage.getItem('controlSettings') || '{}');
+                
+                if (settings.aTargetTemp) {
+                    aTargetTemp.value = settings.aTargetTemp;
+                    aTargetTempValue.textContent = `${settings.aTargetTemp}°C`;
+                }
+                
+                if (settings.bTargetTemp) {
+                    bTargetTemp.value = settings.bTargetTemp;
+                    bTargetTempValue.textContent = `${settings.bTargetTemp}°C`;
+                }
+                
+                if (settings.coolingPower) {
+                    coolingPower.value = settings.coolingPower;
+                    coolingPowerValue.textContent = `${settings.coolingPower}%`;
+                }
+            }
+            
+            loadSettings();
+        });
+    </script>
+</body>
+</html>

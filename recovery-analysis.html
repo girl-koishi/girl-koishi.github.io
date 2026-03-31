@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方案对比分析 - 发电厂温度控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#93c5fd',
+                        accent: '#10b981',
+                        warning: '#f97316',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'light-text': '#e2e8f0'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flow': 'flow 2s linear infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        flow: {
+                            '0%': { strokeDashoffset: '24' },
+                            '100%': { strokeDashoffset: '0' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(59, 130, 246, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.8)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .conclusion-glow {
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark text-light-text min-h-screen flex flex-col">
+    <!-- 顶部区域 -->
+    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <a href="index.html" class="flex items-center">
+                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
+                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
+                    <i class="fa fa-clock-o text-secondary mr-2"></i>
+                    <span id="current-time" class="text-xl font-mono"></span>
+                </div>
+                <a href="fault-solution.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
+                    <i class="fa fa-arrow-left mr-2"></i>
+                    返回方案选择
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="flex-grow container mx-auto p-6 bg-grid">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-secondary mb-2">方案对比分析</h2>
+            <p class="text-light-text/70">对比两种能源分配方案在故障恢复过程中的性能表现和能耗情况</p>
+        </div>
+
+        <!-- 分析说明 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-4 flex items-center">
+                <i class="fa fa-info-circle mr-3 text-primary"></i>
+                分析说明
+            </h3>
+            <p class="text-light-text/90 mb-4">
+                以下图表展示了两种能源分配方案在三个阶段的功率变化情况：
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
+                    <div class="flex items-center mb-2">
+                        <div class="w-4 h-4 rounded-full bg-primary mr-2"></div>
+                        <h4 class="font-bold text-primary">阶段一：正常运行</h4>
+                    </div>
+                    <p class="text-sm text-light-text/70">故障发生前的正常运行状态，A、B地区均获得100%所需电量</p>
+                </div>
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <div class="flex items-center mb-2">
+                        <div class="w-4 h-4 rounded-full bg-warning mr-2"></div>
+                        <h4 class="font-bold text-warning">阶段二：方案实施</h4>
+                    </div>
+                    <p class="text-sm text-light-text/70">故障发生后，按照不同方案进行能源分配的阶段</p>
+                </div>
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <div class="flex items-center mb-2">
+                        <div class="w-4 h-4 rounded-full bg-accent mr-2"></div>
+                        <h4 class="font-bold text-accent">阶段三：系统稳定</h4>
+                    </div>
+                    <p class="text-sm text-light-text/70">系统在新的能源分配方案下达到稳定运行状态</p>
+                </div>
+                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
+                    <div class="flex items-center mb-2">
+                        <div class="w-4 h-4 rounded-full bg-success mr-2"></div>
+                        <h4 class="font-bold text-success">阶段四：恢复正常</h4>
+                    </div>
+                    <p class="text-sm text-light-text/70">电力系统故障修复后，恢复到正常工作功率状态</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 方案一分析 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary flex items-center">
+                    <i class="fa fa-first-order mr-3 text-warning"></i>
+                    方案一：优先保证商圈用电
+                </h3>
+                <span class="px-3 py-1 bg-warning/20 text-warning rounded-full text-sm font-bold">总能耗：14,280 kWh</span>
+            </div>
+            
+            <div class="h-80 mb-6">
+                <canvas id="solution1RecoveryChart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
+                    <h4 class="font-bold text-primary mb-3">阶段一：正常运行</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">800 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">400 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">6 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">7,200 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <h4 class="font-bold text-warning mb-3">阶段二：方案实施</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">640 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-danger">0 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">4 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">2,560 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <h4 class="font-bold text-accent mb-3">阶段三：系统稳定</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">680 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-danger">0 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">6 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">4,080 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
+                    <h4 class="font-bold text-success mb-3">阶段四：恢复正常</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">800 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">400 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">2 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">2,400 kWh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 方案二分析 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary flex items-center">
+                    <i class="fa fa-second-order mr-3 text-accent"></i>
+                    方案二：兼顾居民基本需求
+                </h3>
+                <span class="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm font-bold">总能耗：12,420 kWh</span>
+            </div>
+            
+            <div class="h-80 mb-6">
+                <canvas id="solution2RecoveryChart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
+                    <h4 class="font-bold text-primary mb-3">阶段一：正常运行</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">800 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">400 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">6 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">7,200 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <h4 class="font-bold text-warning mb-3">阶段二：方案实施</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">400 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">120 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">4 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">2,080 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <h4 class="font-bold text-accent mb-3">阶段三：系统稳定</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">420 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">135 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">6 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">3,330 kWh</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
+                    <h4 class="font-bold text-success mb-3">阶段四：恢复正常</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">A地区功率：</span>
+                            <span class="font-bold text-primary">800 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">B地区功率：</span>
+                            <span class="font-bold text-accent">400 kW</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">持续时间：</span>
+                            <span class="font-bold">2 小时</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-light-text/70">阶段能耗：</span>
+                            <span class="font-bold text-warning">2,400 kWh</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 能耗对比 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-balance-scale mr-3 text-primary"></i>
+                能耗对比
+            </h3>
+            
+            <div class="h-80 mb-6">
+                <canvas id="energyComparisonChart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <h4 class="font-bold text-warning mb-3">方案一能耗详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>正常运行阶段</span>
+                                <span class="font-bold">7,200 kWh (50.4%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-warning h-2 rounded-full" style="width: 50.4%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>方案实施阶段</span>
+                                <span class="font-bold">2,560 kWh (17.9%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-warning h-2 rounded-full" style="width: 17.9%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>系统稳定阶段</span>
+                                <span class="font-bold">4,080 kWh (28.6%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-warning h-2 rounded-full" style="width: 28.6%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-light-text/20">
+                            <div class="flex justify-between font-bold text-lg">
+                                <span>总计</span>
+                                <span class="text-warning">14,280 kWh</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <h4 class="font-bold text-accent mb-3">方案二能耗详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>正常运行阶段</span>
+                                <span class="font-bold">7,200 kWh (58.0%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 58.0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>方案实施阶段</span>
+                                <span class="font-bold">2,080 kWh (16.8%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 16.8%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>系统稳定阶段</span>
+                                <span class="font-bold">3,330 kWh (26.8%)</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 26.8%"></div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-light-text/20">
+                            <div class="flex justify-between font-bold text-lg">
+                                <span>总计</span>
+                                <span class="text-accent">12,420 kWh</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分析结论 -->
+        <div class="bg-gradient-to-br from-dark-light to-dark rounded-lg border-2 border-accent/50 p-8 conclusion-glow mb-8">
+            <h3 class="text-2xl font-bold text-accent mb-6 flex items-center">
+                <i class="fa fa-check-circle mr-3 text-accent"></i>
+                分析结论
+            </h3>
+            
+            <div class="space-y-6">
+                <div class="flex items-center">
+                    <div class="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mr-6">
+                        <i class="fa fa-lightbulb-o text-accent text-3xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-accent mb-2">方案二能耗更低</h4>
+                        <p class="text-light-text/90">
+                            方案二（兼顾居民基本需求）比方案一（优先保证商圈用电）节约了 
+                            <span class="text-accent font-bold text-xl">1,860 kWh</span> 
+                            的能源，节能率达到 
+                            <span class="text-accent font-bold text-xl">13.0%</span>。
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-6 rounded-lg border border-accent/30">
+                    <h4 class="text-xl font-bold text-accent mb-4">推荐方案：方案二（兼顾居民基本需求）</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
+                            <p class="text-light-text/90">
+                                <strong class="text-accent">能源效率更高：</strong> 
+                                方案二在保证基本用电需求的同时，显著降低了总体能耗，符合可持续发展理念。
+                            </p>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
+                            <p class="text-light-text/90">
+                                <strong class="text-accent">社会影响更小：</strong> 
+                                方案二兼顾了居民的基本生活需求，避免了居民生活受到严重影响，社会稳定性更好。
+                            </p>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
+                            <p class="text-light-text/90">
+                                <strong class="text-accent">长期可行性更强：</strong> 
+                                方案二可以长期实施，而方案一由于完全切断居民用电，只适合短期紧急情况。
+                            </p>
+                        </div>
+                        <div class="flex items-start">
+                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
+                            <p class="text-light-text/90">
+                                <strong class="text-accent">恢复成本更低：</strong> 
+                                方案二在系统恢复时的冲击更小，有利于系统平稳过渡到正常状态。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-warning/10 p-6 rounded-lg border border-warning/30">
+                    <h4 class="text-xl font-bold text-warning mb-4">特殊情况建议</h4>
+                    <p class="text-light-text/90">
+                        虽然方案二在大多数情况下更为优越，但在以下特殊情况下，方案一可能更为适合：
+                    </p>
+                    <ul class="space-y-2 mt-3">
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
+                            <span class="text-light-text/90">商圈内有重要的医疗设施或数据中心等关键基础设施</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
+                            <span class="text-light-text/90">故障预计在4小时内可以完全修复</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
+                            <span class="text-light-text/90">B地区有完善的备用电源系统可以临时支撑基本需求</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 返回按钮 -->
+        <div class="flex justify-center mb-8">
+            <a href="power-plant.html" class="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-4 rounded-lg flex items-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+                <i class="fa fa-home mr-3 text-xl"></i>
+                <span class="text-lg font-bold">返回监控中心</span>
+            </a>
+        </div>
+    </main>
+
+    <!-- 底部区域 -->
+    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
+        <div class="container mx-auto text-center text-sm text-light-text/70">
+            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            document.getElementById('current-time').textContent = timeString;
+            return timeString;
+        }
+
+        // 初始更新时间
+        updateCurrentTime();
+
+        // 每分钟更新一次时间
+        setInterval(updateCurrentTime, 60000);
+
+        // 生成方案一恢复过程数据
+        function generateSolution1RecoveryData() {
+            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常'];
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'A地区功率 (kW)',
+                        data: [800, 640, 680, 800],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'B地区功率 (kW)',
+                        data: [400, 0, 0, 400],
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            };
+        }
+
+        // 生成方案二恢复过程数据
+        function generateSolution2RecoveryData() {
+            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常'];
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'A地区功率 (kW)',
+                        data: [800, 400, 420, 800],
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: 'B地区功率 (kW)',
+                        data: [400, 120, 135, 400],
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 4,
+                        pointRadius: 6,
+                        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            };
+        }
+
+        // 生成能耗对比数据
+        function generateEnergyComparisonData() {
+            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常', '总计'];
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '方案一能耗 (kWh)',
+                        data: [7200, 2560, 4080, 2400, 16680],
+                        backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                        borderColor: 'rgba(249, 115, 22, 1)',
+                        borderWidth: 2
+                    },
+                    {
+                        label: '方案二能耗 (kWh)',
+                        data: [7200, 2080, 3330, 2400, 15010],
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2
+                    }
+                ]
+            };
+        }
+
+        // 初始化方案一恢复图表
+        const solution1RecoveryCtx = document.getElementById('solution1RecoveryChart').getContext('2d');
+        const solution1RecoveryData = generateSolution1RecoveryData();
+        const solution1RecoveryChart = new Chart(solution1RecoveryCtx, {
+            type: 'line',
+            data: solution1RecoveryData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' kW';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 900
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' kW';
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        tension: 0.4
+                    }
+                }
+            }
+        });
+
+        // 初始化方案二恢复图表
+        const solution2RecoveryCtx = document.getElementById('solution2RecoveryChart').getContext('2d');
+        const solution2RecoveryData = generateSolution2RecoveryData();
+        const solution2RecoveryChart = new Chart(solution2RecoveryCtx, {
+            type: 'line',
+            data: solution2RecoveryData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' kW';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 900
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' kW';
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    line: {
+                        tension: 0.4
+                    }
+                }
+            }
+        });
+
+        // 初始化能耗对比图表
+        const energyComparisonCtx = document.getElementById('energyComparisonChart').getContext('2d');
+        const energyComparisonData = generateEnergyComparisonData();
+        const energyComparisonChart = new Chart(energyComparisonCtx, {
+            type: 'bar',
+            data: energyComparisonData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 12,
+                                weight: 'bold'
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' kWh';
+                            }
+                        },
+                        suggestedMin: 0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)',
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + ' kWh';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

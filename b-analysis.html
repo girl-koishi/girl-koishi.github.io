@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>温度变化分析 - 幸福小区 - 发电厂温度控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#93c5fd',
+                        accent: '#10b981',
+                        warning: '#f97316',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'light-text': '#e2e8f0'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flow': 'flow 2s linear infinite',
+                    },
+                    keyframes: {
+                        flow: {
+                            '0%': { strokeDashoffset: '24' },
+                            '100%': { strokeDashoffset: '0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+            }
+            .metric-card {
+                transition: all 0.3s ease;
+                border: 1px solid rgba(59, 130, 246, 0.3);
+            }
+            .metric-card:hover {
+                border-color: rgba(59, 130, 246, 0.8);
+                box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark text-light-text min-h-screen flex flex-col">
+    <!-- 顶部区域 -->
+    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <a href="index.html" class="flex items-center">
+                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
+                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
+                    <i class="fa fa-clock-o text-secondary mr-2"></i>
+                    <span id="current-time" class="text-xl font-mono"></span>
+                </div>
+                <a href="b-area.html" class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
+                    <i class="fa fa-arrow-left mr-2"></i>
+                    返回B区监控
+                </a>
+                <a href="index.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
+                    <i class="fa fa-home mr-2"></i>
+                    返回首页
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="flex-grow container mx-auto p-6 bg-grid">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-secondary mb-2">温度变化分析 - 幸福小区</h2>
+            <p class="text-light-text/70">基于最近24小时的温度数据分析结果</p>
+        </div>
+
+        <!-- 变化速率板块 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-tachometer mr-3 text-primary"></i>
+                变化速率分析
+            </h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="h-80">
+                        <canvas id="rateChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">当前温度变化速率</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-primary">0.6</span>
+                            <span class="text-lg text-primary ml-1 mb-1">°C/小时</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">基于最近60分钟数据计算</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">变化速率评级</h4>
+                        <div class="flex items-center">
+                            <span class="text-2xl font-bold text-accent">优秀</span>
+                            <div class="ml-auto flex">
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">5分制评分系统</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">系统响应时间</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-secondary">12</span>
+                            <span class="text-lg text-secondary ml-1 mb-1">分钟</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">从温度波动到系统调整的时间</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
+                <h4 class="font-bold text-secondary mb-2">分析结论</h4>
+                <p class="text-light-text">根据最近24小时的数据分析，当前温度变化速率为0.6摄氏度每小时，低于A地区，属于优秀范围。住宅区温度变化较为平缓，系统能够及时响应温度变化，保持环境温度稳定。夜间（22:00-06:00）温度变化速率更低，符合居民休息时段的舒适度需求。</p>
+            </div>
+        </div>
+
+        <!-- 温度范围板块 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-area-chart mr-3 text-primary"></i>
+                温度范围分析
+            </h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="h-80">
+                        <canvas id="rangeChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">当前温度范围</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-primary">21°C</span>
+                            <span class="text-lg text-light-text/50 mx-2 mb-1">-</span>
+                            <span class="text-3xl font-bold text-primary">25°C</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">符合设定标准</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">温度波动幅度</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-warning">±1.0</span>
+                            <span class="text-lg text-warning ml-1 mb-1">°C</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">相对于目标温度23°C</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">超出设定范围时间占比</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-accent">1.8</span>
+                            <span class="text-lg text-accent ml-1 mb-1">%</span>
+                        </div>
+                        <div class="flex items-center mt-1">
+                            <span class="text-sm font-bold text-accent">优秀</span>
+                            <div class="ml-2 w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 1.8%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
+                <h4 class="font-bold text-secondary mb-2">分析结论</h4>
+                <p class="text-light-text">当前温度范围控制在21°C到25°C之间，符合住宅区设定标准。温度波动幅度为±1.0°C，优于A地区，提供了更稳定的居住环境。系统在98.2%的时间内保持温度在设定范围内，超出范围的时间占比仅为1.8%，表现优秀。夜间温度略低，符合居民睡眠舒适度需求；白天温度适中，满足日常活动需求。</p>
+            </div>
+        </div>
+
+        <!-- 控制精度板块 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-bullseye mr-3 text-primary"></i>
+                控制精度分析
+            </h3>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="h-80">
+                        <canvas id="precisionChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">温度控制精度</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-primary">±0.4</span>
+                            <span class="text-lg text-primary ml-1 mb-1">°C</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">系统控制精度指标</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">温度控制稳定性</h4>
+                        <div class="flex items-center">
+                            <span class="text-2xl font-bold text-accent">优秀</span>
+                            <div class="ml-auto flex">
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                                <i class="fa fa-star text-warning"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">系统在设定温度附近保持稳定的能力</p>
+                    </div>
+                    
+                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
+                        <h4 class="text-sm text-light-text/70 mb-1">温度恢复时间</h4>
+                        <div class="flex items-end">
+                            <span class="text-3xl font-bold text-secondary">6</span>
+                            <span class="text-lg text-secondary ml-1 mb-1">分钟</span>
+                        </div>
+                        <p class="text-xs text-light-text/50 mt-2">从偏离到恢复设定范围的平均时间</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-4 bg-dark/50 rounded-lg">
+                    <h4 class="font-bold text-secondary mb-2">PID控制器参数分析</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>比例增益 (P)</span>
+                                <span class="text-primary">2.2</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 60%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>积分时间 (I)</span>
+                                <span class="text-primary">2.8 分钟</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>微分时间 (D)</span>
+                                <span class="text-primary">0.6 分钟</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 35%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-3">当前PID参数配置针对住宅区优化，控制更加平稳</p>
+                </div>
+                
+                <div class="p-4 bg-dark/50 rounded-lg">
+                    <h4 class="font-bold text-secondary mb-2">负载变化适应性</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>轻负载适应性</span>
+                                <span class="text-accent">优秀</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 95%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>中负载适应性</span>
+                                <span class="text-accent">优秀</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 90%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>重负载适应性</span>
+                                <span class="text-accent">优秀</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 85%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-3">系统在不同负载条件下均表现出色，适应住宅区内不同时段的用冷需求</p>
+                </div>
+            </div>
+            
+            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
+                <h4 class="font-bold text-secondary mb-2">节能效率分析</h4>
+                <p class="text-light-text">温度控制精度与能耗呈现正相关关系。当前系统在保持高精度控制的同时，能耗效率达到92%，优于A地区和行业平均水平。住宅区制冷系统针对居民作息特点进行了优化，夜间（22:00-06:00）自动降低功率消耗，同时保持舒适温度。建议在非高峰用冷时段（10:00-16:00）进一步优化温度设定，可实现节能15%的同时不影响居住舒适度。系统整体能耗比A地区低约30%，符合住宅区节能要求。</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部区域 -->
+    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
+        <div class="container mx-auto text-center text-sm text-light-text/70">
+            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            document.getElementById('current-time').textContent = timeString;
+            return timeString;
+        }
+
+        // 初始更新时间
+        updateCurrentTime();
+
+        // 每分钟更新一次时间
+        setInterval(updateCurrentTime, 60000);
+
+        // 生成过去24小时的时间标签
+        function generateTimeLabels() {
+            const labels = [];
+            const now = new Date();
+            
+            for (let i = 23; i >= 0; i--) {
+                const time = new Date(now - i * 60 * 60 * 1000);
+                const hours = String(time.getHours()).padStart(2, '0');
+                labels.push(`${hours}:00`);
+            }
+            
+            return labels;
+        }
+
+        // 生成变化速率图表数据
+        function generateRateData() {
+            const labels = generateTimeLabels();
+            const data = [];
+            
+            // 生成模拟的温度变化速率数据（幸福小区更低、更稳定）
+            for (let i = 0; i < labels.length; i++) {
+                // 模拟一天中的变化速率波动
+                let baseRate;
+                const hour = parseInt(labels[i]);
+                
+                if (hour >= 7 && hour <= 9) {
+                    // 早晨温度缓慢上升
+                    baseRate = 0.8 + Math.random() * 0.3;
+                } else if (hour >= 9 && hour <= 15) {
+                    // 白天温度变化较小
+                    baseRate = 0.5 + Math.random() * 0.2;
+                } else if (hour >= 15 && hour <= 19) {
+                    // 傍晚温度变化适中
+                    baseRate = 0.7 + Math.random() * 0.3;
+                } else if (hour >= 19 && hour <= 22) {
+                    // 晚上温度缓慢下降
+                    baseRate = 0.6 + Math.random() * 0.2;
+                } else {
+                    // 夜间温度变化最小
+                    baseRate = 0.2 + Math.random() * 0.1;
+                }
+                
+                data.push(parseFloat(baseRate.toFixed(1)));
+            }
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '温度变化速率 (°C/小时)',
+                        data: data,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderWidth: 3,
+                        pointRadius: 2,
+                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: '理想变化速率',
+                        data: Array(labels.length).fill(0.5),
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: false
+                    }
+                ]
+            };
+        }
+
+        // 生成温度范围图表数据
+        function generateRangeData() {
+            const labels = generateTimeLabels();
+            const minTempData = [];
+            const maxTempData = [];
+            const avgTempData = [];
+            
+            // 生成模拟的温度范围数据（幸福小区更稳定）
+            for (let i = 0; i < labels.length; i++) {
+                const hour = parseInt(labels[i]);
+                let baseTemp;
+                
+                if (hour >= 6 && hour <= 12) {
+                    // 上午温度逐渐升高
+                    baseTemp = 22 + (hour - 6) * 0.3;
+                } else if (hour > 12 && hour <= 18) {
+                    // 下午温度保持高位后逐渐下降
+                    baseTemp = 24 - (hour - 12) * 0.2;
+                } else if (hour > 18 && hour <= 22) {
+                    // 傍晚温度下降较慢
+                    baseTemp = 23.2 - (hour - 18) * 0.3;
+                } else {
+                    // 夜间温度较低且非常稳定
+                    baseTemp = 21.5 + Math.random() * 0.3;
+                }
+                
+                // 添加较小的随机波动（B地区波动更小）
+                const minTemp = baseTemp - 0.3 - Math.random() * 0.3;
+                const maxTemp = baseTemp + 0.3 + Math.random() * 0.3;
+                const avgTemp = (minTemp + maxTemp) / 2;
+                
+                minTempData.push(parseFloat(minTemp.toFixed(1)));
+                maxTempData.push(parseFloat(maxTemp.toFixed(1)));
+                avgTempData.push(parseFloat(avgTemp.toFixed(1)));
+            }
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '最低温度',
+                        data: minTempData,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: '平均温度',
+                        data: avgTempData,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: '最高温度',
+                        data: maxTempData,
+                        borderColor: 'rgba(249, 115, 22, 1)',
+                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: false
+                    },
+                    {
+                        label: '目标温度',
+                        data: Array(labels.length).fill(23),
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: false
+                    }
+                ]
+            };
+        }
+
+        // 生成控制精度图表数据
+        function generatePrecisionData() {
+            const labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+            const accuracyData = [];
+            const targetAccuracy = 0.4; // B地区精度更高
+            
+            // 生成模拟的控制精度数据（B地区精度更高）
+            for (let i = 0; i < labels.length; i++) {
+                const hour = parseInt(labels[i]);
+                let accuracy;
+                
+                if (hour >= 9 && hour <= 18) {
+                    // 白天控制精度非常高
+                    accuracy = targetAccuracy - 0.1 + Math.random() * 0.15;
+                } else {
+                    // 夜间控制精度更高
+                    accuracy = targetAccuracy - 0.15 + Math.random() * 0.1;
+                }
+                
+                accuracyData.push(parseFloat(accuracy.toFixed(2)));
+            }
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '控制精度 (°C)',
+                        data: accuracyData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        barThickness: 30
+                    },
+                    {
+                        label: '目标精度',
+                        data: Array(labels.length).fill(targetAccuracy),
+                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        tension: 0,
+                        fill: false,
+                        type: 'line'
+                    }
+                ]
+            };
+        }
+
+        // 初始化变化速率图表
+        const rateCtx = document.getElementById('rateChart').getContext('2d');
+        const rateData = generateRateData();
+        const rateChart = new Chart(rateCtx, {
+            type: 'line',
+            data: rateData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' °C/h';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 1.5
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+
+        // 初始化温度范围图表
+        const rangeCtx = document.getElementById('rangeChart').getContext('2d');
+        const rangeData = generateRangeData();
+        const rangeChart = new Chart(rangeCtx, {
+            type: 'line',
+            data: rangeData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' °C';
+                            }
+                        },
+                        suggestedMin: 20,
+                        suggestedMax: 26
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+
+        // 初始化控制精度图表
+        const precisionCtx = document.getElementById('precisionChart').getContext('2d');
+        const precisionData = generatePrecisionData();
+        const precisionChart = new Chart(precisionCtx, {
+            type: 'bar',
+            data: precisionData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)'
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' °C';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 0.8
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

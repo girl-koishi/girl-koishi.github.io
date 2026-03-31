@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发电厂运行监控 - 发电厂温度控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#93c5fd',
+                        accent: '#10b981',
+                        warning: '#f97316',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'light-text': '#e2e8f0'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flow': 'flow 2s linear infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        flow: {
+                            '0%': { strokeDashoffset: '24' },
+                            '100%': { strokeDashoffset: '0' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(59, 130, 246, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.8)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .building-glow {
+                filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6));
+            }
+            .power-line {
+                stroke-dasharray: 10;
+                animation: flow 1.5s linear infinite;
+            }
+            .light-point {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .status-normal {
+                background: linear-gradient(135deg, #10b981, #059669);
+            }
+            .status-warning {
+                background: linear-gradient(135deg, #f97316, #ea580c);
+            }
+            .status-danger {
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark text-light-text min-h-screen flex flex-col">
+    <!-- 顶部区域 -->
+    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <a href="index.html" class="flex items-center">
+                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
+                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
+                    <i class="fa fa-clock-o text-secondary mr-2"></i>
+                    <span id="current-time" class="text-xl font-mono"></span>
+                </div>
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-accent/30 border-glow">
+                    <i class="fa fa-check-circle text-accent mr-2"></i>
+                    <span class="text-xl font-bold text-accent">正常运行</span>
+                </div>
+                <a href="index.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
+                    <i class="fa fa-home mr-2"></i>
+                    返回首页
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="flex-grow container mx-auto p-6 bg-grid">
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-secondary mb-2">发电厂运行监控中心</h2>
+            <p class="text-light-text/70">实时监控A、B地区的电力供应和设备运行状态</p>
+        </div>
+
+        <!-- 运行状态地图 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-map-o mr-3 text-primary"></i>
+                系统运行状态地图
+            </h3>
+            
+            <div class="relative w-full h-[500px] bg-dark/50 rounded-lg overflow-hidden">
+                <!-- 运行状态地图将通过Canvas绘制 -->
+                <canvas id="powerGridMap" class="w-full h-full"></canvas>
+                
+                <!-- 状态指示器 -->
+                <div class="absolute top-4 left-4 flex flex-col space-y-3">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-accent mr-2"></div>
+                        <span class="text-sm">正常运行</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-warning mr-2"></div>
+                        <span class="text-sm">需要注意</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-danger mr-2"></div>
+                        <span class="text-sm">故障状态</span>
+                    </div>
+                </div>
+                
+                <!-- 图例说明 -->
+                <div class="absolute bottom-4 left-4 bg-dark-light/80 p-3 rounded-lg border border-primary/30">
+                    <h4 class="text-sm font-bold text-primary mb-2">图例说明</h4>
+                    <div class="space-y-1 text-xs">
+                        <div class="flex items-center">
+                            <i class="fa fa-industry text-primary mr-2"></i>
+                            <span>发电厂主站</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fa fa-building text-secondary mr-2"></i>
+                            <span>万达商场（商圈）</span>
+                        </div>
+                        <div class="flex items-center">
+                            <i class="fa fa-home text-secondary mr-2"></i>
+                            <span>幸福小区（住宅区）</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-12 h-1 bg-primary mr-2"></div>
+                            <span>电力传输线</span>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 rounded-full bg-accent mr-2 light-point"></div>
+                            <span>数据传输点</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- 系统状态概览 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
+                <i class="fa fa-tachometer mr-3 text-primary"></i>
+                系统状态概览
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-accent">系统整体状态</h4>
+                        <span class="px-2 py-1 bg-accent/20 text-accent rounded text-xs font-bold">正常</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-dark rounded-full h-3 mr-4">
+                            <div class="bg-accent h-3 rounded-full" style="width: 95%"></div>
+                        </div>
+                        <span class="text-accent font-bold">95%</span>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-2">所有系统组件运行正常</p>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-primary">电力供应状态</h4>
+                        <span class="px-2 py-1 bg-primary/20 text-primary rounded text-xs font-bold">充足</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-dark rounded-full h-3 mr-4">
+                            <div class="bg-primary h-3 rounded-full" style="width: 88%"></div>
+                        </div>
+                        <span class="text-primary font-bold">88%</span>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-2">当前电力供应充足，满足需求</p>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-secondary/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-secondary">设备运行状态</h4>
+                        <span class="px-2 py-1 bg-secondary/20 text-secondary rounded text-xs font-bold">良好</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-dark rounded-full h-3 mr-4">
+                            <div class="bg-secondary h-3 rounded-full" style="width: 92%"></div>
+                        </div>
+                        <span class="text-secondary font-bold">92%</span>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-2">所有设备运行状态良好</p>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-warning">环境温度</h4>
+                        <span class="px-2 py-1 bg-warning/20 text-warning rounded text-xs font-bold">偏高</span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-full bg-dark rounded-full h-3 mr-4">
+                            <div class="bg-warning h-3 rounded-full" style="width: 75%"></div>
+                        </div>
+                        <span class="text-warning font-bold">32°C</span>
+                    </div>
+                    <p class="text-xs text-light-text/50 mt-2">室外温度偏高，可能增加制冷负荷</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模拟线路故障按钮 -->
+        <div class="flex justify-center mb-8">
+            <button id="simulateFaultBtn" class="bg-gradient-to-r from-warning to-danger hover:from-warning/90 hover:to-danger/90 text-white px-8 py-4 rounded-lg flex items-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+                <i class="fa fa-bolt mr-3 text-xl"></i>
+                <span class="text-lg font-bold">模拟线路故障</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部区域 -->
+    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
+        <div class="container mx-auto text-center text-sm text-light-text/70">
+            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            document.getElementById('current-time').textContent = timeString;
+            return timeString;
+        }
+
+        // 初始更新时间
+        updateCurrentTime();
+
+        // 每分钟更新一次时间
+        setInterval(updateCurrentTime, 60000);
+
+
+
+        // 绘制运行状态地图
+        function drawPowerGridMap() {
+            const canvas = document.getElementById('powerGridMap');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置Canvas尺寸
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 绘制背景
+            function drawBackground() {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制网格
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.1)';
+                ctx.lineWidth = 1;
+                
+                const gridSize = 40;
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // 绘制建筑物
+            function drawBuildings() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                
+                // 发电厂
+                ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
+                ctx.fillRect(centerX - 60, centerY - 40, 120, 80);
+                
+                // 发电厂图标
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.font = '30px FontAwesome';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('\uf275', centerX, centerY);
+                
+                // A地区标注
+                const aX = centerX - 200;
+                const aY = centerY - 100;
+                
+                // A地区标签
+                ctx.fillStyle = 'rgba(147, 197, 253, 0.9)';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('万达商场 - 大型商圈', aX, aY - 80);
+                
+                // A地区建筑群（静止的楼房图标）
+                const aBuildings = [
+                    { x: aX - 60, y: aY + 20, width: 40, height: 80 },
+                    { x: aX - 10, y: aY + 10, width: 35, height: 90 },
+                    { x: aX + 30, y: aY + 30, width: 45, height: 70 }
+                ];
+                
+                aBuildings.forEach(building => {
+                    // 楼房主体
+                    ctx.fillStyle = 'rgba(147, 197, 253, 0.7)';
+                    ctx.fillRect(building.x, building.y, building.width, building.height);
+                    
+                    // 楼顶
+                    ctx.fillStyle = 'rgba(147, 197, 253, 0.9)';
+                    ctx.beginPath();
+                    ctx.moveTo(building.x - 5, building.y);
+                    ctx.lineTo(building.x + building.width / 2, building.y - 15);
+                    ctx.lineTo(building.x + building.width + 5, building.y);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // 窗户
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    for (let w = 0; w < Math.floor(building.height / 15); w++) {
+                        for (let h = 0; h < Math.floor(building.width / 10); h++) {
+                            ctx.fillRect(building.x + 5 + h * 10, building.y + 5 + w * 15, 5, 8);
+                        }
+                    }
+                });
+                
+                // A地区跳动的小圆点
+                ctx.fillStyle = 'rgba(147, 197, 253, 1)';
+                ctx.beginPath();
+                ctx.arc(aX, aY - 40, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // B地区标注
+                const bX = centerX + 180;
+                const bY = centerY + 80;
+                
+                // B地区标签
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('幸福小区 - 住宅区', bX, bY - 70);
+                
+                // B地区建筑群（静止的楼房图标）
+                const bBuildings = [
+                    { x: bX - 70, y: bY + 10, width: 30, height: 50 },
+                    { x: bX - 35, y: bY + 15, width: 25, height: 45 },
+                    { x: bX - 5, y: bY + 5, width: 28, height: 55 },
+                    { x: bX + 25, y: bY + 20, width: 32, height: 40 },
+                    { x: bX + 60, y: bY + 10, width: 27, height: 50 }
+                ];
+                
+                bBuildings.forEach(building => {
+                    // 楼房主体
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.7)';
+                    ctx.fillRect(building.x, building.y, building.width, building.height);
+                    
+                    // 楼顶
+                    ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+                    ctx.fillRect(building.x - 3, building.y - 8, building.width + 6, 8);
+                    
+                    // 窗户
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    for (let w = 0; w < Math.floor(building.height / 12); w++) {
+                        for (let h = 0; h < Math.floor(building.width / 8); h++) {
+                            ctx.fillRect(building.x + 3 + h * 8, building.y + 3 + w * 12, 4, 6);
+                        }
+                    }
+                });
+                
+                // B地区跳动的小圆点
+                ctx.fillStyle = 'rgba(16, 185, 129, 1)';
+                ctx.beginPath();
+                ctx.arc(bX, bY - 30, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 添加机器厂房图标（在发电厂周围）
+                const factoryBuildings = [
+                    { x: centerX - 120, y: centerY - 60, icon: '\uf0e7', color: 'rgba(249, 115, 22, 0.8)' }, // 闪电图标
+                    { x: centerX + 120, y: centerY - 60, icon: '\uf206', color: 'rgba(249, 115, 22, 0.8)' }, // 齿轮图标
+                    { x: centerX - 100, y: centerY + 60, icon: '\uf1e6', color: 'rgba(249, 115, 22, 0.8)' }, // 插头图标
+                    { x: centerX + 100, y: centerY + 60, icon: '\uf085', color: 'rgba(249, 115, 22, 0.8)' }  // 发电机图标
+                ];
+                
+                factoryBuildings.forEach(factory => {
+                    // 厂房基础
+                    ctx.fillStyle = factory.color;
+                    ctx.fillRect(factory.x - 25, factory.y - 15, 50, 30);
+                    
+                    // 厂房图标
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    ctx.font = '20px FontAwesome';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(factory.icon, factory.x, factory.y);
+                });
+            }
+            
+            // 绘制电力传输线
+            function drawPowerLines() {
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+                ctx.lineWidth = 4;
+                
+                // 发电厂 -> A地区
+                ctx.beginPath();
+                ctx.moveTo(centerX - 60, centerY);
+                ctx.lineTo(centerX - 200, centerY - 60);
+                ctx.stroke();
+                
+                // 发电厂 -> B地区
+                ctx.beginPath();
+                ctx.moveTo(centerX + 60, centerY);
+                ctx.lineTo(centerX + 180, centerY + 60);
+                ctx.stroke();
+            }
+            
+            // 光点数据（电力传输线上的光点）
+            const lightPoints = [
+                { x: canvas.width / 2 - 130, y: canvas.height / 2 - 30, color: 'rgba(59, 130, 246, 1)', pulse: 0 },
+                { x: canvas.width / 2 + 130, y: canvas.height / 2 + 30, color: 'rgba(16, 185, 129, 1)', pulse: 0.6 }
+            ];
+            
+            // 绘制光点
+            function drawLightPoints() {
+                lightPoints.forEach(point => {
+                    const pulseSize = 3 + Math.sin(Date.now() * 0.003 + point.pulse) * 2;
+                    
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, pulseSize, 0, Math.PI * 2);
+                    ctx.fillStyle = point.color;
+                    ctx.fill();
+                    
+                    // 光晕效果
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, pulseSize * 2, 0, Math.PI * 2);
+                    ctx.fillStyle = point.color.replace('1)', '0.3)');
+                    ctx.fill();
+                });
+            }
+            
+            // 动画循环
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawBackground();
+                drawPowerLines();
+                drawBuildings();
+                drawLightPoints();
+                requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+
+        // 初始化地图
+        drawPowerGridMap();
+
+        // 模拟线路故障按钮点击事件
+        document.getElementById('simulateFaultBtn').addEventListener('click', function() {
+            // 直接跳转到故障方案页面
+            window.location.href = 'fault-solution.html';
+        });
+    </script>
+</body>
+</html>

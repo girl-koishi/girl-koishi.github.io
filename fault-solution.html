@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模拟线路故障 - 发电厂温度控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 统一的 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#93c5fd',
+                        accent: '#10b981',
+                        warning: '#f97316',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'light-text': '#e2e8f0'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flow': 'flow 2s linear infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        flow: {
+                            '0%': { strokeDashoffset: '24' },
+                            '100%': { strokeDashoffset: '0' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(239, 68, 68, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(239, 68, 68, 0.8)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
+            }
+            .border-glow-danger {
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .status-danger {
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+            }
+            .pulse-danger {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        }
+    </style>
+</head>
+<body class="bg-dark text-light-text min-h-screen flex flex-col">
+    <!-- 顶部区域 -->
+    <header class="bg-dark-light border-b border-danger/30 py-4 px-6">
+        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center mb-4 md:mb-0">
+                <a href="index.html" class="flex items-center">
+                    <i class="fa fa-bolt text-danger text-3xl mr-3"></i>
+                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
+                </a>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-danger/30 border-glow-danger pulse-danger">
+                    <i class="fa fa-exclamation-triangle text-danger mr-2"></i>
+                    <span class="text-xl font-bold text-danger">线路故障</span>
+                </div>
+                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-warning/30 border-glow">
+                    <i class="fa fa-clock-o text-warning mr-2"></i>
+                    <span id="current-time" class="text-xl font-mono"></span>
+                </div>
+                <a href="power-plant.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
+                    <i class="fa fa-arrow-left mr-2"></i>
+                    返回监控中心
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="flex-grow container mx-auto p-6 bg-grid">
+        <div class="mb-8">
+            <div class="flex items-center mb-2">
+                <h2 class="text-2xl font-bold text-danger mr-3">模拟线路故障</h2>
+                <span class="px-3 py-1 bg-danger/20 text-danger rounded-full text-sm font-bold">能源限制：80%</span>
+            </div>
+            <p class="text-light-text/70">由于线路故障，系统能源供应限制为正常水平的80%，请选择合适的能源分配方案</p>
+        </div>
+
+        <!-- 能源限制警告 -->
+        <div class="bg-danger/10 border border-danger/30 rounded-lg p-4 mb-8 flex items-center">
+            <i class="fa fa-exclamation-circle text-danger text-2xl mr-4"></i>
+            <div>
+                <h3 class="font-bold text-danger mb-1">能源供应限制</h3>
+                <p class="text-light-text/90">当前能源供应限制为正常水平的80%，需要采取紧急能源分配方案以确保关键设施正常运行。请根据实际情况选择合适的方案。</p>
+            </div>
+        </div>
+
+        <!-- 方案一 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary flex items-center">
+                    <i class="fa fa-first-order mr-3 text-warning"></i>
+                    方案一：优先保证商圈用电
+                </h3>
+                <span class="px-3 py-1 bg-warning/20 text-warning rounded-full text-sm font-bold">适合紧急情况</span>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-light-text/90 mb-4">
+                    <strong class="text-warning">方案说明：</strong> 将80%的供电量全部分配给万达商场（大型商圈），幸福小区（住宅区）供电量为0。此方案适用于紧急情况，优先保证商业设施正常运行。
+                </p>
+                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
+                    <h4 class="font-bold text-warning mb-2">方案特点</h4>
+                    <ul class="space-y-2 text-light-text/90">
+                        <li class="flex items-start">
+                            <i class="fa fa-check-circle text-warning mt-1 mr-2"></i>
+                            <span>万达商场获得100%所需电量（相当于正常水平的80%）</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-times-circle text-danger mt-1 mr-2"></i>
+                            <span>幸福小区获得0%电量，需要启动备用电源或实施紧急预案</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-clock-o text-primary mt-1 mr-2"></i>
+                            <span>建议实施时间：不超过4小时</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-balance-scale text-accent mt-1 mr-2"></i>
+                            <span>商业损失最小化，但居民生活受到严重影响</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="h-80 mb-6">
+                <canvas id="solution1Chart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg">
+                    <h4 class="font-bold text-primary mb-3">万达商场供电详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>制冷系统</span>
+                                <span class="text-primary font-bold">80%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>照明系统</span>
+                                <span class="text-primary font-bold">70%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>电梯系统</span>
+                                <span class="text-primary font-bold">80%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>应急系统</span>
+                                <span class="text-primary font-bold">100%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg">
+                    <h4 class="font-bold text-danger mb-3">幸福小区供电详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>制冷系统</span>
+                                <span class="text-danger font-bold">0%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-danger h-2 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>照明系统</span>
+                                <span class="text-danger font-bold">10%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-danger h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>电梯系统</span>
+                                <span class="text-danger font-bold">10%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-danger h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>应急系统</span>
+                                <span class="text-warning font-bold">50%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-warning h-2 rounded-full" style="width: 50%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 方案二 -->
+        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-secondary flex items-center">
+                    <i class="fa fa-second-order mr-3 text-accent"></i>
+                    方案二：兼顾居民基本需求
+                </h3>
+                <span class="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm font-bold">适合长期故障</span>
+            </div>
+            
+            <div class="mb-6">
+                <p class="text-light-text/90 mb-4">
+                    <strong class="text-accent">方案说明：</strong> 幸福小区维持能正常运行的最低功率（约30%），剩余的50%功率分配给万达商场。此方案适用于长期故障情况，兼顾居民基本生活需求。
+                </p>
+                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
+                    <h4 class="font-bold text-accent mb-2">方案特点</h4>
+                    <ul class="space-y-2 text-light-text/90">
+                        <li class="flex items-start">
+                            <i class="fa fa-check-circle text-primary mt-1 mr-2"></i>
+                            <span>万达商场获得约62.5%所需电量（相当于正常水平的50%）</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-check-circle text-accent mt-1 mr-2"></i>
+                            <span>幸福小区获得100%最低需求电量（相当于正常水平的30%）</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-clock-o text-primary mt-1 mr-2"></i>
+                            <span>建议实施时间：可长期实施</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fa fa-balance-scale text-warning mt-1 mr-2"></i>
+                            <span>商业运营受到一定影响，但居民基本生活需求得到保障</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="h-80 mb-6">
+                <canvas id="solution2Chart"></canvas>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-dark/50 p-4 rounded-lg">
+                    <h4 class="font-bold text-primary mb-3">万达商场供电详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>制冷系统</span>
+                                <span class="text-primary font-bold">50%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 50%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>照明系统</span>
+                                <span class="text-primary font-bold">70%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>电梯系统</span>
+                                <span class="text-primary font-bold">80%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 80%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>应急系统</span>
+                                <span class="text-primary font-bold">100%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-primary h-2 rounded-full" style="width: 100%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-dark/50 p-4 rounded-lg">
+                    <h4 class="font-bold text-accent mb-3">幸福小区供电详情</h4>
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>制冷系统</span>
+                                <span class="text-accent font-bold">30%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 30%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>照明系统</span>
+                                <span class="text-accent font-bold">10%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>电梯系统</span>
+                                <span class="text-accent font-bold">10%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 10%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-sm mb-1">
+                                <span>应急系统</span>
+                                <span class="text-accent font-bold">50%</span>
+                            </div>
+                            <div class="w-full bg-dark rounded-full h-2">
+                                <div class="bg-accent h-2 rounded-full" style="width: 50%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 二次恢复分析按钮 -->
+        <div class="flex justify-center mb-8">
+            <button id="recoveryAnalysisBtn" class="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-white px-8 py-4 rounded-lg flex items-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+                <i class="fa fa-line-chart mr-3 text-xl"></i>
+                <span class="text-lg font-bold">二次恢复分析</span>
+            </button>
+        </div>
+    </main>
+
+    <!-- 底部区域 -->
+    <footer class="bg-dark-light border-t border-danger/30 py-4 px-6">
+        <div class="container mx-auto text-center text-sm text-light-text/70">
+            <p>&copy; 2025 发电厂温度控制系统 | 版权所有 | <span class="text-danger font-bold">当前处于故障应急模式</span></p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+            document.getElementById('current-time').textContent = timeString;
+            return timeString;
+        }
+
+        // 初始更新时间
+        updateCurrentTime();
+
+        // 每分钟更新一次时间
+        setInterval(updateCurrentTime, 60000);
+
+        // 生成过去120分钟的时间标签（扩大时间跨度）
+        function generateTimeLabels(minutes = 120) {
+            const labels = [];
+            const now = new Date();
+            
+            for (let i = minutes - 1; i >= 0; i--) {
+                const time = new Date(now - i * 60 * 1000);
+                const hours = String(time.getHours()).padStart(2, '0');
+                const minutes = String(time.getMinutes()).padStart(2, '0');
+                labels.push(`${hours}:${minutes}`);
+            }
+            
+            return labels;
+        }
+
+        // 生成方案一功率数据
+        function generateSolution1Data() {
+            const labels = generateTimeLabels();
+            const aData = [];
+            const bData = [];
+            
+            // 基准功率值（单位：万kW）
+            const aBasePower = 1.6; // 万达商场基准功率1.6万kW
+            const bBasePower = 1.0; // 幸福小区基准功率1万kW
+            
+            for (let i = 0; i < labels.length; i++) {
+                // 前30个数据点：正常运行功率
+                if (i < 30) {
+                    aData.push(aBasePower + (Math.random() * 0.1 - 0.05)); // 正常波动
+                    bData.push(bBasePower + (Math.random() * 0.1 - 0.05));
+                }
+                // 中间40个数据点：故障期间（平台期）
+                else if (i < 70) {
+                    // 万达商场获得80%的正常功率，幸福小区获得0功率
+                    aData.push((aBasePower * 0.8) + (Math.random() * 0.05 - 0.025));
+                    bData.push(0);
+                }
+                // 最后50个数据点：恢复到初始高度
+                else {
+                    // 快速恢复到初始功率（使用二次函数使曲线更陡峭）
+                    const recoveryProgress = (i - 70) / 50;
+                    const steepProgress = recoveryProgress * recoveryProgress; // 二次函数使曲线更陡峭
+                    const aRecoveryPower = aBasePower * 0.8 + (aBasePower * 0.2 * steepProgress);
+                    const bRecoveryPower = 0 + (bBasePower * steepProgress);
+                    
+                    aData.push(aRecoveryPower + (Math.random() * 0.05 - 0.025));
+                    bData.push(bRecoveryPower + (Math.random() * 0.05 - 0.025));
+                }
+            }
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '万达商场功率 (万kW)',
+                        data: aData,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: '幸福小区功率 (万kW)',
+                        data: bData,
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            };
+        }
+
+        // 生成方案二功率数据
+        function generateSolution2Data() {
+            const labels = generateTimeLabels();
+            const aData = [];
+            const bData = [];
+            
+            // 基准功率值（单位：万kW）
+            const aBasePower = 1.6; // 万达商场基准功率1.6万kW
+            const bBasePower = 1.0; // 幸福小区基准功率1万kW
+            
+            for (let i = 0; i < labels.length; i++) {
+                // 前30个数据点：正常运行功率
+                if (i < 30) {
+                    aData.push(aBasePower + (Math.random() * 0.1 - 0.05)); // 正常波动
+                    bData.push(bBasePower + (Math.random() * 0.1 - 0.05));
+                }
+                // 中间40个数据点：故障期间（平台期）
+                else if (i < 70) {
+                    // 故障后万达商场获得50%的正常功率，幸福小区获得30%的正常功率
+                    aData.push((aBasePower * 0.5) + (Math.random() * 0.05 - 0.025));
+                    bData.push((bBasePower * 0.3) + (Math.random() * 0.05 - 0.025));
+                }
+                // 最后50个数据点：恢复到初始高度
+                else {
+                    // 快速恢复到初始功率（使用二次函数使曲线更陡峭）
+                    const recoveryProgress = (i - 70) / 50;
+                    const steepProgress = recoveryProgress * recoveryProgress; // 二次函数使曲线更陡峭
+                    const aRecoveryPower = aBasePower * 0.5 + (aBasePower * 0.5 * steepProgress);
+                    const bRecoveryPower = bBasePower * 0.3 + (bBasePower * 0.7 * steepProgress);
+                    
+                    aData.push(aRecoveryPower + (Math.random() * 0.05 - 0.025));
+                    bData.push(bRecoveryPower + (Math.random() * 0.05 - 0.025));
+                }
+            }
+            
+            return {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '万达商场功率 (万kW)',
+                        data: aData,
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    },
+                    {
+                        label: '幸福小区功率 (万kW)',
+                        data: bData,
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        tension: 0.4,
+                        fill: true
+                    }
+                ]
+            };
+        }
+
+        // 初始化方案一图表
+        const solution1Ctx = document.getElementById('solution1Chart').getContext('2d');
+        let solution1Data = generateSolution1Data();
+        const solution1Chart = new Chart(solution1Ctx, {
+            type: 'line',
+            data: solution1Data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' 万kW';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 2.0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+
+        // 初始化方案二图表
+        const solution2Ctx = document.getElementById('solution2Chart').getContext('2d');
+        let solution2Data = generateSolution2Data();
+        const solution2Chart = new Chart(solution2Ctx, {
+            type: 'line',
+            data: solution2Data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        grid: {
+                            color: 'rgba(59, 130, 246, 0.1)'
+                        },
+                        ticks: {
+                            color: 'rgba(226, 232, 240, 0.7)',
+                            callback: function(value) {
+                                return value + ' 万kW';
+                            }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 2.0
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgba(226, 232, 240, 0.9)'
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        titleColor: 'rgba(226, 232, 240, 0.9)',
+                        bodyColor: 'rgba(226, 232, 240, 0.9)',
+                        borderColor: 'rgba(59, 130, 246, 0.5)',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
+
+        // 更新图表数据
+        function updateCharts() {
+            const newTimeLabels = generateTimeLabels();
+            
+            const newSolution1Data = generateSolution1Data();
+            solution1Chart.data.labels = newTimeLabels;
+            solution1Chart.data.datasets[0].data = newSolution1Data.datasets[0].data;
+            solution1Chart.data.datasets[1].data = newSolution1Data.datasets[1].data;
+            solution1Chart.update();
+            
+            const newSolution2Data = generateSolution2Data();
+            solution2Chart.data.labels = newTimeLabels;
+            solution2Chart.data.datasets[0].data = newSolution2Data.datasets[0].data;
+            solution2Chart.data.datasets[1].data = newSolution2Data.datasets[1].data;
+            solution2Chart.update();
+        }
+
+        // 每30秒更新一次图表数据
+        setInterval(updateCharts, 30000);
+
+        // 二次恢复分析按钮点击事件
+        document.getElementById('recoveryAnalysisBtn').addEventListener('click', function() {
+            window.location.href = 'recovery-analysis.html';
+        });
+    </script>
+</body>
+</html>
