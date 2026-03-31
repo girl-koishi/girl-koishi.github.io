@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>发电厂温度控制系统</title>
+    <title>基于温控负荷的能源优化管理系统</title>
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
@@ -124,7 +124,7 @@
         <header class="bg-dark/80 backdrop-blur-md border-b border-accent/30 p-4 flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <div class="text-primary text-2xl font-bold text-shadow">
-                    <i class="fa fa-bolt mr-2"></i>电网调度系统
+                    <i class="fa fa-bolt mr-2"></i>能源优化管理系统
                 </div>
                 <div class="hidden md:flex space-x-6 ml-10">
                     <a href="#" class="text-accent hover:text-white transition-colors">首页</a>
@@ -460,7 +460,7 @@
 
         <!-- 底部状态栏 -->
         <footer class="bg-dark/80 backdrop-blur-md border-t border-accent/30 p-2 text-sm text-gray-400 flex justify-between items-center">
-            <div>© 2024 电网调度系统</div>
+            <div>© 基于温控负荷的能源优化管理系统</div>
             <div class="flex space-x-4">
                 <span>状态: <span class="text-green-400">正常</span></span>
                 <span>版本: v1.0.0</span>
@@ -544,9 +544,6 @@
     </div>
 
     <script>
-        // 修复节点点击事件的函数
-        function fixNodeClickEvents() {
-            console.log('开始修复节点点击事件...');
             
             // 重新绑定发电厂节点点击事件
             const powerPlantNode = document.getElementById('power-plant-node');
@@ -554,10 +551,8 @@
                 powerPlantNode.style.pointerEvents = 'all';
                 powerPlantNode.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('发电厂节点被点击，跳转到 power-plant.html');
                     window.location.href = 'power-plant.html';
                 };
-                console.log('发电厂节点点击事件已修复');
             }
 
             // 重新绑定万达商场节点点击事件
@@ -567,14 +562,13 @@
                 changchunNode.style.pointerEvents = 'all';
                 changchunNode.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('万达商场节点被点击，显示菜单');
+                    console.log('万达商场节点被点击');
                     const rect = changchunNode.getBoundingClientRect();
                     changchunMenu.style.left = `${rect.left + rect.width}px`;
                     changchunMenu.style.top = `${rect.top}px`;
                     changchunMenu.classList.toggle('hidden');
                     if (jilinMenu) jilinMenu.classList.add('hidden'); // 关闭其他菜单
                 };
-                console.log('万达商场节点点击事件已修复');
             }
 
             // 重新绑定幸福小区节点点击事件
@@ -591,7 +585,6 @@
                     jilinMenu.classList.toggle('hidden');
                     if (changchunMenu) changchunMenu.classList.add('hidden'); // 关闭其他菜单
                 };
-                console.log('幸福小区节点点击事件已修复');
             }
 
             // 确保菜单按钮点击事件正常
@@ -599,7 +592,7 @@
             if (aAreaTempBtn) {
                 aAreaTempBtn.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('万达商场温度分析按钮被点击，跳转到 a-area.html');
+                    console.log('万达商场温度分析a-area.html');
                     window.location.href = 'a-area.html';
                 };
             }
@@ -608,7 +601,7 @@
             if (aCoolingBtn) {
                 aCoolingBtn.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('万达商场制冷分析按钮被点击，跳转到 a-cooling-analysis.html');
+                    console.log('万达商场制冷分析a-cooling-analysis.html');
                     window.location.href = 'a-cooling-analysis.html';
                 };
             }
@@ -617,7 +610,7 @@
             if (bAreaTempBtn) {
                 bAreaTempBtn.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('幸福小区温度分析按钮被点击，跳转到 b-area.html');
+                    console.log('幸福小区温度分析b-area.html');
                     window.location.href = 'b-area.html';
                 };
             }
@@ -626,17 +619,16 @@
             if (bCoolingBtn) {
                 bCoolingBtn.onclick = function(event) {
                     event.stopPropagation();
-                    console.log('幸福小区制冷分析按钮被点击，跳转到 b-cooling-analysis.html');
+                    console.log('幸福小区制冷分析b-cooling-analysis.html');
                     window.location.href = 'b-cooling-analysis.html';
                 };
             }
 
-            console.log('所有节点点击事件修复完成！');
         }
 
         // 初始化粒子效果
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM加载完成，开始初始化...');
+            console.log('开始初始化');
             
             // 先修复节点点击事件
             fixNodeClickEvents();
