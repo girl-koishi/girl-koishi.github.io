@@ -550,7 +550,7 @@
             if (powerPlantNode) {
                 powerPlantNode.style.pointerEvents = 'all';
                 powerPlantNode.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     window.location.href = 'power-plant.html';
                 };
             }
@@ -561,7 +561,7 @@
             if (changchunNode && changchunMenu) {
                 changchunNode.style.pointerEvents = 'all';
                 changchunNode.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('万达商场节点被点击');
                     const rect = changchunNode.getBoundingClientRect();
                     changchunMenu.style.left = `${rect.left + rect.width}px`;
@@ -577,7 +577,7 @@
             if (jilinNode && jilinMenu) {
                 jilinNode.style.pointerEvents = 'all';
                 jilinNode.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('幸福小区节点被点击，显示菜单');
                     const rect = jilinNode.getBoundingClientRect();
                     jilinMenu.style.left = `${rect.left + rect.width}px`;
@@ -591,7 +591,7 @@
             const aAreaTempBtn = document.getElementById('a-area-temp-btn');
             if (aAreaTempBtn) {
                 aAreaTempBtn.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('万达商场温度分析a-area.html');
                     window.location.href = 'a-area.html';
                 };
@@ -600,7 +600,7 @@
             const aCoolingBtn = document.getElementById('a-cooling-btn');
             if (aCoolingBtn) {
                 aCoolingBtn.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('万达商场制冷分析a-cooling-analysis.html');
                     window.location.href = 'a-cooling-analysis.html';
                 };
@@ -609,7 +609,7 @@
             const bAreaTempBtn = document.getElementById('b-area-temp-btn');
             if (bAreaTempBtn) {
                 bAreaTempBtn.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('幸福小区温度分析b-area.html');
                     window.location.href = 'b-area.html';
                 };
@@ -618,7 +618,7 @@
             const bCoolingBtn = document.getElementById('b-cooling-btn');
             if (bCoolingBtn) {
                 bCoolingBtn.onclick = function(event) {
-                    event.stopPropagation();
+                    //event.stopPropagation();
                     console.log('幸福小区制冷分析b-cooling-analysis.html');
                     window.location.href = 'b-cooling-analysis.html';
                 };
