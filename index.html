@@ -4,8 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>基于温控负荷的能源优化管理系统</title>
+    <link rel="icon" href="data:,">
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script setup>
+        import { onmMounted, onUnmounted ref } from 'vue'
+        import { baseDate, lineDate } from './systemDate.js'
+        const reactiveData = ref(baseData)
+        let timer = null
+            const updateRealTimeData = () => {
+  // 1. 万达商场温度：基准值上下0.3℃小幅度波动
+  reactiveData.value.wanda.currentTemp = +(
+    reactiveData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3
+  ).toFixed(1)
+
+  // 2. 功率随温度同步变化：温度越高，功率越高，数据联动
+  const tempDiff = reactiveData.value.wanda.currentTemp - reactiveData.value.wanda.baseTemp
+  reactiveData.value.wanda.currentPower = Math.floor(
+    reactiveData.value.wanda.basePower * (1 + tempDiff * 0.05)
+  )
+
+  // 3. 电网负载率：70%-80%之间波动，模拟真实电网负载变化
+  reactiveData.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1)
+
+  // 4. 幸福小区数据同步更新，逻辑同上
+  reactiveData.value.community.currentTemp = +(
+    reactiveData.value.community.baseTemp + (Math.random() - 0.5) * 0.4
+  ).toFixed(1)
+}
+
+// 页面加载后，每3秒更新一次数据，模拟实时采集
+onMounted(() => {
+  updateRealTimeData() // 先执行一次
+  timer = setInterval(updateRealTimeData, 3000)
+})
+
+// 页面销毁时清除定时器，避免内存泄漏
+onUnmounted(() => {
+  clearInterval(timer)
+})
+       
     <!-- Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <!-- Chart.js -->
@@ -360,7 +398,7 @@
                 <div class="space-y-0.5 text-[10px]">
                     <div class="flex justify-between">
                         <span>总负载:</span>
-                        <span class="text-green-400">85%</span>
+                        <span class="text-green-400">{{ baseDate.grid.totalLoad }}%</span>
                     </div>
                     <div class="flex justify-between">
                         <span>运行设备:</span>
@@ -368,7 +406,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span>系统温度:</span>
-                        <span class="text-yellow-400">32°C</span>
+                        <span class="text-yellow-400">{{ baseDate.wanda.currentTemp }}°C</span>
                     </div>
                     <div class="flex justify-between">
                         <span>网络状态:</span>
