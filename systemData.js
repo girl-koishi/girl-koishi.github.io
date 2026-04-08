@@ -1,4 +1,5 @@
-export const baseData = {
+import { ref } from 'vue'
+export const baseData = ref({
   // 万达商场数据
   wanda: {
     baseTemp: 24, // 基准温度
@@ -22,7 +23,7 @@ export const baseData = {
     plan1Energy: 14280, // 方案一总能耗
     plan2Energy: 12420, // 方案二总能耗
   }
-}
+})
 
 // 曲线数据生成函数
 export const generateLineData = (baseValue, waveRange, length = 24) => {
