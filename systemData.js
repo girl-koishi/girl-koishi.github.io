@@ -26,7 +26,7 @@ export const baseData = ref({
 })
 
 // 曲线数据生成函数
-export const generateLineData = (baseValue, waveRange, length = 24) => {
+export const lineData = (baseValue, waveRange, length = 24) => {
   return Array.from({ length }, () => {
     // 生成基准值上下波动的动态数据，替代固定的曲线数组
     return +(baseValue + (Math.random() - 0.5) * waveRange).toFixed(2)
