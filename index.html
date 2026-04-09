@@ -7,6 +7,8 @@
     <link rel="icon" href="data:,">
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
+    </script>
     <script setup>
         import { onmMounted, onUnmounted ref } from 'vue'
         import { baseDate, lineDate } from './systemDate.js'
@@ -393,7 +395,7 @@ onUnmounted(() => {
             </div>
 
             <!-- 悬浮信息面板 - 保留原样式和位置 -->
-            <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40">
+            <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40" id="app">
                 <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
                 <div class="space-y-0.5 text-[10px]">
                     <div class="flex justify-between">
@@ -874,5 +876,26 @@ onUnmounted(() => {
             loadSettings();
         });
     </script>
+    <script>
+  // 1. 定义数据对象（和模板里的变量对应）
+  const baseDate = {
+    grid: {
+      totalLoad: 78 // 示例值，替换成你的真实数据
+    },
+    wanda: {
+      currentTemp: 22.5 // 示例值
+    }
+  };
+
+  // 2. 初始化 Vue 应用，挂载到页面根元素
+  const { createApp } = Vue;
+  createApp({
+    setup() {
+      return {
+        baseDate
+      };
+    }
+  }).mount('#app');
+</script>
 </body>
 </html>
