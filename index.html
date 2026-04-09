@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>基于温控负荷的能源优化管理系统</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
     <link rel="icon" href="data:,">
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
     </script>
     <script setup>
         import { onmMounted, onUnmounted ref } from 'vue'
@@ -151,7 +151,7 @@ onUnmounted(() => {
         }
     </style>
 </head>
-<body class="bg-dark-blue text-white min-h-screen overflow-hidden">
+<body class="bg-dark-blue text-white min-h-screen overflow-hidden" id="app">
     <!-- 粒子背景 -->
     <div id="particles-js" class="fixed inset-0 z-0"></div>
     
