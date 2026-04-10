@@ -150,6 +150,69 @@ onUnmounted(() => {
             }
         }
     </style>
+    <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  // 立即执行 + 保险起见加 load 事件
+  function initTailwind() {
+    return {
+      config(userConfig = {}) {
+        return {
+          content: [],
+          theme: {
+            extend: {
+              colors: {
+                primary: '#0ea5e9',
+                secondary: '#a78bfa',
+                accent: '#ec4899',
+                dark: '#1e2937',
+                'dark-blue': '#0f172a',
+                'light-blue': '#38bdf8',
+                'grid-color': 'rgb(56, 189, 248, 0.1)'
+              }
+            }
+          }
+        };
+      },
+      theme: {
+        extend: {}
+      }
+    };
+  }
+
+  window.addEventListener('load', () => {
+    tailwind.config = initTailwind().config({
+      // 你原来的 tailwind.config 内容全部粘贴在这里
+      theme: {
+        extend: {
+            colors: {
+                        primary: '#0ea5e9',
+                        secondary: '#0284c7',
+                        accent: '#38bdf8',
+                        dark: '#0f172a',
+                        'dark-blue': '#0f172a',
+                        'light-blue': '#38bdf8',
+                        'grid-color': 'rgba(56, 189, 248, 0.1)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+      }
+      }
+    });
+    console.log('✅ Tailwind 配置已成功初始化');
+  });
+</script>
 </head>
 <body class="bg-dark-blue text-white min-h-screen overflow-hidden" id="app">
     <!-- 粒子背景 -->
