@@ -9,8 +9,8 @@
     <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
     </script>
-    <script setup>
-        import { onmMounted, onUnmounted ref } from 'vue'
+    <script type = "module">
+        import { onmMounted, onUnmounted, ref } from 'vue'
         import { baseDate, lineDate } from './systemDate.js'
         const reactiveData = ref(baseData)
         let timer = null
@@ -188,7 +188,7 @@ onUnmounted(() => {
             <!-- 深蓝色背景填充 -->
             <div class="absolute inset-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]"></div>
             
-            <!-- 替换为局部地图背景（移除吉林省地图，改为局部区域背景） -->
+            <!-- 替换为局部地图背景 -->
             <div class="absolute inset-0 flex items-center justify-center">
                 <div class="max-w-[90vw] max-h-[85vh] w-full h-full bg-gradient-to-br from-[#111827] to-[#030712] rounded-lg border border-accent/20 flex items-center justify-center">
                     <div class="w-full h-full flex items-center justify-center">
