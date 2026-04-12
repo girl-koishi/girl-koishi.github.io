@@ -25,6 +25,7 @@
                         dark: '#0f172a',
                         'dark-blue': '#0f172a',
                         'grid-color': 'rgba(56, 189, 248, 0.1)',
+                    },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
@@ -89,7 +90,8 @@
         .map-contour path { opacity: 0.8; }
     </style>
 </head>
-<body class="bg-dark-blue text-white min-h-screen overflow-hidden" id="app">
+<body class="bg-dark-blue text-white min-h-screen overflow-hidden">
+    <div id="app" class="relative w-full h-full">
     <!-- 背景层 (增加了穿透属性) -->
     <div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>
     <div class="fixed inset-0 z-0 grid-bg opacity-50 pointer-events-none"></div>
@@ -320,7 +322,7 @@
             <!-- 悬浮信息面板 - 保留原样式和位置 -->
             <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40" id="appL">
                 <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
-                <div class="space-y-0.5 text-[10px]">
+                <div class="space-y-0.5 text-[10px]" v-if="baseData">
                     <div class="flex justify-between">
                         <span>总负载:</span>
                         <span class="text-green-400">{{ base.grid.totalLoad }}%</span>
