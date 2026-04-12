@@ -744,7 +744,7 @@ onUnmounted(() => {
             });
 
             // 更新当前时间
-            function updatadataTime() {
+            function updatedataTime() {
                 const now = new data();
                 const options = { 
                     year: 'numeric', 
@@ -758,8 +758,8 @@ onUnmounted(() => {
                 document.getElementById('current-data-time').textContent = 
                     now.toLocaleString('zh-CN', options).replace(/\//g, '-');
             }
-            updatadataTime();
-            setInterval(updatadataTime, 1000);
+            updatedataTime();
+            setInterval(updatedataTime, 1000);
 
             // 点击其他地方关闭菜单
             document.addEventListener('click', function(event) {
