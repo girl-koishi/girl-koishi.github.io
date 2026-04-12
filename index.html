@@ -141,10 +141,10 @@
 </head>
 <body class="bg-dark-blue text-white min-h-screen overflow-hidden" id="app">
     <!-- 粒子背景 -->
-    <div id="particles-js" class="fixed inset-0 z-0"></div>
+    <div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>
     
     <!-- 网格背景 -->
-    <div class="fixed inset-0 z-0 grid-bg opacity-50"></div>
+    <div class="fixed inset-0 z-0 grid-bg opacity-50 pointer-events-none"></div>
 
     <!-- 主容器 -->
     <div class="relative z-10 flex flex-col h-screen">
@@ -267,14 +267,14 @@
                     </g>
                     
                     <!-- 发电厂 -->
-                    <g class="city-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style=“cursor: pointer;">
+                    <g class="city-node" id="power-plant-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style=“cursor: pointer;">
                         <circle r="18" fill="#8b5cf6" />
                         <circle r="10" fill="#ffffff" />
                         <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
                     </g>
                     
                     <!-- 万达商场 -->
-                    <g class="city-node" @click="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
+                    <g class="city-node" id="changchun-node" @click="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
                         <circle r="15" fill="#0ea5e9" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
