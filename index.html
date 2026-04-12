@@ -445,9 +445,14 @@
         <button @click="goTo('b-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 flex items-center text-sm"><i class="fa fa-snowflake-o mr-2"></i>制冷分析</button>
     </div>
 </div>
+    <template>
+  <div id="current-date-time">
+    {{ currentTime }}
+  </div>
+    </template>
     <!-- 4. 核心逻辑 -->
     <script type="module">
-        import { createApp, onMounted, ref } from 'vue';
+        import { createApp, onMounted, ref, onBeforeUnmount } from 'vue';
         import { baseData } from './systemData.js'; // 确保文件名拼写正确
 
         createApp({
@@ -473,11 +478,22 @@
                     }
 
                     // 实时时间 (修正 Date)
-                    const updateTime = () => {
-                        const el = document.getElementById('current-date-time');
-                        if (el) el.textContent = new Date().toLocaleString();
-                    };
-                    setInterval(updateTime, 1000);
+                    const currentTime = ref(new Date().toLocaleString())
+
+            let timer = null
+
+              const updateTime = () => {
+                currentTime.value = new Date().toLocaleString()
+                  }
+
+                    onMounted(() => {
+                      updateTime()                    // 立即显示一次
+                      timer = setInterval(updateTime, 1000)
+                    })
+
+                    onBeforeUnmount(() => {
+                      if (timer) clearInterval(timer)
+                    })
 
                     // 点击空白关闭菜单
                     window.addEventListener('click', () => {
