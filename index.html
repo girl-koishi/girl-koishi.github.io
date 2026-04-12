@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>基于温控负荷的能源优化管理系统</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js">
-    <link rel="icon" href="data:,"></script>
-    <!-- Tailwind CSS v3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link rel="icon" href="data:,">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type = "module">
         import { onMounted, onUnmounted, ref } from 'vue'
@@ -14,12 +13,12 @@
         const reactiveData = ref(baseData)
         let timer = null
             const updateRealTimeData = () => {
-  // 1. 万达商场温度：基准值上下0.3℃小幅度波动
+  // 1. 万达温度：基准值上下0.3
   reactiveData.value.wanda.currentTemp = +(
     reactiveData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3
   ).toFixed(1)
 
-  // 2. 功率随温度同步变化：温度越高，功率越高，数据联动
+  // 2. 功率随温度同步变化：Tup Pup
   const tempDiff = reactiveData.value.wanda.currentTemp - reactiveData.value.wanda.baseTemp
   reactiveData.value.wanda.currentPower = Math.floor(
     reactiveData.value.wanda.basePower * (1 + tempDiff * 0.05)
@@ -303,99 +302,88 @@ onUnmounted(() => {
                         <path d="M480,430 L620,420" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                     </g>
                     
-                    <!-- 新增发电厂节点（左下角） -->
-                    <g class="city-node" id="power-plant-node" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
+                    <!-- 发电厂 -->
+                    <g class="city-node" @click="To('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
                         <circle r="18" fill="#8b5cf6" />
                         <circle r="10" fill="#ffffff" />
                         <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
                     </g>
                     
-                    <!-- 万达商场 - 移至中心位置 -->
-                    <g class="city-node" id="changchun-node" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
+                    <!-- 万达商场 -->
+                    <g class="city-node" @click="toggleTo('wanda', $event)" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
                         <circle r="15" fill="#0ea5e9" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
                     </g>
                     
-                    <!-- 幸福小区 - 移至右上角 -->
+                    <!-- 幸福小区 -->
                     <g class="city-node" id="jilin-node" transform="translate(650, 320)" style="pointer-events: all; cursor: pointer;">
                         <circle r="15" fill="#f97316" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
                     </g>
                     
-                    <!-- 凑数地点节点（分散分布） -->
-                    <!-- 市政府 -->
+                    <!-- npc -->
                     <g class="city-node" transform="translate(420, 240)">
                         <circle r="10" fill="#6366f1" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">市政府</text>
                     </g>
                     
-                    <!-- 百货大楼 -->
                     <g class="city-node" transform="translate(550, 270)">
                         <circle r="10" fill="#ec4899" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">百货大楼</text>
                     </g>
                     
-                    <!-- 中心广场 -->
                     <g class="city-node" transform="translate(450, 350)">
                         <circle r="10" fill="#f59e0b" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">中心广场</text>
                     </g>
-                    
-                    <!-- 金融中心写字楼 -->
+            
                     <g class="city-node" transform="translate(580, 380)">
                         <circle r="10" fill="#8b5cf6" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">金融中心</text>
                     </g>
                     
-                    <!-- 吉林一中 -->
                     <g class="city-node" transform="translate(380, 320)">
                         <circle r="10" fill="#10b981" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">吉林一中</text>
                     </g>
                     
-                    <!-- 北山公园 -->
                     <g class="city-node" transform="translate(320, 280)">
                         <circle r="10" fill="#22c55e" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">北山公园</text>
                     </g>
                     
-                    <!-- 人民医院 -->
                     <g class="city-node" transform="translate(620, 420)">
                         <circle r="10" fill="#ef4444" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">人民医院</text>
                     </g>
                     
-                    <!-- 会展中心 -->
                     <g class="city-node" transform="translate(350, 450)">
                         <circle r="10" fill="#0ea5e9" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">会展中心</text>
                     </g>
                     
-                    <!-- 体育馆 -->
                     <g class="city-node" transform="translate(680, 400)">
                         <circle r="10" fill="#f97316" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">体育馆</text>
                     </g>
                     
-                    <!-- 科技园 -->
                     <g class="city-node" transform="translate(480, 430)">
                         <circle r="10" fill="#8b5cf6" />
                         <circle r="5" fill="#ffffff" />
                         <text y="35" class="city-label" font-size="14">科技园</text>
                     </g>
                     
-                    <!-- 传统电力设施节点 -->
                     <!-- 调压站 -->
                     <g class="city-node" transform="translate(300, 380)">
                         <circle r="8" fill="#22c55e" />
@@ -902,25 +890,39 @@ onUnmounted(() => {
         });
     </script>
     <script>
-  // 1. 定义数据对象（和模板里的变量对应）
-  const basedata = {
-    grid: {
-      totalLoad: 78 // 示例值，替换成你的真实数据
-    },
-    wanda: {
-      currentTemp: 22.5 // 示例值
-    }
-  };
+  const { createApp, ref, onMounted } = Vue;
 
-  // 2. 初始化 Vue 应用，挂载到页面根元素
-  const { createApp } = Vue;
   createApp({
     setup() {
-      return {
-        basedata
+      // 模拟数据
+      const stats = ref({
+        totalLoad: 78,
+        temp: 22.5
+      });
+
+      // 跳转函数
+      const goTo = (url) => {
+        console.log("正在跳转到:", url);
+        window.location.href = url;
       };
+
+      // 菜单控制 (万达/幸福小区)
+      const toggleMenu = (type, event) => {
+        // 你可以在这里逻辑控制弹出菜单的显示
+        const menuId = type === 'wanda' ? 'changchun-menu' : 'jilin-menu';
+        const menu = document.getElementById(menuId);
+        if(menu) {
+            menu.classList.toggle('hidden');
+            menu.style.left = event.clientX + 'px';
+            menu.style.top = event.clientY + 'px';
+        }
+      };
+
+      return {
+        stats,
+        goTo,
+        toggleTo
+      }
     }
   }).mount('#app');
 </script>
-</body>
-</html>
