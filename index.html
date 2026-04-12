@@ -44,7 +44,6 @@ onUnmounted(() => {
   clearInterval(timer)
 })
        
-    <!-- Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
@@ -303,14 +302,14 @@ onUnmounted(() => {
                     </g>
                     
                     <!-- 发电厂 -->
-                    <g class="city-node" @click="To('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
+                    <g class="city-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
                         <circle r="18" fill="#8b5cf6" />
                         <circle r="10" fill="#ffffff" />
                         <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
                     </g>
                     
                     <!-- 万达商场 -->
-                    <g class="city-node" @click="toggleTo('wanda', $event)" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
+                    <g class="city-node" @click="toggleMenu('wanda', $event)" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
                         <circle r="15" fill="#0ea5e9" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
@@ -889,40 +888,68 @@ onUnmounted(() => {
             loadSettings();
         });
     </script>
-    <script>
-  const { createApp, ref, onMounted } = Vue;
+<script>
+const { createApp, ref, onMounted } = Vue;
 
-  createApp({
-    setup() {
-      // 模拟数据
-      const stats = ref({
-        totalLoad: 78,
-        temp: 22.5
-      });
+createApp({
+  setup() {
+    // 1. 初始化数据，防止 "reading grid" 报错
+    const baseDate = ref({
+      grid: { totalLoad: 0 },
+      wanda: { currentTemp: 0, baseTemp: 22, basePower: 500, currentPower: 0 },
+      community: { currentTemp: 0, baseTemp: 26 }
+    });
 
-      // 跳转函数
-      const goTo = (url) => {
-        console.log("正在跳转到:", url);
-        window.location.href = url;
-      };
+    // 2. 定义跳转函数
+    const goTo = (url) => {
+      console.log('正在跳转至:', url);
+      window.location.href = url;
+    };
 
-      // 菜单控制 (万达/幸福小区)
-      const toggleMenu = (type, event) => {
-        // 你可以在这里逻辑控制弹出菜单的显示
-        const menuId = type === 'wanda' ? 'changchun-menu' : 'jilin-menu';
-        const menu = document.getElementById(menuId);
-        if(menu) {
-            menu.classList.toggle('hidden');
-            menu.style.left = event.clientX + 'px';
-            menu.style.top = event.clientY + 'px';
-        }
-      };
-
-      return {
-        stats,
-        goTo,
-        toggleTo
+    // 3. 定义菜单切换逻辑 (解决 toggleTo 报错)
+    const toggleMenu = (menuId, event) => {
+      // 先隐藏所有菜单
+      document.getElementById('changchun-menu').classList.add('hidden');
+      document.getElementById('jilin-menu').classList.add('hidden');
+      
+      const menu = document.getElementById(menuId);
+      if (menu) {
+        menu.classList.remove('hidden');
+        menu.style.left = event.clientX + 'px';
+        menu.style.top = event.clientY + 'px';
       }
-    }
-  }).mount('#app');
+    };
+
+    // 4. 数据更新逻辑
+    const updateRealTimeData = () => {
+      baseDate.value.wanda.currentTemp = +(baseDate.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3).toFixed(1);
+      baseDate.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1);
+      // 其他联动逻辑...
+    };
+
+    onMounted(() => {
+      // 启动定时器
+      setInterval(updateRealTimeData, 3000);
+      updateRealTimeData();
+
+      // 在这里初始化粒子，确保 DOM 已加载
+      if (typeof particlesJS !== 'undefined') {
+        particlesJS('particles-js', {
+          particles: {
+            number: { value: 80 },
+            color: { value: '#38bdf8' },
+            line_linked: { enable: true, color: '#38bdf8' },
+            move: { enable: true, speed: 1 }
+          }
+        });
+      }
+    });
+
+    return {
+      baseDate,
+      goTo,
+      toggleMenu
+    };
+  }
+}).mount('#app');
 </script>
