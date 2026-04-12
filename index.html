@@ -13,7 +13,7 @@
         import { baseData, lineData } from './systemData.js'
         const reactiveData = ref(baseData)
         let timer = null
-            const updataRealTimeData = () => {
+            const updateRealTimeData = () => {
   // 1. 万达商场温度：基准值上下0.3℃小幅度波动
   reactiveData.value.wanda.currentTemp = +(
     reactiveData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3
