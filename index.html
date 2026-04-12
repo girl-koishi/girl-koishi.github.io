@@ -11,48 +11,10 @@
         }
     }
     </script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <link rel="icon" href="data:,">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type = "module">
-        const reactiveData = ref(baseData)
-        let timer = null
-            const updateRealTimeData = () => {
-  // 1. 万达温度：基准值上下0.3
-  reactiveData.value.wanda.currentTemp = +(
-    reactiveData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3
-  ).toFixed(1)
-
-  // 2. 功率随温度同步变化：Tup Pup
-  const tempDiff = reactiveData.value.wanda.currentTemp - reactiveData.value.wanda.baseTemp
-  reactiveData.value.wanda.currentPower = Math.floor(
-    reactiveData.value.wanda.basePower * (1 + tempDiff * 0.05)
-  )
-
-  // 3. 电网负载率：70%-80%之间波动，模拟真实电网负载变化
-  reactiveData.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1)
-
-  // 4. 幸福小区数据同步更新，逻辑同上
-  reactiveData.value.community.currentTemp = +(
-    reactiveData.value.community.baseTemp + (Math.random() - 0.5) * 0.4
-  ).toFixed(1)
-}
-
-// 每3秒更新一次数据，模拟实时采集
-onMounted(() => {
-  upRealTimeData() // 
-  timer = setInterval(upRealTimeData, 3000)
-})
-
-// 页面销毁时清除定时器
-onUnmounted(() => {
-  clearInterval(timer)
-})
-       
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -305,21 +267,21 @@ onUnmounted(() => {
                     </g>
                     
                     <!-- 发电厂 -->
-                    <g class="city-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
+                    <g class="city-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style=“cursor: pointer;">
                         <circle r="18" fill="#8b5cf6" />
                         <circle r="10" fill="#ffffff" />
                         <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
                     </g>
                     
                     <!-- 万达商场 -->
-                    <g class="city-node" @click="toggleMenu('wanda', $event)" transform="translate(500, 300)" style="pointer-events: all; cursor: pointer;">
+                    <g class="city-node" @click="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
                         <circle r="15" fill="#0ea5e9" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
                     </g>
                     
                     <!-- 幸福小区 -->
-                    <g class="city-node" id="jilin-node" transform="translate(650, 320)" style="pointer-events: all; cursor: pointer;">
+                    <g class="city-node" id="jilin-node" transform="translate(650, 320)" style="cursor: pointer;">
                         <circle r="15" fill="#f97316" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
@@ -892,67 +854,62 @@ onUnmounted(() => {
         });
     </script>
 <script type="module">
-    import { createApp, onMounted } from 'vue';
-    import { baseData } from './systemData.js';
-    
-createApp({
-  setup() {
-    // 1. 初始化数据，防止 "reading grid" 报错
-    const baseDate = ref({
-      grid: { totalLoad: 0 },
-      wanda: { currentTemp: 0, baseTemp: 22, basePower: 500, currentPower: 0 },
-      community: { currentTemp: 0, baseTemp: 26 }
-    });
+    // 1. 从 vue 导入 ref (修复 ref is not defined)
+    import { createApp, ref, onMounted } from 'vue';
+    // 2. 导入你的外部数据
+    import { baseData } from './systemDate.js';
 
-    // 2. 定义跳转函数
-    const goTo = (url) => {
-      console.log('正在跳转至:', url);
-      window.location.href = url;
-    };
+    createApp({
+        setup() {
+            // 定义跳转函数
+            const goTo = (url) => {
+                console.log('正在跳转:', url);
+                window.location.href = url;
+            };
 
-    const toggleMenu = (menuId, event) => {
-      // 先隐藏所有菜单
-      document.getElementById('changchun-menu').classList.add('hidden');
-      document.getElementById('jilin-menu').classList.add('hidden');
-      
-      const menu = document.getElementById(menuId);
-      if (menu) {
-        menu.classList.remove('hidden');
-        menu.style.left = event.clientX + 'px';
-        menu.style.top = event.clientY + 'px';
-      }
-    };
+            // 定义菜单切换
+            const toggleMenu = (menuId, event) => {
+                // 隐藏所有菜单
+                document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
+                
+                const menu = document.getElementById(menuId);
+                if (menu) {
+                    menu.classList.remove('hidden');
+                    // 这里的 event.clientX/Y 是原生坐标
+                    menu.style.left = event.clientX + 'px';
+                    menu.style.top = event.clientY + 'px';
+                }
+            };
 
-    // 4. 数据更新逻辑
-    const updateRealTimeData = () => {
-      baseDate.value.wanda.currentTemp = +(baseDate.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3).toFixed(1);
-      baseDate.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1);
-      // 其他联动逻辑...
-    };
+            // 数据每 3 秒模拟更新一次
+            const updateRealTimeData = () => {
+                if (baseData.value) {
+                    baseData.value.wanda.currentTemp = +(baseData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.4).toFixed(1);
+                    baseData.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1);
+                }
+            };
 
-    onMounted(() => {
-      // 启动定时器
-      setInterval(updateRealTimeData, 3000);
-      updateRealTimeData();
+            onMounted(() => {
+                // 3. 在这里执行粒子初始化 (修复 particles 报错)
+                if (window.particlesJS && document.getElementById('particles-js')) {
+                    particlesJS('particles-js', {
+                        particles: {
+                            number: { value: 60 },
+                            color: { value: '#38bdf8' },
+                            line_linked: { enable: true, opacity: 0.2 },
+                            move: { enable: true, speed: 1 }
+                        }
+                    });
+                }
+                
+                setInterval(updateRealTimeData, 3000);
+            });
 
-      // 在这里初始化粒子，确保 DOM 已加载
-      if (typeof particlesJS !== 'undefined') {
-        particlesJS('particles-js', {
-          particles: {
-            number: { value: 80 },
-            color: { value: '#38bdf8' },
-            line_linked: { enable: true, color: '#38bdf8' },
-            move: { enable: true, speed: 1 }
-          }
-        });
-      }
-    });
-
-    return {
-      baseDate,
-      goTo,
-      toggleMenu
-    };
-  }
-}).mount('#app');
+            return {
+                baseData, // 这里的名字必须和 HTML 里 {{ baseData... }} 一致
+                goTo,
+                toggleMenu
+            };
+        }
+    }).mount('#app');
 </script>
