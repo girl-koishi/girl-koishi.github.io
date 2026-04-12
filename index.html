@@ -221,14 +221,14 @@
                     </g>
                     
                     <!-- 万达商场 -->
-                    <g class="city-node" id="changchun-node" @click="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
+                    <g class="city-node" id="changchun-node" @click.stop="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
                         <circle r="15" fill="#0ea5e9" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
                     </g>
                     
                     <!-- 幸福小区 -->
-                    <g class="city-node" id="jilin-node" @click="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)" style="cursor: pointer;">
+                    <g class="city-node" id="jilin-node" @click.stop="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)" style="cursor: pointer;">
                         <circle r="15" fill="#f97316" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
