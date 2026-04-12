@@ -25,22 +25,67 @@
                         dark: '#0f172a',
                         'dark-blue': '#0f172a',
                         'grid-color': 'rgba(56, 189, 248, 0.1)',
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
                     }
                 }
             }
         }
     </script>
     <style>
+         .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            }
+            .border-glow {
+                box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+            }
         .grid-bg {
             background-size: 50px 50px;
             background-image: 
                 linear-gradient(to right, rgba(56, 189, 248, 0.1) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
         }
+         .node-pulse {
+                position: relative;
+            }
+            .node-pulse::before {
+                content: '';
+                position: absolute;
+                top: -20px;
+                left: -20px;
+                right: -20px;
+                bottom: -20px;
+                border-radius: 50%;
+                background: rgba(56, 189, 248, 0.3);
+                animation: pulse 2s infinite;
+                z-index: -1;
+            }
+
         .power-line { stroke-dasharray: 10; animation: dash 1s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -20; } }
-        .city-node { cursor: pointer; transition: all 0.1s ease; pointer-events: all; }
-        .city-label { font-size: 14px; font-weight: bold; fill: white; text-anchor: middle; text-shadow: 0 0 5px rgba(0,0,0,0.8); }
+        .city-node { cursor: pointer;
+                    transition: all 0.1s ease;
+                    pointer-events: all; }
+        .city-label {
+            font-size: 14px;
+            font-weight: bold;
+            fill: white;
+            text-anchor: middle;
+            text-shadow: 0 0 5px rgba(0,0,0,0.8); }
         .map-contour path { opacity: 0.8; }
     </style>
 </head>
@@ -52,30 +97,96 @@
     <div class="relative z-10 flex flex-col h-screen">
         <!-- 顶部导航 -->
         <header class="bg-dark/80 backdrop-blur-md border-b border-accent/30 p-4 flex justify-between items-center">
-            <div class="text-primary text-2xl font-bold"><i class="fa fa-bolt mr-2"></i>能源优化管理系统</div>
-            <div class="text-sm text-gray-400" id="current-date-time">加载中...</div>
-        </header>
+            <div class="flex items-center space-x-4">
+                <div class="text-primary text-2xl font-bold text-shadow">
+                    <i class="fa fa-bolt mr-2"></i>能源优化管理系统
+                </div>
+                <div class="hidden md:flex space-x-6 ml-10">
+                    <a href="#" class="text-accent hover:text-white transition-colors">首页</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">数据监控</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">故障分析</a>
+                    <a href="#" class="text-gray-400 hover:text-white transition-colors">系统设置</a>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="text-sm text-gray-400">
+                    <span id="current--time">2024-01-01 00:00:00</span>
+                </div>
+                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <i class="fa fa-user"></i>
+                </div>
+            </div>
+        </header>>
 
-        <main class="flex-1 relative overflow-hidden bg-[#0f172a]">
-            <!-- 地图容器 -->
+       <main class="flex-1 relative overflow-hidden bg-[#0f172a]">
+            <!-- 深蓝色背景填充 -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]"></div>
+            
+            <!-- 替换为局部地图背景 -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <div class="max-w-[90vw] max-h-[85vh] w-full h-full bg-gradient-to-br from-[#111827] to-[#030712] rounded-lg border border-accent/20 flex items-center justify-center">
+                    <div class="w-full h-full flex items-center justify-center">
+                        <!-- 局部地图网格背景 -->
+                        <div class="w-full h-full absolute bg-grid opacity-30"></div>
+                        <!-- 局部区域标题 -->
+                        <div class="absolute top-4 text-xl font-bold text-accent text-shadow">
+                            局部电网监控区域
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 扩大的局部电网覆盖层（添加地图轮廓并分散节点） -->
             <div class="absolute inset-0 flex items-center justify-center">
                 <svg width="1200" height="900" viewBox="0 0 1200 900" class="max-w-[95vw] max-h-[90vh] transform translate-x-20 scale-135">
-                    
-                    <!-- [完全保留] 最初代码的地图轮廓 -->
+                    <!-- 添加更自然不规则的地图轮廓 -->
                     <g class="map-contour">
-                        <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" fill="rgba(34, 197, 94, 0.15)" stroke="#22c55e" stroke-width="2" />
-                        <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 Z" fill="rgba(56, 189, 248, 0.08)" stroke="#38bdf8" stroke-width="1" />
+                        <!-- 主要区域轮廓 - 更复杂的地形形状 -->
+                        <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" 
+                              fill="rgba(34, 197, 94, 0.15)" 
+                              stroke="#22c55e" 
+                              stroke-width="2" 
+                              opacity="0.8" />
+                        <!-- 内部细节轮廓 - 模拟城市区域分布 -->
+                        <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 C280,250 280,250 280,250 Z" 
+                              fill="rgba(56, 189, 248, 0.08)" 
+                              stroke="#38bdf8" 
+                              stroke-width="1" 
+                              opacity="0.7" />
+                        <!-- 内部河流/道路轮廓 -->
+                        <path d="M300,270 C330,250 360,240 390,250 C420,260 450,280 480,300 C510,320 540,350 570,390 C600,430 590,460 570,480 C550,500 520,510 490,500 C460,490 430,480 400,490 C370,500 340,510 310,500 C280,490 260,470 250,440 C240,410 250,380 260,350 C270,320 280,290 300,270 Z" 
+                              fill="none" 
+                              stroke="#0ea5e9" 
+                              stroke-width="1.5" 
+                              opacity="0.5" 
+                              stroke-dasharray="5,3" />
+                        <!-- 额外的地形细节 -->
+                        <path d="M350,220 C370,200 400,190 430,200 C460,210 480,230 500,250 C520,270 530,300 520,320 C510,340 490,350 470,340 C450,330 430,310 410,320 C390,330 370,320 350,300 C330,280 320,250 330,230 C340,210 350,220 350,220 Z" 
+                              fill="rgba(34, 197, 94, 0.05)" 
+                              stroke="#22c55e" 
+                              stroke-width="1" 
+                              opacity="0.5" />
+                        <path d="M580,300 C600,280 630,270 660,280 C690,290 710,310 720,340 C730,370 720,400 700,420 C680,440 650,450 620,440 C590,430 570,410 560,380 C550,350 560,320 580,300 Z" 
+                              fill="rgba(34, 197, 94, 0.05)" 
+                              stroke="#22c55e" 
+                              stroke-width="1" 
+                              opacity="0.5" />
                     </g>
                     
-                    <!-- [完全保留] 最初代码的所有连线数据 -->
+                    <!-- 优化的电网连接线（适配新的地点分布） -->
                     <g class="power-lines">
+                        <!-- 发电厂与主要地点主线路 -->
                         <path d="M250,500 L500,300" stroke="#38bdf8" stroke-width="4" class="power-line" />
                         <path d="M250,500 L650,320" stroke="#38bdf8" stroke-width="4" class="power-line" />
                         <path d="M500,300 L650,320" stroke="#f97316" stroke-width="3" class="power-line" />
+                        
+                        <!-- 主要地点之间的连接线 -->
                         <path d="M500,300 L420,240" stroke="#f97316" stroke-width="3" class="power-line" />
                         <path d="M500,300 L550,270" stroke="#f97316" stroke-width="3" class="power-line" />
                         <path d="M650,320 L680,400" stroke="#f97316" stroke-width="3" class="power-line" />
                         <path d="M650,320 L580,380" stroke="#f97316" stroke-width="3" class="power-line" />
+                        
+                        <!-- 次要连接线 -->
                         <path d="M250,500 L350,450" stroke="#22c55e" stroke-width="2" class="power-line" />
                         <path d="M250,500 L300,380" stroke="#22c55e" stroke-width="2" class="power-line" />
                         <path d="M500,300 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
@@ -84,7 +195,8 @@
                         <path d="M650,320 L600,320" stroke="#22c55e" stroke-width="2" class="power-line" />
                         <path d="M500,300 L480,430" stroke="#22c55e" stroke-width="2" class="power-line" />
                         <path d="M650,320 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <!-- 密集网格线部分 -->
+                        
+                        <!-- 密集网格线 -->
                         <path d="M200,450 L500,300" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                         <path d="M300,550 L650,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                         <path d="M250,500 L450,350" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
@@ -95,38 +207,227 @@
                         <path d="M300,380 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                         <path d="M450,350 L520,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                         <path d="M580,380 L680,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M420,240 L550,270" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M320,280 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
+                        <path d="M480,430 L620,420" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
                     </g>
                     
-                    <!-- 交互节点 (绑定 Vue 函数) -->
-                    <g class="city-node" @click.stop="goTo('power-plant.html')" transform="translate(250, 500)">
-                        <circle r="18" fill="#8b5cf6" /><circle r="10" fill="#ffffff" />
-                        <text y="50" class="city-label">发电厂</text>
+                    <!-- 发电厂 -->
+                    <g class="city-node" id="power-plant-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
+                        <circle r="18" fill="#8b5cf6" />
+                        <circle r="10" fill="#ffffff" />
+                        <text y="50" class="city-label" font-size="16" font-weight="bold">发电厂</text>
                     </g>
-                    <g class="city-node" @click.stop="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)">
-                        <circle r="15" fill="#0ea5e9" /><circle r="8" fill="#ffffff" />
-                        <text y="45" class="city-label">万达商场</text>
+                    
+                    <!-- 万达商场 -->
+                    <g class="city-node" id="changchun-node" @click="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
+                        <circle r="15" fill="#0ea5e9" />
+                        <circle r="8" fill="#ffffff" />
+                        <text y="45" class="city-label" font-size="16" font-weight="bold">万达商场</text>
                     </g>
-                    <g class="city-node" @click.stop="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)">
-                        <circle r="15" fill="#f97316" /><circle r="8" fill="#ffffff" />
-                        <text y="45" class="city-label">幸福小区</text>
+                    
+                    <!-- 幸福小区 -->
+                    <g class="city-node" id="jilin-node" @click="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)" style="cursor: pointer;">
+                        <circle r="15" fill="#f97316" />
+                        <circle r="8" fill="#ffffff" />
+                        <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
                     </g>
-
-                    <!-- 静态装饰节点 (保持位置不变) -->
-                    <g transform="translate(420, 240)"><circle r="8" fill="#6366f1" /><text y="25" class="city-label" font-size="10">市政府</text></g>
-                    <g transform="translate(550, 270)"><circle r="8" fill="#ec4899" /><text y="25" class="city-label" font-size="10">百货大楼</text></g>
+                    
+                    <!-- npc -->
+                    <g class="city-node" transform="translate(420, 240)">
+                        <circle r="10" fill="#6366f1" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">市政府</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(550, 270)">
+                        <circle r="10" fill="#ec4899" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">百货大楼</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(450, 350)">
+                        <circle r="10" fill="#f59e0b" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">中心广场</text>
+                    </g>
+            
+                    <g class="city-node" transform="translate(580, 380)">
+                        <circle r="10" fill="#8b5cf6" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">金融中心</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(380, 320)">
+                        <circle r="10" fill="#10b981" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">吉林一中</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(320, 280)">
+                        <circle r="10" fill="#22c55e" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">北山公园</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(620, 420)">
+                        <circle r="10" fill="#ef4444" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">人民医院</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(350, 450)">
+                        <circle r="10" fill="#0ea5e9" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">会展中心</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(680, 400)">
+                        <circle r="10" fill="#f97316" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">体育馆</text>
+                    </g>
+                    
+                    <g class="city-node" transform="translate(480, 430)">
+                        <circle r="10" fill="#8b5cf6" />
+                        <circle r="5" fill="#ffffff" />
+                        <text y="35" class="city-label" font-size="14">科技园</text>
+                    </g>
+                    
+                    <!-- 调压站 -->
+                    <g class="city-node" transform="translate(300, 380)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">调压站</text>
+                    </g>
+                    
+                    <!-- 配电站 -->
+                    <g class="city-node" transform="translate(520, 400)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">配电站</text>
+                    </g>
+                    
+                    <!-- 变电站 -->
+                    <g class="city-node" transform="translate(600, 320)">
+                        <circle r="8" fill="#22c55e" />
+                        <circle r="4" fill="#ffffff" />
+                        <text y="30" class="city-label" font-size="12">变电站</text>
+                    </g>
                 </svg>
             </div>
 
-            <!-- 数据面板 -->
-            <div class="absolute top-4 left-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-48">
-                <h3 class="text-accent font-bold mb-2 text-sm">实时数据监控</h3>
+            <!-- 悬浮信息面板 - 保留原样式和位置 -->
+            <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40" id="appL">
+                <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
+                <div class="space-y-0.5 text-[10px]">
+                    <div class="flex justify-between">
+                        <span>总负载:</span>
+                        <span class="text-green-400">{{ base.grid.totalLoad }}%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>运行设备:</span>
+                        <span class="text-green-400">12/15</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>系统温度:</span>
+                        <span class="text-yellow-400">{{ base.wanda.currentTemp }}°C</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>网络状态:</span>
+                        <span class="text-green-400">正常</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧信息面板 - 保留原样式和位置 -->
+            <div class="absolute top-2 right-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-48">
+                <h3 class="text-accent font-bold mb-1 text-xs">实时数据</h3>
+                <div class="space-y-2">
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>万达商场温度</span>
+                            <span id="a-area-temp" class="text-primary">25°C</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="a-area-temp-bar" class="bg-primary h-1 rounded-full" style="width: 60%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>幸福小区温度</span>
+                            <span id="b-area-temp" class="text-orange-500">38°C</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="b-area-temp-bar" class="bg-orange-500 h-1 rounded-full" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] mb-0.5">
+                            <span>电网负载</span>
+                            <span id="power-load" class="text-yellow-400">78%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1">
+                            <div id="power-load-bar" class="bg-yellow-400 h-1 rounded-full" style="width: 78%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下方左侧信息框 -->
+            <div class="absolute bottom-4 left-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
+                <h3 class="text-accent font-bold mb-2 text-sm">电网调度</h3>
                 <div class="space-y-2 text-xs">
-                    <div class="flex justify-between"><span>电网总负载:</span><span class="text-green-400">{{ baseData.grid.totalLoad }}%</span></div>
-                    <div class="flex justify-between"><span>万达温度:</span><span class="text-yellow-400">{{ baseData.wanda.currentTemp }}°C</span></div>
-                    <div class="flex justify-between"><span>小区负载:</span><span class="text-orange-400">{{ baseData.community.loadRate }}%</span></div>
+                    <div class="flex justify-between">
+                        <span>当前频率:</span>
+                        <span class="text-green-400">50.02 Hz</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>电压水平:</span>
+                        <span class="text-green-400">220 kV</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>有功功率:</span>
+                        <span class="text-blue-400">1250 MW</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>无功功率:</span>
+                        <span class="text-blue-400">320 MVar</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 下方右侧信息框 -->
+            <div class="absolute bottom-4 right-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
+                <h3 class="text-accent font-bold mb-2 text-sm">告警信息</h3>
+                <div class="space-y-1 text-xs">
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>万达商场冷却系统正常</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                        <span>幸福小区温度偏高</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>电网连接稳定</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        <span>所有设备运行正常</span>
+                    </div>
                 </div>
             </div>
         </main>
+        <!-- 底部状态栏 -->
+        <footer class="bg-dark/80 backdrop-blur-md border-t border-accent/30 p-2 text-sm text-gray-400 flex justify-between items-center">
+            <div>© 基于温控负荷的能源优化管理系统</div>
+            <div class="flex space-x-4">
+                <span>状态: <span class="text-green-400">正常</span></span>
+                <span>版本: v1.0.0</span>
+            </div>
+        </footer>
     </div>
 
     <!-- 菜单 (万达) -->
