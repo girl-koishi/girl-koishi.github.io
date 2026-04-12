@@ -861,6 +861,12 @@
 
     createApp({
         setup() {
+            const displayData = typeof baseData !== 'undefined' ? baseData : ref({
+                grid: { totalLoad: 0 },
+                wanda: { currentTemp: 0 },
+                community: { currentTemp: 0 }
+            });
+
             // 定义跳转函数
             const goTo = (url) => {
                 console.log('正在跳转:', url);
@@ -872,12 +878,12 @@
                 // 隐藏所有菜单
                 document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
                 
-                const menu = document.getElementById(menuId);
-                if (menu) {
-                    menu.classList.remove('hidden');
-                    // 这里的 event.clientX/Y 是原生坐标
-                    menu.style.left = event.clientX + 'px';
-                    menu.style.top = event.clientY + 'px';
+            const menu = document.getElementById(menuId);
+            if (menu) {
+                menu.classList.remove('hidden');
+                // 这里的 event.clientX/Y 是原生坐标
+                menu.style.left = event.clientX + 'px';
+                menu.style.top = event.clientY + 'px';
                 }
             };
 
@@ -906,7 +912,7 @@
             });
 
             return {
-                baseData, // 这里的名字必须和 HTML 里 {{ baseData... }} 一致
+                baseData:displayData
                 goTo,
                 toggleMenu
             };
