@@ -824,7 +824,7 @@ onUnmounted(() => {
                 localStorage.setItem('controlSettings', JSON.stringify(settings));
                 
                 // 更新显示的数据
-                updataDisplayData();
+                updateDisplayData();
                 
                 settingsModal.classList.add('hidden');
                 
@@ -854,7 +854,7 @@ onUnmounted(() => {
             }
 
             // 更新显示的数据 - 保留原功能
-            function updataDisplayData() {
+            function updateDisplayData() {
                 const settings = JSON.parse(localStorage.getItem('controlSettings') || '{}');
                 
                 // 模拟温度数据
@@ -873,10 +873,10 @@ onUnmounted(() => {
             }
 
             // 初始化数据 - 保留原功能
-            updataDisplayData();
+            updateDisplayData();
             
             // 定期更新数据 - 保留原功能
-            setInterval(updataDisplayData, 5000);
+            setInterval(updateDisplayData, 5000);
 
             // 从 localStorage 加载设置 - 保留原功能
             function loadSettings() {
