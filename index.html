@@ -696,7 +696,7 @@
 
             // 更新当前时间
             function updatedataTime() {
-                const now = new date();
+                const now = new Date();
                 const options = { 
                     year: 'numeric', 
                     month: '2-digit', 
@@ -853,65 +853,72 @@
         });
     </script>
 <script type="module">
-    // 1. 从 vue 导入 ref (修复 ref is not defined)
     import { createApp, ref, onMounted } from 'vue';
-    // 2. 导入你的外部数据
-    import { baseData } from './systemData.js';
+    // 请确保文件名和路径百分之百正确
+    import { baseData } from './systemDate.js'; 
 
     createApp({
         setup() {
-            const displayData = typeof baseData !== 'undefined' ? baseData : ref({
-                grid: { totalLoad: 0 },
-                wanda: { currentTemp: 0 },
-                community: { currentTemp: 0 }
-            });
-
-            // 定义跳转函数
+            // 1. 跳转函数
             const goTo = (url) => {
-                console.log('正在跳转:', url);
+                console.log('执行跳转:', url);
                 window.location.href = url;
             };
 
-            // 定义菜单切换
+            // 2. 菜单切换函数
             const toggleMenu = (menuId, event) => {
+                console.log('切换菜单:', menuId);
                 // 隐藏所有菜单
-                document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
-                
-            const menu = document.getElementById(menuId);
-            if (menu) {
-                menu.classList.remove('hidden');
-                // 这里的 event.clientX/Y 是原生坐标
-                menu.style.left = event.clientX + 'px';
-                menu.style.top = event.clientY + 'px';
+                const menus = ['changchun-menu', 'jilin-menu'];
+                menus.forEach(id => {
+                    const m = document.getElementById(id);
+                    if (m) m.classList.add('hidden');
+                });
+
+                const menu = document.getElementById(menuId);
+                if (menu && event) {
+                    menu.classList.remove('hidden');
+                    menu.style.left = event.clientX + 'px';
+                    menu.style.top = event.clientY + 'px';
                 }
             };
 
-            // 数据每 3 秒模拟更新一次
-            const updateRealTimeData = () => {
-                if (baseData.value) {
-                    baseData.value.wanda.currentTemp = +(baseData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.4).toFixed(1);
-                    baseData.value.grid.totalLoad = +(70 + Math.random() * 10).toFixed(1);
+            // 3. 修正时间函数 (注意 Date 大写)
+            const updateDateTime = () => {
+                const dateTimeEl = document.getElementById('current-date-time');
+                if (dateTimeEl) {
+                    const now = new Date(); // 修复此处：必须是大写 D
+                    dateTimeEl.textContent = now.toLocaleString();
                 }
             };
 
             onMounted(() => {
-                // 3. 在这里执行粒子初始化 (修复 particles 报错)
-                if (window.particlesJS && document.getElementById('particles-js')) {
+                // 初始化粒子背景
+                if (window.particlesJS) {
                     particlesJS('particles-js', {
                         particles: {
                             number: { value: 60 },
                             color: { value: '#38bdf8' },
-                            line_linked: { enable: true, opacity: 0.2 },
-                            move: { enable: true, speed: 1 }
+                            move: { enable: true, speed: 1 },
+                            line_linked: { opacity: 0.2 }
                         }
                     });
                 }
+
+                // 启动定时器
+                setInterval(updateDateTime, 1000);
                 
-                setInterval(updateRealTimeData, 3000);
+                // 点击背景关闭菜单
+                window.addEventListener('click', (e) => {
+                    // 如果点击的不是节点也不是菜单，就隐藏菜单
+                    if (!e.target.closest('.city-node') && !e.target.closest('[id$="-menu"]')) {
+                        toggleMenu('none');
+                    }
+                });
             });
 
             return {
-                baseData:displayData
+                baseData,
                 goTo,
                 toggleMenu
             };
