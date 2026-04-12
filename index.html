@@ -280,7 +280,7 @@
                     </g>
                     
                     <!-- 幸福小区 -->
-                    <g class="city-node" id="jilin-node" transform="translate(650, 320)" style="cursor: pointer;">
+                    <g class="city-node" id="jilin-node" @click="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)" style="cursor: pointer;">
                         <circle r="15" fill="#f97316" />
                         <circle r="8" fill="#ffffff" />
                         <text y="45" class="city-label" font-size="16" font-weight="bold">幸福小区</text>
@@ -488,10 +488,10 @@
     <div id="changchun-menu" class="hidden fixed z-50 bg-dark/90 backdrop-blur-md border border-primary rounded-lg shadow-lg p-4 w-48">
         <h4 class="text-primary font-bold mb-2">万达商场</h4>
         <div class="space-y-2">
-            <button id="a-area-temp-btn" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
+            <button id="a-area-temp-btn" @click="goTo('a-area.html')" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
                 <i class="fa fa-thermometer-half mr-2"></i>温度分析
             </button>
-            <button id="a-cooling-btn" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
+            <button id="a-cooling-btn" @click="goTo('a-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 transition-colors flex items-center">
                 <i class="fa fa-snowflake-o mr-2"></i>制冷分析
             </button>
         </div>
@@ -501,10 +501,10 @@
     <div id="jilin-menu" class="hidden fixed z-50 bg-dark/90 backdrop-blur-md border border-orange-500 rounded-lg shadow-lg p-4 w-48">
         <h4 class="text-orange-500 font-bold mb-2">幸福小区</h4>
         <div class="space-y-2">
-            <button id="b-area-temp-btn" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center">
+            <button id="b-area-temp-btn" @click="goTo('b-area.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center">
                 <i class="fa fa-thermometer-half mr-2"></i>温度分析
             </button>
-            <button id="b-cooling-btn" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center">
+            <button id="b-cooling-btn" @click="goTo('b-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 transition-colors flex items-center" >
                 <i class="fa fa-snowflake-o mr-2"></i>制冷分析
             </button>
         </div>
