@@ -33,23 +33,20 @@
   ).toFixed(1)
 }
 
-// 页面加载后，每3秒更新一次数据，模拟实时采集
+// 每3秒更新一次数据，模拟实时采集
 onMounted(() => {
-  upRealTimeData() // 先执行一次
+  upRealTimeData() // 
   timer = setInterval(upRealTimeData, 3000)
 })
 
-// 页面销毁时清除定时器，避免内存泄漏
+// 页面销毁时清除定时器
 onUnmounted(() => {
   clearInterval(timer)
 })
        
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- 粒子效果库 -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <!-- 统一的 Tailwind 配置 -->
     <script>
         tailwind.config = {
             theme: {
