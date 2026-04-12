@@ -91,7 +91,7 @@
     </style>
 </head>
 <body class="bg-dark-blue text-white min-h-screen overflow-hidden">
-    <div id="app" class="relative w-full h-full">
+    <div id="app">
     <!-- 背景层 (增加了穿透属性) -->
     <div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>
     <div class="fixed inset-0 z-0 grid-bg opacity-50 pointer-events-none"></div>
@@ -111,7 +111,7 @@
                 </div>
             </div>
             <div class="flex items-center space-x-4">
-                <div class="text-sm text-gray-400">
+                <div class="text-sm text-gray-400"> 
                     <span id="current--time">2024-01-01 00:00:00</span>
                 </div>
                 <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
@@ -325,7 +325,7 @@
                 <div class="space-y-0.5 text-[10px]" v-if="baseData">
                     <div class="flex justify-between">
                         <span>总负载:</span>
-                        <span class="text-green-400">{{ base.grid.totalLoad }}%</span>
+                        <span class="text-green-400">{{ baseData.grid.totalLoad }}%</span>
                     </div>
                     <div class="flex justify-between">
                         <span>运行设备:</span>
@@ -333,7 +333,7 @@
                     </div>
                     <div class="flex justify-between">
                         <span>系统温度:</span>
-                        <span class="text-yellow-400">{{ base.wanda.currentTemp }}°C</span>
+                        <span class="text-yellow-400">{{ baseData.wanda.currentTemp }}°C</span>
                     </div>
                     <div class="flex justify-between">
                         <span>网络状态:</span>
