@@ -10,10 +10,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script type = "module">
         import { onMounted, onUnmounted, ref } from 'vue'
-        import { baseDate, lineDate } from './systemDate.js'
+        import { baseData, lineData } from './systemData.js'
         const reactiveData = ref(baseData)
         let timer = null
-            const updateRealTimeData = () => {
+            const updataRealTimeData = () => {
   // 1. 万达商场温度：基准值上下0.3℃小幅度波动
   reactiveData.value.wanda.currentTemp = +(
     reactiveData.value.wanda.baseTemp + (Math.random() - 0.5) * 0.3
@@ -36,8 +36,8 @@
 
 // 页面加载后，每3秒更新一次数据，模拟实时采集
 onMounted(() => {
-  updateRealTimeData() // 先执行一次
-  timer = setInterval(updateRealTimeData, 3000)
+  upRealTimeData() // 先执行一次
+  timer = setInterval(upRealTimeData, 3000)
 })
 
 // 页面销毁时清除定时器，避免内存泄漏
@@ -200,7 +200,7 @@ onUnmounted(() => {
             </div>
             <div class="flex items-center space-x-4">
                 <div class="text-sm text-gray-400">
-                    <span id="current-date-time">2024-01-01 00:00:00</span>
+                    <span id="current--time">2024-01-01 00:00:00</span>
                 </div>
                 <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                     <i class="fa fa-user"></i>
@@ -425,7 +425,7 @@ onUnmounted(() => {
                 <div class="space-y-0.5 text-[10px]">
                     <div class="flex justify-between">
                         <span>总负载:</span>
-                        <span class="text-green-400">{{ baseDate.grid.totalLoad }}%</span>
+                        <span class="text-green-400">{{ base.grid.totalLoad }}%</span>
                     </div>
                     <div class="flex justify-between">
                         <span>运行设备:</span>
@@ -433,7 +433,7 @@ onUnmounted(() => {
                     </div>
                     <div class="flex justify-between">
                         <span>系统温度:</span>
-                        <span class="text-yellow-400">{{ baseDate.wanda.currentTemp }}°C</span>
+                        <span class="text-yellow-400">{{ base.wanda.currentTemp }}°C</span>
                     </div>
                     <div class="flex justify-between">
                         <span>网络状态:</span>
@@ -744,8 +744,8 @@ onUnmounted(() => {
             });
 
             // 更新当前时间
-            function updateDateTime() {
-                const now = new Date();
+            function updatadataTime() {
+                const now = new data();
                 const options = { 
                     year: 'numeric', 
                     month: '2-digit', 
@@ -755,11 +755,11 @@ onUnmounted(() => {
                     second: '2-digit',
                     hour12: false
                 };
-                document.getElementById('current-date-time').textContent = 
+                document.getElementById('current-data-time').textContent = 
                     now.toLocaleString('zh-CN', options).replace(/\//g, '-');
             }
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
+            updatadataTime();
+            setInterval(updatadataTime, 1000);
 
             // 点击其他地方关闭菜单
             document.addEventListener('click', function(event) {
@@ -824,7 +824,7 @@ onUnmounted(() => {
                 localStorage.setItem('controlSettings', JSON.stringify(settings));
                 
                 // 更新显示的数据
-                updateDisplayData();
+                updataDisplayData();
                 
                 settingsModal.classList.add('hidden');
                 
@@ -854,7 +854,7 @@ onUnmounted(() => {
             }
 
             // 更新显示的数据 - 保留原功能
-            function updateDisplayData() {
+            function updataDisplayData() {
                 const settings = JSON.parse(localStorage.getItem('controlSettings') || '{}');
                 
                 // 模拟温度数据
@@ -873,10 +873,10 @@ onUnmounted(() => {
             }
 
             // 初始化数据 - 保留原功能
-            updateDisplayData();
+            updataDisplayData();
             
             // 定期更新数据 - 保留原功能
-            setInterval(updateDisplayData, 5000);
+            setInterval(updataDisplayData, 5000);
 
             // 从 localStorage 加载设置 - 保留原功能
             function loadSettings() {
@@ -903,7 +903,7 @@ onUnmounted(() => {
     </script>
     <script>
   // 1. 定义数据对象（和模板里的变量对应）
-  const baseDate = {
+  const basedata = {
     grid: {
       totalLoad: 78 // 示例值，替换成你的真实数据
     },
@@ -917,7 +917,7 @@ onUnmounted(() => {
   createApp({
     setup() {
       return {
-        baseDate
+        basedata
       };
     }
   }).mount('#app');
