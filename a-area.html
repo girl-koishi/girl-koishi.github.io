@@ -90,14 +90,14 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- 万达商场温度监控（支持8+点） -->
+            <!-- 万达商场温度监控 -->
             <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-secondary">万达商场温度监控</h3>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-light-text/70 mr-2">目标温度:</span>
                         <span id="displayTargetTempA" class="text-lg font-bold text-accent">{{baseData.wanda.currentTemp}}°C</span>
-                        <!-- 新增：目标温度输入框 -->
+                        <!-- 目标温度输入框 -->
                         <input type="number" id="targetTempInputA" placeholder="输入温度" step="0.1" min="20" max="30"
                                class="bg-dark-light border border-primary/50 rounded px-3 py-1 text-light-text w-20 text-center">
                         <button id="setTargetTempBtnA" 
@@ -186,24 +186,23 @@
         updateCurrentTime();
         setInterval(updateCurrentTime, 60000);
 
-        // ========== 万达商场核心数据 ==========
+        // 万达商场核心数据
         let tempPointsA = [
             { time: '14:00', temp: 24.5 },
             { time: '14:10', temp: 24.7 },
             { time: '14:20', temp: 24.6 }
         ];
-        let targetTempA = 24.0; // 改为let，支持修改
+        let targetTempA = 24.0; 
         document.getElementById('displayTargetTempA').textContent = `${targetTempA.toFixed(1)}°C`;
-        // 初始化输入框默认值
         document.getElementById('targetTempInputA').value = targetTempA;
         document.getElementById('pointCountA').textContent = tempPointsA.length;
 
-        // 排序并生成温度数据
+        // 生成温度
         function getTempDataA() {
             tempPointsA.sort((a, b) => a.time.split(':').join('') - b.time.split(':').join(''));
             return {
                 labels: tempPointsA.map(p => p.time),
-                target: tempPointsA.map(() => targetTempA), // 使用最新的targetTempA
+                target: tempPointsA.map(() => targetTempA), 
                 actual: tempPointsA.map(p => p.temp)
             };
         }
@@ -214,7 +213,7 @@
                 const base = 1.6; // 基准功率1.6万kW
                 const tempDiff = tempPointsA[i].temp - targetTempA; // 温度差值
                 
-                // 温度差与功率的强正相关关系：温度越高，功率显著增大
+                // 温度差与功率的强正相关关系：Tup Pup
                 // 系数0.15控制功率随温度变化的敏感度（大幅提高）
                 const tempRelatedPower = base + (tempDiff * 0.15);
                 
@@ -228,7 +227,7 @@
             });
         }
 
-        // ========== 初始化万达商场温度图表 ==========
+        // 初始化万达商场温度图表
         const tempCtxA = document.getElementById('temperatureChartA').getContext('2d');
         const tempDataA = getTempDataA();
         const tempChartA = new Chart(tempCtxA, {
@@ -284,7 +283,7 @@
             }
         });
 
-        // ========== 初始化万达商场功率图表 ==========
+        // 初始化万达商场功率图表
         const powerCtxA = document.getElementById('powerChartA').getContext('2d');
         const powerChartA = new Chart(powerCtxA, {
             type: 'line',
@@ -337,7 +336,7 @@
             }
         });
 
-        // ========== 新增：万达商场设置目标温度 ==========
+        // 新增：万达商场设置目标温度
         document.getElementById('setTargetTempBtnA').addEventListener('click', function() {
             const newTemp = parseFloat(document.getElementById('targetTempInputA').value);
             
@@ -364,7 +363,7 @@
             document.getElementById('targetTempInputA').value = '';
         });
 
-        // ========== 自动获取芒市天气数据（下午4点到5点） ==========
+        // 自动获取芒市天气数据（下午4点到5点）
         async function getMangshiWeather() {
             const mangshiLat = 24.4333; // 芒市纬度
             const mangshiLon = 98.5000; // 芒市经度
@@ -476,7 +475,7 @@
         // 绑定自动获取天气按钮事件
         document.getElementById('getMangshiWeatherBtn').addEventListener('click', getMangshiWeather);
 
-        // ========== 万达商场添加温度点 ==========
+        // 万达商场添加温度点
         document.getElementById('addTempPointBtnA').addEventListener('click', function() {
             const time = document.getElementById('tempTimeInputA').value.trim();
             const temp = parseFloat(document.getElementById('tempValueInputA').value);
@@ -506,7 +505,7 @@
             document.getElementById('tempValueInputA').value = '';
         });
 
-        // ========== 万达商场重置图表 ==========
+        // 万达商场重置图表
         document.getElementById('resetTempChartBtnA').addEventListener('click', function() {
             tempPointsA = [
                 { time: '14:00', temp: 24.5 },
