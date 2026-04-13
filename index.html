@@ -111,7 +111,7 @@
             </div>
             <div class="flex items-center space-x-4">
                 <div class="text-sm text-gray-400"> 
-                    <span id="current--time">2024-01-01 00:00:00</span>
+                    <span id="current--time">{{ currentTime }}</span>
                 </div>
                 <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                     <i class="fa fa-user"></i>
@@ -445,11 +445,6 @@
         <button @click="goTo('b-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 flex items-center text-sm"><i class="fa fa-snowflake-o mr-2"></i>制冷分析</button>
     </div>
 </div>
-    <template>
-  <div id="current-date-time">
-    {{ currentTime }}
-  </div>
-    </template>
     <!-- 4. 核心逻辑 -->
     <script type="module">
         import { createApp, onMounted, ref, onBeforeUnmount } from 'vue';
@@ -468,6 +463,30 @@
                         menu.style.top = `${event.clientY}px`;
                     }
                 };
+                // 实时时间 (修正 Date)
+                    const currentTime = ref(new Date().toLocaleString())
+
+            let timer = null
+
+              const updateTime = () => {
+                 currentTime.value = new Date().toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            };
+
+                onMounted(() => {
+                    updateTime()                    // 立即显示一次
+                    timer = setInterval(updateTime, 1000)
+                 })
+
+                onBeforeUnmount(() => {
+                    if (timer) clearInterval(timer)
+                 })
 
                 onMounted(() => {
                     // 粒子背景
@@ -477,31 +496,13 @@
                         });
                     }
 
-                    // 实时时间 (修正 Date)
-                    const currentTime = ref(new Date().toLocaleString())
-
-            let timer = null
-
-              const updateTime = () => {
-                currentTime.value = new Date().toLocaleString()
-                  }
-
-                    onMounted(() => {
-                      updateTime()                    // 立即显示一次
-                      timer = setInterval(updateTime, 1000)
-                    })
-
-                    onBeforeUnmount(() => {
-                      if (timer) clearInterval(timer)
-                    })
-
                     // 点击空白关闭菜单
                     window.addEventListener('click', () => {
                         document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
                     });
                 });
 
-                return { baseData, goTo, toggleMenu };
+                return { baseData, goTo, toggleMenu, currentTime };
             }
         }).mount('#app');
     </script>
