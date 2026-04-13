@@ -174,7 +174,7 @@
                               opacity="0.5" />
                     </g>
                     
-                    <!-- 优化的电网连接线（适配新的地点分布） -->
+                    <!-- 电网连接线 -->
                     <g class="power-lines">
                         <!-- 发电厂与主要地点主线路 -->
                         <path d="M250,500 L500,300" stroke="#38bdf8" stroke-width="4" class="power-line" />
@@ -318,7 +318,7 @@
                 </svg>
             </div>
 
-            <!-- 悬浮信息面板 - 保留原样式和位置 -->
+            <!-- 左上面板 -->
             <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-40" id="appL">
                 <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
                 <div class="space-y-0.5 text-[10px]" v-if="baseData">
@@ -341,7 +341,7 @@
                 </div>
             </div>
 
-            <!-- 右侧信息面板 - 保留原样式和位置 -->
+            <!-- 右上面板 -->
             <div class="absolute top-2 right-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-48">
                 <h3 class="text-accent font-bold mb-1 text-xs">实时数据</h3>
                 <div class="space-y-2">
@@ -375,7 +375,7 @@
                 </div>
             </div>
 
-            <!-- 下方左侧信息框 -->
+            <!-- 左下面板 -->
             <div class="absolute bottom-4 left-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
                 <h3 class="text-accent font-bold mb-2 text-sm">电网调度</h3>
                 <div class="space-y-2 text-xs">
@@ -398,7 +398,7 @@
                 </div>
             </div>
 
-            <!-- 下方右侧信息框 -->
+            <!-- 右下面板 -->
             <div class="absolute bottom-4 right-4 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-3 w-64">
                 <h3 class="text-accent font-bold mb-2 text-sm">告警信息</h3>
                 <div class="space-y-1 text-xs">
@@ -445,10 +445,10 @@
         <button @click="goTo('b-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 flex items-center text-sm"><i class="fa fa-snowflake-o mr-2"></i>制冷分析</button>
     </div>
 </div>
-    <!-- 4. 核心逻辑 -->
+    <!-- vue定义 -->
     <script type="module">
         import { createApp, onMounted, ref, onBeforeUnmount } from 'vue';
-        import { baseData } from './systemData.js'; // 确保文件名拼写正确
+        import { baseData } from './systemData.js';
 
         createApp({
             setup() {
