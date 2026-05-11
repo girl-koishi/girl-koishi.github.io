@@ -280,7 +280,8 @@
             </div>
 
             <!-- 左上面板 -->
-            <div class="absolute top-2 left-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-[160px] transform-none" id="appL">
+        <div class="relative w-full h-screen">
+            <div class="absolute top-[10px] left-[10px] bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-[200px] h-[120px] transform-none" id="appL">
                 <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
                 <div class="space-y-0.5 text-[10px]" v-if="baseData">
                     <div class="flex justify-between">
@@ -301,6 +302,7 @@
                     </div>
                 </div>
             </div>
+         </div>
 
             <!-- 右上面板 -->
             <div class="absolute top-2 right-2 bg-dark/80 backdrop-blur-md border border-accent/30 rounded-lg p-2 w-48">
