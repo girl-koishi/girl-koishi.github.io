@@ -47,56 +47,23 @@
          .content-auto {
                 content-visibility: auto;
             }
-            .text-shadow {
-                text-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
-            }
-            .border-glow {
-                box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
-            }
         .grid-bg {
             background-size: 50px 50px;
             background-image: 
                 linear-gradient(to right, rgba(56, 189, 248, 0.1) 1px, transparent 1px),
                 linear-gradient(to bottom, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
         }
-         .node-pulse {
-                position: relative;
-            }
-            .node-pulse::before {
-                content: '';
-                position: absolute;
-                top: -20px;
-                left: -20px;
-                right: -20px;
-                bottom: -20px;
-                border-radius: 50%;
-                background: rgba(56, 189, 248, 0.3);
-                animation: pulse 2s infinite;
-                z-index: -1;
-            }
-
         .power-line { stroke-dasharray: 10; animation: dash 1s linear infinite; }
         @keyframes dash { to { stroke-dashoffset: -20; } }
-        .city-node { cursor: pointer;
-                    transition: all 0.1s ease;
-                    pointer-events: all; }
-        .city-label {
-            font-size: 14px;
-            font-weight: bold;
-            fill: white;
-            text-anchor: middle;
-            text-shadow: 0 0 5px rgba(0,0,0,0.8); }
-        .map-contour path { opacity: 0.8; }
     </style>
 </head>
 <body class="bg-dark-blue text-white min-h-screen overflow-hidden">
     <div id="app">
-    <!-- 背景层 (增加了穿透属性) -->
+    <!-- 背景层 -->
     <div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>
     <div class="fixed inset-0 z-0 grid-bg opacity-50 pointer-events-none"></div>
 
     <div class="relative z-10 flex flex-col h-screen">
-        <!-- 顶部导航 -->
         <header class="bg-dark/80 backdrop-blur-md border-b border-accent/30 p-4 flex justify-between items-center">
             <div class="flex items-center space-x-4">
                 <div class="text-primary text-2xl font-bold text-shadow">
@@ -137,31 +104,28 @@
                 </div>
             </div>
             
-            <!-- 扩大的局部电网覆盖层（添加地图轮廓并分散节点） -->
+            <!-- 扩大的局部电网覆盖层 -->
             <div class="absolute inset-0 flex items-center justify-center">
                 <svg width="1200" height="900" viewBox="0 0 1200 900" class="max-w-[95vw] max-h-[90vh] transform translate-x-20 scale-135">
-                    <!-- 添加更自然不规则的地图轮廓 -->
                     <g class="map-contour">
-                        <!-- 主要区域轮廓 - 更复杂的地形形状 -->
+                        <!-- 主要区域轮廓 -->
                         <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" 
                               fill="rgba(34, 197, 94, 0.15)" 
                               stroke="#22c55e" 
                               stroke-width="2" 
                               opacity="0.8" />
-                        <!-- 内部细节轮廓 - 模拟城市区域分布 -->
+                        <!-- 内部细节轮廓 -->
                         <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 C280,250 280,250 280,250 Z" 
                               fill="rgba(56, 189, 248, 0.08)" 
                               stroke="#38bdf8" 
                               stroke-width="1" 
                               opacity="0.7" />
-                        <!-- 内部河流/道路轮廓 -->
                         <path d="M300,270 C330,250 360,240 390,250 C420,260 450,280 480,300 C510,320 540,350 570,390 C600,430 590,460 570,480 C550,500 520,510 490,500 C460,490 430,480 400,490 C370,500 340,510 310,500 C280,490 260,470 250,440 C240,410 250,380 260,350 C270,320 280,290 300,270 Z" 
                               fill="none" 
                               stroke="#0ea5e9" 
                               stroke-width="1.5" 
                               opacity="0.5" 
                               stroke-dasharray="5,3" />
-                        <!-- 额外的地形细节 -->
                         <path d="M350,220 C370,200 400,190 430,200 C460,210 480,230 500,250 C520,270 530,300 520,320 C510,340 490,350 470,340 C450,330 430,310 410,320 C390,330 370,320 350,300 C330,280 320,250 330,230 C340,210 350,220 350,220 Z" 
                               fill="rgba(34, 197, 94, 0.05)" 
                               stroke="#22c55e" 
