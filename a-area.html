@@ -4,13 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>万达商场监控中心 - 发电厂温度控制系统</title>
-    <!-- Tailwind CSS v3 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- Tailwind 配置 -->
     <script>
         tailwind.config = {
             theme: {
@@ -60,7 +56,7 @@
     </style>
 </head>
 <body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部区域 -->
+    <!-- 顶部 -->
     <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center mb-4 md:mb-0">
@@ -82,7 +78,6 @@
         </div>
     </header>
 
-    <!-- 主要内容区域 -->
     <main class="flex-grow container mx-auto p-6 bg-grid">
         <div class="mb-8">
             <h2 class="text-2xl font-bold text-secondary mb-2">万达商场监控中心</h2>
@@ -90,14 +85,13 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- 万达商场温度监控 -->
             <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-secondary">万达商场温度监控</h3>
                     <div class="flex items-center space-x-2">
                         <span class="text-sm text-light-text/70 mr-2">目标温度:</span>
                         <span id="displayTargetTempA" class="text-lg font-bold text-accent">{{baseData.wanda.currentTemp}}°C</span>
-                        <!-- 目标温度输入框 -->
+                        
                         <input type="number" id="targetTempInputA" placeholder="输入温度" step="0.1" min="20" max="30"
                                class="bg-dark-light border border-primary/50 rounded px-3 py-1 text-light-text w-20 text-center">
                         <button id="setTargetTempBtnA" 
@@ -107,18 +101,15 @@
                     </div>
                 </div>
                 
-                <!-- 温度点控制面板 -->
                 <div class="mb-6 bg-dark p-4 rounded-lg border border-primary/20">
                     <h4 class="text-lg font-semibold mb-3 text-secondary">温度数据管理</h4>
                     
-                    <!-- 自动获取天气数据按钮 -->
                     <div class="mb-4">
                         <button id="getMangshiWeatherBtn" 
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                            <i class="fa fa-cloud-download mr-2"></i> 自动获取芒市实时天气
+                            <i class="fa fa-cloud-download mr-2"></i> 自动获取实时天气
                         </button>
                     
-                    <!-- 手动设置温度点 -->
                     <div class="flex flex-wrap gap-3 items-center mb-3">
                         <label class="text-light-text/90">时间 (HH:MM):</label>
                         <input type="text" id="tempTimeInputA" placeholder="例如: 14:30" 
@@ -151,7 +142,6 @@
                 </div>
             </div>
 
-            <!-- 万达商场制冷功率（同步温度点） -->
             <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xl font-bold text-secondary">万达商场制冷功率</h3>
@@ -167,16 +157,14 @@
         </div>
     </main>
 
-    <!-- 底部区域 -->
+    <!-- 底部 -->
     <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
         <div class="container mx-auto text-center text-sm text-light-text/70">
             <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script>
-        // 更新当前时间
         function updateCurrentTime() {
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -186,7 +174,6 @@
         updateCurrentTime();
         setInterval(updateCurrentTime, 60000);
 
-        // 万达商场核心数据
         let tempPointsA = [
             { time: '14:00', temp: 24.5 },
             { time: '14:10', temp: 24.7 },
@@ -197,7 +184,6 @@
         document.getElementById('targetTempInputA').value = targetTempA;
         document.getElementById('pointCountA').textContent = tempPointsA.length;
 
-        // 生成温度
         function getTempDataA() {
             tempPointsA.sort((a, b) => a.time.split(':').join('') - b.time.split(':').join(''));
             return {
@@ -207,27 +193,18 @@
             };
         }
 
-        // 生成万达商场功率数据（与温度强正相关，单位：万kW）
         function getPowerDataA(labels) {
             return labels.map((_, i) => {
-                const base = 1.6; // 基准功率1.6万kW
-                const tempDiff = tempPointsA[i].temp - targetTempA; // 温度差值
-                
-                // 温度差与功率的强正相关关系：Tup Pup
-                // 系数0.15控制功率随温度变化的敏感度（大幅提高）
+                const base = 1.6;
+                const tempDiff = tempPointsA[i].temp - targetTempA;
                 const tempRelatedPower = base + (tempDiff * 0.15);
-                
-                // 添加小波动使曲线更自然
                 const fluctuation = (Math.random() - 0.5) * 0.02;
-                
-                // 确保功率在合理范围内（扩大范围以适应更大的变化）
                 const finalPower = Math.max(1.4, Math.min(1.8, tempRelatedPower + fluctuation));
                 
                 return finalPower.toFixed(2);
             });
         }
 
-        // 初始化万达商场温度图表
         const tempCtxA = document.getElementById('temperatureChartA').getContext('2d');
         const tempDataA = getTempDataA();
         const tempChartA = new Chart(tempCtxA, {
@@ -283,7 +260,6 @@
             }
         });
 
-        // 初始化万达商场功率图表
         const powerCtxA = document.getElementById('powerChartA').getContext('2d');
         const powerChartA = new Chart(powerCtxA, {
             type: 'line',
@@ -314,10 +290,10 @@
                         ticks: { 
                             color: 'rgba(226, 232, 240, 0.7)', 
                             callback: v => v + ' 万kW',
-                            stepSize: 0.1 // 分度值0.1万kW
+                            stepSize: 0.1
                         },
-                        suggestedMin: 1.5, // 适配1.6万kW基准的范围
-                        suggestedMax: 1.7  // 上下留0.1万kW余量
+                        suggestedMin: 1.5,
+                        suggestedMax: 1.7
                     }
                 },
                 plugins: {
@@ -336,37 +312,28 @@
             }
         });
 
-        // 新增：万达商场设置目标温度
         document.getElementById('setTargetTempBtnA').addEventListener('click', function() {
             const newTemp = parseFloat(document.getElementById('targetTempInputA').value);
             
-            // 验证输入
             if (isNaN(newTemp) || newTemp < 20 || newTemp > 30) {
                 alert('请输入20-30之间的有效温度值');
                 return;
             }
             
-            // 更新目标温度
             targetTempA = newTemp;
             document.getElementById('displayTargetTempA').textContent = `${targetTempA.toFixed(1)}°C`;
             
-            // 更新温度图表中的目标温度线
             const newTempData = getTempDataA();
             tempChartA.data.datasets[0].data = newTempData.target;
             tempChartA.update();
-            
-            // 更新功率图表（因为功率和温度差值相关）
             powerChartA.data.datasets[0].data = getPowerDataA(newTempData.labels);
             powerChartA.update();
-            
-            // 清空输入框
             document.getElementById('targetTempInputA').value = '';
         });
 
-        // 自动获取芒市天气数据（下午4点到5点）
         async function getMangshiWeather() {
-            const mangshiLat = 24.4333; // 芒市纬度
-            const mangshiLon = 98.5000; // 芒市经度
+            const mangshiLat = 25;
+            const mangshiLon = 100;
             
             try {
                 // 显示加载状态
