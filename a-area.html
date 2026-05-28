@@ -23,16 +23,6 @@
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 2s linear infinite',
-                    },
-                    keyframes: {
-                        flow: {
-                            '0%': { strokeDashoffset: '24' },
-                            '100%': { strokeDashoffset: '0' }
-                        }
-                    }
                 }
             }
         }
@@ -105,7 +95,7 @@
                     <h4 class="text-lg font-semibold mb-3 text-secondary">温度数据管理</h4>
                     
                     <div class="mb-4">
-                        <button id="getMangshiWeatherBtn" 
+                        <button id="locWeatherBtn" 
                                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
                             <i class="fa fa-cloud-download mr-2"></i> 自动获取实时天气
                         </button>
@@ -331,13 +321,13 @@
             document.getElementById('targetTempInputA').value = '';
         });
 
-        async function getMangshiWeather() {
-            const mangshiLat = 25;
-            const mangshiLon = 100;
+        async function locWeather() {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
             
             try {
                 // 显示加载状态
-                const btn = document.getElementById('getMangshiWeatherBtn');
+                const btn = document.getElementById('locWeatherBtn');
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 获取中...';
@@ -358,7 +348,7 @@
                 ];
                 
                 // 获取天气预报数据（请求2天的数据以确保覆盖今天）
-                const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${mangshiLat}&longitude=${mangshiLon}&hourly=temperature_2m&forecast_days=2&timezone=Asia/Shanghai`;
+                const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${Lat}&longitude=${Lon}&hourly=temperature_2m&forecast_days=2&timezone=Asia/Shanghai`;
                 const forecastResponse = await fetch(forecastUrl);
                 const forecastData = await forecastResponse.json();
                 
@@ -420,7 +410,7 @@
                 // 显示成功提示
                 const toast = document.createElement('div');
                 toast.className = 'fixed bottom-4 right-4 bg-accent text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
-                toast.innerHTML = `<i class="fa fa-check-circle mr-2"></i> 成功获取芒市下午4点到5点的温度数据`;
+                toast.innerHTML = `<i class="fa fa-check-circle mr-2"></i> 成功获取温度数据`;
                 document.body.appendChild(toast);
                 
                 // 3秒后移除提示
@@ -433,14 +423,14 @@
                 alert('获取天气数据失败，请稍后重试。错误信息：' + error.message);
             } finally {
                 // 恢复按钮状态
-                const btn = document.getElementById('getMangshiWeatherBtn');
+                const btn = document.getElementById('locWeatherBtn');
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-cloud-download mr-2"></i> 自动获取芒市实时天气';
+                btn.innerHTML = '<i class="fa fa-cloud-download mr-2"></i> 自动获取实时天气';
             }
         }
 
         // 绑定自动获取天气按钮事件
-        document.getElementById('getMangshiWeatherBtn').addEventListener('click', getMangshiWeather);
+        document.getElementById('locWeatherBtn').addEventListener('click', locWeather);
 
         // 万达商场添加温度点
         document.getElementById('addTempPointBtnA').addEventListener('click', function() {
