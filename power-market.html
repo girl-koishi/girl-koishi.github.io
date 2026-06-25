@@ -1,0 +1,656 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>电力市场交易监控 — 阶序智调</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.3);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+  --mono:"SF Mono","Fira Code","Consolas",monospace;
+  --accent:#00e5a0;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(0,229,160,.15)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(0,229,160,.15);border-radius:2px}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,150,100,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,229,160,.04),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.03),transparent 55%);
+}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ===== HEADER ===== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98)0%,rgba(6,13,31,.94)100%);border-bottom:1px solid rgba(0,210,255,.12);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,#00d2ff,transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:#00e5a0;animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ===== NAV BAR ===== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative}
+.nl.dd:hover .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:120px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ===== MAIN GRID ===== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:270px 1fr 250px;grid-template-rows:1fr;gap:5px;padding:5px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.cl.mid{grid-row:1/2}
+.pnl{background:rgba(8,18,42,.92);border:1px solid rgba(0,210,255,.12);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:rgba(0,210,255,.28);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.col{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.col.center{grid-row:1/3}
+
+/* ===== PANEL ===== */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 10px rgba(0,0,0,.3)}
+.panel:hover{border-color:var(--border-h);box-shadow:0 1px 10px rgba(0,0,0,.3),0 0 12px rgba(0,229,160,.05)}
+
+.ph{display:flex;align-items:center;gap:6px;padding:6px 10px 4px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}.phi.r{background:rgba(255,61,87,.1);color:var(--red)}.phi.g{background:rgba(0,229,160,.1);color:var(--green)}.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1}
+.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+.phtag.live{background:rgba(0,229,160,.06);color:var(--accent);animation:livePulse 2s ease infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+/* ===== CHART WRAPPER ===== */
+.cw{flex:1;min-height:0;position:relative;padding:4px 7px 5px}
+.cw>div{width:100%;height:100%}
+
+/* ===== KPI GRID ===== */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 7px}
+.kpi-c{padding:6px 7px;background:rgba(0,229,160,.012);border:1px solid rgba(0,229,160,.03);border-radius:4px;transition:.2s}
+.kpi-c:hover{background:rgba(0,229,160,.03)}
+.kpi-cl{font-size:8px;color:var(--t2)}
+.kpi-cv{font-family:var(--mono);font-size:15px;font-weight:700;line-height:1.15}
+.kpi-cv.c{color:var(--cyan)}.kpi-cv.g{color:var(--green)}.kpi-cv.a{color:var(--amber)}.kpi-cv.r{color:var(--red)}.kpi-cv.p{color:var(--purple)}
+.kpi-bar{height:2px;background:rgba(0,229,160,.03);border-radius:1px;margin-top:3px;overflow:hidden}
+.kpi-bf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ===== MINI CHART ===== */
+.chart-w{flex:1;min-height:0;position:relative;padding:3px 6px}
+.chart-w>div{width:100%;height:100%}
+
+/* ===== RANKING ===== */
+.rk-item{display:flex;align-items:center;gap:5px;padding:4px 7px;border-bottom:1px solid rgba(255,255,255,.01);font-size:7px;transition:.15s}
+.rk-item:hover{background:rgba(0,229,160,.02)}
+.rk-pos{width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;background:rgba(0,229,160,.04);color:var(--t2)}
+.rk-item.g1 .rk-pos{background:rgba(255,179,0,.08);color:var(--amber)}
+.rk-item.g2 .rk-pos{background:rgba(192,192,192,.05);color:#c0c0c0}
+.rk-item.g3 .rk-pos{background:rgba(205,127,50,.05);color:#cd7f32}
+.rk-name{flex:1;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:7px}
+.rk-val{font-family:var(--mono);font-size:7px;color:var(--accent)}
+.rk-bar{width:32px;height:2px;background:rgba(0,229,160,.03);border-radius:1px;overflow:hidden}
+.rk-bf{height:100%;border-radius:1px}
+.rk-tr{font-size:7px;width:14px;text-align:center}
+.rk-tr.up{color:var(--red)}.rk-tr.down{color:var(--green)}
+
+/* ===== TOGGLE BUTTONS ===== */
+.tg-group{display:flex;gap:1px;margin-left:auto}
+.tg-btn{font-size:8px;padding:2px 7px;border-radius:3px;background:rgba(0,229,160,.03);border:1px solid rgba(0,229,160,.08);color:var(--t2);cursor:pointer;transition:.2s}
+.tg-btn:hover{color:var(--accent);background:rgba(0,229,160,.06)}
+.tg-btn.active{color:var(--accent);background:rgba(0,229,160,.1);border-color:rgba(0,229,160,.25)}
+
+/* ===== MARKET STATUS ===== */
+.ms-list{display:flex;flex-direction:column;gap:6px;padding:6px 9px}
+.ms-status{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;background:rgba(0,229,160,.04);border:1px solid rgba(0,229,160,.1)}
+.ms-st-d{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 1.8s ease infinite}
+.ms-st-l{font-size:7px;color:var(--t2)}
+.ms-st-v{font-size:10px;color:var(--accent);font-weight:600;margin-left:auto}
+.ms-row{display:flex;justify-content:space-between;align-items:baseline;padding:2px 0;border-bottom:1px dashed rgba(0,229,160,.04)}
+.ms-row:last-child{border:none}
+.ms-l{font-size:7px;color:var(--t2)}
+.ms-v{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--t1)}
+.ms-v.g{color:var(--accent)}.ms-v.a{color:var(--amber)}.ms-v.c{color:var(--cyan)}.ms-v.r{color:var(--red)}
+.ms-unit{font-size:8px;color:var(--t2);margin-left:2px}
+
+/* ===== DR RING ===== */
+.dr-wrap{display:flex;align-items:center;gap:8px;padding:5px 7px}
+.dr-ring{position:relative;width:58px;height:58px;flex-shrink:0}
+.dr-ring svg{width:58px;height:58px}
+.dr-rl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dr-pct{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);line-height:1}
+.dr-sub{font-size:8px;color:var(--t2)}
+.dr-stats{flex:1;display:flex;flex-direction:column;gap:3px}
+.dr-row{display:flex;justify-content:space-between;font-size:8px}
+.dr-rl2{color:var(--t2)}.dr-rv{font-family:var(--mono);font-weight:600}.dr-rv.c{color:var(--cyan)}.dr-rv.g{color:var(--accent)}.dr-rv.a{color:var(--amber)}
+
+/* ===== TRANSACTION LOG ===== */
+.log-wrap{flex:1;overflow:hidden;position:relative;padding:3px 5px}
+.log-mask{position:absolute;inset:3px 5px;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 8%,#000 92%,transparent);mask-image:linear-gradient(180deg,transparent 0%,#000 8%,#000 92%,transparent)}
+.log-inner{position:absolute;top:0;left:0;right:0;will-change:transform}
+.log-item{padding:4px 7px;border-bottom:1px solid rgba(0,229,160,.02);font-size:7px;display:flex;flex-direction:column;gap:1px;transition:.15s}
+.log-item:hover{background:rgba(0,229,160,.02)}
+.log-tm{font-family:var(--mono);font-size:8px;color:var(--t3);display:flex;justify-content:space-between;align-items:center}
+.log-tag{font-size:7px;padding:0 4px;border-radius:2px;background:rgba(0,229,160,.06);color:var(--accent)}
+.log-tag.bid{background:rgba(0,210,255,.06);color:var(--cyan)}
+.log-tag.otc{background:rgba(255,179,0,.06);color:var(--amber)}
+.log-ex{display:flex;justify-content:space-between;align-items:center;gap:4px}
+.log-ex-p{color:var(--t1);font-size:7px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.log-ex-i{font-size:8px;color:var(--t2);flex-shrink:0}
+.log-vp{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;color:var(--accent)}
+.log-vp .vol{color:var(--t1)}
+.log-vp .pri{color:var(--accent);font-weight:600}
+
+/* ===== KPI GRID (new) ===== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px}
+.kc{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:17px;font-weight:700;line-height:1.2}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+@media(max-width:1500px){#mn{grid-template-columns:250px 1fr 230px}}
+@media(max-width:1280px){#mn{grid-template-columns:200px 1fr 200px}.nl{padding:0 10px;font-size:10px}}
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl on" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- LEFT COLUMN -->
+  <div class="col">
+    <!-- KPI -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi g"><i class="fas fa-chart-line"></i></div><span class="pht">市场交易概况</span><span class="phtag live">实时</span></div>
+      <div class="kpi-grid">
+        <div class="kpi-c">
+          <div class="kpi-cl">市场均价</div>
+          <div><span class="kpi-cv g" id="kAvg">428.5</span><span style="font-size:8px;color:var(--t2)">元/MWh</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:65%;background:linear-gradient(90deg,#004026,var(--green))"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">日成交量</div>
+          <div><span class="kpi-cv c" id="kVol">12,648</span><span style="font-size:8px;color:var(--t2)">MWh</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:78%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">清算总额</div>
+          <div><span class="kpi-cv a" id="kSum">542.1</span><span style="font-size:8px;color:var(--t2)">万元</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:82%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">竞争率</div>
+          <div><span class="kpi-cv p" id="kComp">68.4</span><span style="font-size:8px;color:var(--t2)">%</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:68%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Price trend mini chart -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-wave-square"></i></div><span class="pht">实时电价(24h)</span><span class="phtag">元/MWh</span></div>
+      <div class="chart-w"><div id="miniPriceChart" style="min-height:280px;height:100%;width:100%"></div></div>
+    </div>
+
+    <!-- Trading ranking -->
+    <div class="panel" style="flex:1;min-height:0;overflow-y:auto">
+      <div class="ph"><div class="phi a"><i class="fas fa-trophy"></i></div><span class="pht">交易实体排行</span><span class="phtag">TOP5</span></div>
+      <div id="rkList"></div>
+    </div>
+  </div>
+
+  <!-- CENTER COLUMN -->
+  <div class="col center">
+    <!-- TOP: Price trend with toggle -->
+    <div class="panel" style="flex:1.5;min-height:0" id="pricePanel">
+      <div class="ph">
+        <div class="phi g"><i class="fas fa-chart-area"></i></div>
+        <span class="pht">电价走势分析</span>
+        <div class="tg-group">
+          <div class="tg-btn active" data-range="day">日</div>
+          <div class="tg-btn" data-range="week">周</div>
+          <div class="tg-btn" data-range="month">月</div>
+        </div>
+      </div>
+      <div class="chart-w"><div id="priceChart" style="min-height:280px;height:100%;width:100%"></div></div>
+    </div>
+
+    <!-- BOTTOM: Supply vs Demand -->
+    <div class="panel" style="flex:1;min-height:0">
+      <div class="ph">
+        <div class="phi c"><i class="fas fa-balance-scale"></i></div>
+        <span class="pht">分时供需对比</span>
+        <span class="phtag">24h</span>
+      </div>
+      <div class="chart-w"><div id="sdChart" style="min-height:280px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col">
+    <!-- Market status -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi g"><i class="fas fa-broadcast-tower"></i></div><span class="pht">市场状态</span><span class="phtag live">竞价中</span></div>
+      <div class="ms-list">
+        <div class="ms-status">
+          <span class="ms-st-d"></span>
+          <span class="ms-st-l">当前阶段</span>
+          <span class="ms-st-v" id="msPhase">实时竞价</span>
+        </div>
+        <div class="ms-row"><span class="ms-l">实时报价</span><span><span class="ms-v g" id="msQuote">432.6</span><span class="ms-unit">元/MWh</span></span></div>
+        <div class="ms-row"><span class="ms-l">挂牌量</span><span><span class="ms-v c" id="msListed">3,856</span><span class="ms-unit">MWh</span></span></div>
+        <div class="ms-row"><span class="ms-l">成交量</span><span><span class="ms-v a" id="msDeal">2,468</span><span class="ms-unit">MWh</span></span></div>
+        <div class="ms-row"><span class="ms-l">买卖比</span><span><span class="ms-v" id="msRatio">1.28</span></span></div>
+      </div>
+    </div>
+
+    <!-- Demand response market -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-exchange-alt"></i></div><span class="pht">需求响应市场</span><span class="phtag" style="color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.1)">进行中</span></div>
+      <div class="dr-wrap">
+        <div class="dr-ring">
+          <svg viewBox="0 0 58 58">
+            <circle cx="29" cy="29" r="23" fill="none" stroke="rgba(0,229,160,.04)" stroke-width="4"/>
+            <circle cx="29" cy="29" r="23" fill="none" stroke="url(#drG)" stroke-width="4" stroke-dasharray="144.5" stroke-dashoffset="40" stroke-linecap="round" transform="rotate(-90 29 29)"/>
+            <defs><linearGradient id="drG" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#004026"/><stop offset="100%" stop-color="#00e5a0"/></linearGradient></defs>
+          </svg>
+          <div class="dr-rl"><div class="dr-pct" id="drPct">72.4%</div><div class="dr-sub">响应率</div></div>
+        </div>
+        <div class="dr-stats">
+          <div class="dr-row"><span class="dr-rl2">参与用户</span><span class="dr-rv c" id="drUser">86</span></div>
+          <div class="dr-row"><span class="dr-rl2">响应容量</span><span class="dr-rv g" id="drCap">1,248 kW</span></div>
+          <div class="dr-row"><span class="dr-rl2">补偿单价</span><span class="dr-rv a" id="drPrice">0.85 元/kWh</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transaction log -->
+    <div class="panel" style="flex:1;min-height:0;overflow-y:auto">
+      <div class="ph"><div class="phi a"><i class="fas fa-list-alt"></i></div><span class="pht">最新成交记录</span><span class="phtag live">滚动</span></div>
+      <div class="log-wrap"><div class="log-mask"><div class="log-inner" id="logScroll"></div></div></div>
+    </div>
+  </div>
+
+
+</main><!-- /main -->
+
+</div><!-- /app -->
+
+<!-- Scripts -->
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
+        });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+// ========== UTILS ==========
+let WS=null;
+const fmt=(n,d)=>d?Number(n).toFixed(d):Math.round(n).toLocaleString();
+const el=id=>document.getElementById(id);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ========== CLOCK ==========
+function updClock(){
+  const d=new Date();
+  el('clk').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+}
+updClock();setInterval(updClock,1000);
+
+// ========== RANKING ==========
+const medals=['g1','g2','g3'];
+const rkData=[
+  {name:'华能国际电力',vol:1856,trend:'up'},
+  {name:'国电电力股份',vol:1648,trend:'up'},
+  {name:'大唐发电集团',vol:1342,trend:'down'},
+  {name:'华电国际电力',vol:1186,trend:'up'},
+  {name:'中电投清洁能源',vol:982,trend:'down'}
+];
+function initRanking(){
+  let h='',max=rkData[0].vol;
+  rkData.forEach((r,i)=>{
+    const p=r.vol/max*100,c=r.vol>1500?'#ffb300':r.vol>1000?'#00e5a0':'#00d2ff';
+    h+=`<div class="rk-item ${medals[i]||''}"><div class="rk-pos">${i+1}</div><div class="rk-name">${r.name}</div><div class="rk-val">${Math.round(r.vol)}</div><div class="rk-bar"><div class="rk-bf" style="width:${p}%;background:${c}"></div></div><div class="rk-tr ${r.trend}"><i class="fas fa-arrow-${r.trend}"></i></div></div>`;
+  });
+  el('rkList').innerHTML=h;
+}
+initRanking();
+
+// ========== MINI PRICE CHART (24h) ==========
+let miniChart;
+function initMiniPrice(){
+  miniChart=echarts.init(el('miniPriceChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(miniChart);
+  const data=[],now=Date.now();
+  for(let i=23;i>=0;i--){
+    const t=now-i*3600000,h=new Date(t).getHours();
+    const v=380+120*Math.sin((h-6)/24*2*Math.PI-0.5)+rnd(-15,15);
+    data.push([t,Math.max(280,Math.min(560,v))]);
+  }
+  miniChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,229,160,.12)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:p=>new Date(p[0].value[0]).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'<br/>'+p[0].marker+' 电价: '+p[0].value[1].toFixed(1)+' 元/MWh'},
+    grid:{left:'4%',right:'3%',top:'8%',bottom:'4%'},
+    xAxis:{type:'time',axisLine:{lineStyle:{color:'rgba(0,229,160,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:7,formatter:v=>new Date(v).getHours()+'时'},splitLine:{show:false}},
+    yAxis:{type:'value',min:200,max:600,splitLine:{lineStyle:{color:'rgba(0,229,160,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:7}},
+    series:[{type:'line',smooth:true,symbol:'none',data:data,lineStyle:{color:'#00e5a0',width:1.5},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.22)'},{offset:1,color:'rgba(0,229,160,.002)'}])}}]
+  });
+}
+
+// ========== PRICE TREND CHART (with toggle) ==========
+let priceChart,currentRange='day';
+function genPriceData(range){
+  const data=[],markZones=[];
+  const now=Date.now();
+  if(range==='day'){
+    for(let i=47;i>=0;i--){
+      const t=now-i*1800000,h=new Date(t).getHours()+new Date(t).getMinutes()/60;
+      const v=380+120*Math.sin((h-6)/24*2*Math.PI-0.5)+rnd(-15,15);
+      data.push([t,Math.max(280,Math.min(560,v))]);
+    }
+    // Peak/valley zones
+    const t0=now-47*1800000;
+    const peakStart=t0+10*3600000,peakEnd=t0+14*3600000;
+    const valleyStart=t0+0*3600000,valleyEnd=t0+5*3600000;
+    markZones.push([{xAxis:peakStart,itemStyle:{color:'rgba(255,61,87,.06)'}},{xAxis:peakEnd}]);
+    markZones.push([{xAxis:valleyStart,itemStyle:{color:'rgba(0,210,255,.06)'}},{xAxis:valleyEnd}]);
+  }else if(range==='week'){
+    for(let i=6;i>=0;i--){
+      for(let h=0;h<24;h+=4){
+        const t=now-i*86400000-(24-h)*3600000;
+        const v=400+100*Math.sin((h-6)/24*2*Math.PI-0.5)+rnd(-30,30)+i*5;
+        data.push([t,Math.max(280,Math.min(600,v))]);
+      }
+    }
+  }else if(range==='month'){
+    for(let i=29;i>=0;i--){
+      const t=now-i*86400000;
+      const v=420+80*Math.sin(i/30*2*Math.PI)+rnd(-25,25);
+      data.push([t,Math.max(300,Math.min(560,v))]);
+    }
+  }
+  return {data,markZones};
+}
+function initPriceChart(){
+  priceChart=echarts.init(el('priceChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(priceChart);
+  updatePriceChart();
+}
+function updatePriceChart(){
+  const {data,markZones}=genPriceData(currentRange);
+  const fmtTime=currentRange==='day'?'{HH}:{mm}':currentRange==='week'?'{MM}/{dd} {HH}:00':'{MM}/{dd}';
+  priceChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,229,160,.12)',textStyle:{color:'#d8eaf8',fontSize:10},
+      formatter:p=>{
+        const dt=new Date(p[0].value[0]);
+        const ts=currentRange==='day'?dt.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}):dt.toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'});
+        return ts+'<br/>'+p[0].marker+' 电价: '+p[0].value[1].toFixed(1)+' 元/MWh';
+      }},
+    grid:{left:'5%',right:'4%',top:'12%',bottom:'8%'},
+    xAxis:{type:'time',axisLine:{lineStyle:{color:'rgba(0,229,160,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:v=>{
+      const d=new Date(v);
+      if(currentRange==='day')return d.getHours()+':'+d.getMinutes().toString().padStart(2,'0');
+      if(currentRange==='week')return (d.getMonth()+1)+'/'+d.getDate();
+      return (d.getMonth()+1)+'/'+d.getDate();
+    }},splitLine:{show:false}},
+    yAxis:{type:'value',min:200,max:650,name:'元/MWh',nameTextStyle:{color:'#6a8ba8',fontSize:8},splitLine:{lineStyle:{color:'rgba(0,229,160,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:8}},
+    series:[{
+      name:'电价',type:'line',smooth:true,symbol:'none',data:data,
+      lineStyle:{color:'#00e5a0',width:2.2},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.28)'},{offset:1,color:'rgba(0,229,160,.002)'}])},
+      markArea:markZones.length?{silent:true,data:markZones}:{},
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(255,179,0,.25)',type:'dashed',width:1},label:{formatter:'峰价线',color:'#ffb300',fontSize:8},data:[{yAxis:520}]},
+      markPoint:{symbol:'pin',symbolSize:36,data:[
+        {type:'max',name:'最高',itemStyle:{color:'#ff3d57'},label:{color:'#fff',fontSize:8,formatter:'{c|峰}\n{c|{c}}',rich:{c:{color:'#fff',fontSize:8,lineHeight:10}}}},
+        {type:'min',name:'最低',itemStyle:{color:'#00d2ff'},label:{color:'#fff',fontSize:8,formatter:'{c|谷}\n{c|{c}}',rich:{c:{color:'#fff',fontSize:8,lineHeight:10}}}}
+      ]}
+    }]
+  },true);
+}
+
+// Toggle buttons
+document.querySelectorAll('.tg-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tg-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRange=btn.dataset.range;
+    updatePriceChart();
+  });
+});
+
+// ========== SUPPLY vs DEMAND CHART ==========
+let sdChart;
+function initSdChart(){
+  sdChart=echarts.init(el('sdChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(sdChart);
+  const hours=[],supply=[],demand=[];
+  for(let h=0;h<24;h++){
+    hours.push(h+':00');
+    // Supply: relatively stable with slight peak
+    supply.push(Math.round(580+80*Math.sin((h-6)/24*2*Math.PI-0.3)+rnd(-20,20)));
+    // Demand: morning peak 7-10, evening peak 18-21
+    const morning=Math.exp(-Math.pow((h-9)/1.8,2))*180;
+    const evening=Math.exp(-Math.pow((h-19)/2,2))*220;
+    demand.push(Math.round(480+morning+evening+rnd(-15,15)));
+  }
+  sdChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,229,160,.12)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:p=>p[0].axisValue+'<br/>'+p.map(i=>i.marker+' '+i.seriesName+': '+i.value+' MWh').join('<br/>')},
+    legend:{data:['供电量','需求量'],textStyle:{color:'#6a8ba8',fontSize:8},top:2,right:8,itemWidth:10,itemHeight:5},
+    grid:{left:'5%',right:'4%',top:'18%',bottom:'8%'},
+    xAxis:{type:'category',data:hours,axisLine:{lineStyle:{color:'rgba(0,229,160,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:7,interval:1},splitLine:{show:false}},
+    yAxis:{type:'value',name:'MWh',nameTextStyle:{color:'#6a8ba8',fontSize:8},splitLine:{lineStyle:{color:'rgba(0,229,160,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:8}},
+    series:[
+      {name:'供电量',type:'bar',data:supply,barWidth:'35%',itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#00e5a0'},{offset:1,color:'rgba(0,229,160,.3)'}]),borderRadius:[2,2,0,0]}},
+      {name:'需求量',type:'bar',data:demand,barWidth:'35%',itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ffb300'},{offset:1,color:'rgba(255,179,0,.3)'}]),borderRadius:[2,2,0,0]}}
+    ]
+  });
+}
+
+// ========== TRANSACTION LOG ==========
+const buyers=['国电电力','华能国际','大唐发电','华电国际','中电投','申能股份','深圳能源','广州发展'];
+const sellers=['华能北方','国电龙源','大唐新能源','华电福新','中电投远达','京能电力','浙能电力','粤电力A'];
+function genLog(){
+  const items=[];
+  const now=new Date();
+  for(let i=0;i<20;i++){
+    const t=new Date(now.getTime()-i*60000-rnd(0,30000));
+    const tm=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0')+':'+t.getSeconds().toString().padStart(2,'0');
+    const b=buyers[Math.floor(Math.random()*buyers.length)];
+    const s=sellers[Math.floor(Math.random()*sellers.length)];
+    const vol=Math.round(rnd(50,500));
+    const pri=(rnd(380,520)).toFixed(1);
+    const type=Math.random()<0.6?'bid':(Math.random()<0.5?'otc':'');
+    items.push({tm,b,s,vol,pri,type});
+  }
+  return items;
+}
+function renderLog(){
+  const items=genLog();
+  let h='';
+  items.forEach(it=>{
+    const tagCls=it.type==='bid'?'bid':(it.type==='otc'?'otc':'');
+    const tagLb=it.type==='bid'?'竞价':(it.type==='otc'?'OTC':'撮合');
+    h+=`<div class="log-item">
+      <div class="log-tm"><span>${it.tm}</span><span class="log-tag ${tagCls}">${tagLb}</span></div>
+      <div class="log-ex"><span class="log-ex-p">${it.b}</span><span class="log-ex-i">→</span><span class="log-ex-p">${it.s}</span></div>
+      <div class="log-vp"><span class="vol">${it.vol} MWh</span><span class="pri">${it.pri} 元/MWh</span></div>
+    </div>`;
+  });
+  el('logScroll').innerHTML=h;
+}
+function scrollLog(){
+  const sc=el('logScroll');
+  if(!sc)return;
+  let offset=0;
+  const itemH=58;
+  setInterval(()=>{
+    offset+=0.4;
+    if(offset>=itemH){
+      offset=0;
+      // Move first item to end
+      const first=sc.firstElementChild;
+      if(first)sc.appendChild(first);
+    }
+    sc.style.transform=`translateY(-${offset}px)`;
+  },50);
+}
+
+// ========== WEBSOCKET ==========
+function connectWS(){
+  if(WS){try{WS.close();}catch(e){}}
+  try{
+    WS=new WebSocket('ws://localhost:3080');
+    WS.onopen=()=>console.log('[WS] OK');
+    WS.onmessage=e=>{
+      try{
+        const m=JSON.parse(e.data);
+        if(m.type==='market')updateMarket(m.data);
+        else if(m.type==='init')updateMarket(m.data);
+      }catch(ex){}
+    };
+    WS.onclose=()=>setTimeout(connectWS,3000);
+    WS.onerror=()=>{};
+  }catch(e){
+    setTimeout(connectWS,3000);
+  }
+}
+
+function updateMarket(d){
+  if(d.avgPrice)el('kAvg').textContent=fmt(d.avgPrice,1);
+  if(d.dailyVolume)el('kVol').textContent=fmt(d.dailyVolume);
+  if(d.totalClearing)el('kSum').textContent=fmt(d.totalClearing,1);
+  if(d.competitionRate)el('kComp').textContent=fmt(d.competitionRate,1);
+  if(d.quote)el('msQuote').textContent=fmt(d.quote,1);
+  if(d.listed)el('msListed').textContent=fmt(d.listed);
+  if(d.deal)el('msDeal').textContent=fmt(d.deal);
+  if(d.ratio)el('msRatio').textContent=fmt(d.ratio,2);
+  if(d.drRate)el('drPct').textContent=fmt(d.drRate,1)+'%';
+  if(d.drUser)el('drUser').textContent=d.drUser;
+  if(d.drCap)el('drCap').textContent=fmt(d.drCap)+' kW';
+  if(d.drPrice)el('drPrice').textContent=fmt(d.drPrice,2)+' 元/kWh';
+}
+
+// ========== LOCAL SIMULATION ==========
+function simUpdate(){
+  const quote=428.5+(Math.random()-0.5)*30;
+  const listed=3856+Math.round((Math.random()-0.5)*200);
+  const deal=2468+Math.round((Math.random()-0.5)*150);
+  const ratio=deal/listed*3.5;
+  el('msQuote').textContent=quote.toFixed(1);
+  el('msListed').textContent=listed.toLocaleString();
+  el('msDeal').textContent=deal.toLocaleString();
+  el('msRatio').textContent=ratio.toFixed(2);
+  el('kAvg').textContent=(428.5+(Math.random()-0.5)*8).toFixed(1);
+  el('kVol').textContent=(12648+Math.round((Math.random()-0.5)*100)).toLocaleString();
+  el('kSum').textContent=(542.1+(Math.random()-0.5)*5).toFixed(1);
+  el('kComp').textContent=(68.4+(Math.random()-0.5)*3).toFixed(1);
+  el('drPct').textContent=(72.4+(Math.random()-0.5)*4).toFixed(1)+'%';
+}
+
+// ========== INIT ==========
+function init(){
+  initMiniPrice();
+  initPriceChart();
+  initSdChart();
+  renderLog();
+  scrollLog();
+  connectWS();
+  // Fallback local sim if WS not available
+  setInterval(simUpdate,3000);
+}
+window.addEventListener('resize',()=>{
+  if(miniChart)miniChart.resize();
+  if(priceChart)priceChart.resize();
+  if(sdChart)sdChart.resize();
+});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
+</body>
+</html>

@@ -1,736 +1,517 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>温度变化分析 - 发电厂温度控制系统</title>
-    <!-- Tailwind CSS v3 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- 统一的 Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#93c5fd',
-                        accent: '#10b981',
-                        warning: '#f97316',
-                        dark: '#0f172a',
-                        'dark-light': '#1e293b',
-                        'light-text': '#e2e8f0'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 2s linear infinite',
-                    },
-                    keyframes: {
-                        flow: {
-                            '0%': { strokeDashoffset: '24' },
-                            '100%': { strokeDashoffset: '0' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .text-shadow {
-                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-            }
-            .border-glow {
-                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-            }
-            .bg-grid {
-                background-image: 
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            .card-hover {
-                transition: all 0.3s ease;
-            }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-            }
-            .metric-card {
-                transition: all 0.3s ease;
-                border: 1px solid rgba(59, 130, 246, 0.3);
-            }
-            .metric-card:hover {
-                border-color: rgba(59, 130, 246, 0.8);
-                box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>温度变化分析 - 阶序智调</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root { --bg:#060d1f; --panel:rgba(8,18,42,.92); --border:rgba(0,210,255,.12); --cyan:#00d2ff; --green:#00e5a0; --amber:#ffb300; --red:#ff3d57; --t2:#8ab4d8; --t1:#d8eaf8; --t3:#2e4a66; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:#e0e8ff; font-family:'Segoe UI','Microsoft YaHei',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  #hd { height:96px; min-height:96px; background:linear-gradient(90deg,#060d1f 0%,#0a1a3f 50%,#060d1f 100%); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 18px; flex-shrink:0; }
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+  .hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+  .hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+  #nb { height:34px; background:rgba(0,210,255,.04); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:flex-start; padding:0 16px; gap:1px; overflow-x:auto; }
+  .nl { display:flex; align-items:center; gap:4px; height:28px; padding:0 13px; border-radius:3px; font-size:11px; color:rgba(180,210,255,.6); cursor:pointer; transition:.2s; white-space:nowrap; text-decoration:none; border:1px solid transparent; letter-spacing:.3px; }
+  .nl:hover { color:var(--cyan); background:rgba(0,210,255,.05); border-color:rgba(0,210,255,.08); }
+  .nl.on { color:var(--cyan); background:rgba(0,210,255,.08); border-color:rgba(0,210,255,.16); box-shadow:0 0 8px rgba(0,210,255,.06); }
+  .nl i { font-size:7px; }
+  .nl.dd { position:relative; }
+  .nl.dd:hover .dd-menu { display:block; }
+  .dd-menu { display:none; position:absolute; top:100%; left:0; background:rgba(8,18,42,.95); border:1px solid rgba(0,210,255,.12); border-radius:4px; padding:4px 0; min-width:120px; z-index:100; }
+  .dd-menu a { display:block; padding:6px 14px; font-size:11px; color:rgba(180,210,255,.6); text-decoration:none; transition:.2s; white-space:nowrap; }
+  .dd-menu a:hover { color:var(--cyan); background:rgba(0,210,255,.05); }
+  #main { flex:1; display:grid; grid-template-columns:250px 1fr 270px; gap:5px; padding:5px; min-height:0; }
+  .pn { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; overflow:auto; }
+  .kp { background:rgba(0,210,255,.04); border:1px solid var(--border); border-radius:5px; padding:7px 10px; margin-bottom:5px; }
+  .kp .lbl { font-size:10px; color:rgba(160,200,255,.5); margin-bottom:2px; }
+  .kp .val { font-size:18px; font-weight:700; }
+  .kp .unit { font-size:10px; color:rgba(160,200,255,.5); }
+  .chart-box { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; }
+  .chart-box .tt { font-size:12px; color:rgba(180,210,255,.7); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:rgba(0,210,255,.2); border-radius:3px; }
+  .tab-bar { display:flex; gap:4px; margin-bottom:8px; }
+  .tab-btn { padding:4px 12px; border-radius:4px; font-size:11px; cursor:pointer; border:1px solid var(--border); color:rgba(180,210,255,.6); background:transparent; transition:.2s; }
+  .tab-btn.active { background:rgba(0,210,255,.12); color:var(--cyan); border-color:rgba(0,210,255,.3); }
+  .slider-group { margin-bottom:8px; }
+  .slider-group label { font-size:10px; color:rgba(160,200,255,.6); display:block; margin-bottom:2px; }
+  .slider-group input[type=range] { width:100%; accent-color:var(--cyan); height:4px; }
+  .slider-val { font-size:11px; color:var(--cyan); float:right; }
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
 </head>
-<body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部区域 -->
-    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <a href="index.html" class="flex items-center">
-                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
-                </a>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
-                    <i class="fa fa-clock-o text-secondary mr-2"></i>
-                    <span id="current-time" class="text-xl font-mono"></span>
-                </div>
-                <a href="a-area.html" class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-arrow-left mr-2"></i>
-                    返回A区监控
-                </a>
-                <a href="index.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-home mr-2"></i>
-                    返回首页
-                </a>
-            </div>
-        </div>
-    </header>
+<body>
 
-    <!-- 主要内容区域 -->
-    <main class="flex-grow container mx-auto p-6 bg-grid">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-secondary mb-2">温度变化分析</h2>
-            <p class="text-light-text/70">基于最近24小时的温度数据分析结果</p>
-        </div>
+<!-- Header -->
+<div id="hd">
+  <div style="display:flex;align-items:center;gap:8px;width:80px;flex-shrink:0"><span class="hd-brace">[</span><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div style="display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0"><span id="clk" style="font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)">--:--:--</span><span id="wsSt" style="display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap">● 实时</span></div>
+</div>
 
-        <!-- 变化速率板块 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-8">
-            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
-                <i class="fa fa-tachometer mr-3 text-primary"></i>
-                变化速率分析
-            </h3>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2">
-                    <div class="h-80">
-                        <canvas id="rateChart"></canvas>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">当前温度变化速率</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-primary">0.8</span>
-                            <span class="text-lg text-primary ml-1 mb-1">°C/小时</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">基于最近60分钟数据计算</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">变化速率评级</h4>
-                        <div class="flex items-center">
-                            <span class="text-2xl font-bold text-accent">良好</span>
-                            <div class="ml-auto flex">
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star-o text-warning"></i>
-                            </div>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">5分制评分系统</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">系统响应时间</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-secondary">15</span>
-                            <span class="text-lg text-secondary ml-1 mb-1">分钟</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">从温度波动到系统调整的时间</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
-                <h4 class="font-bold text-secondary mb-2">分析结论</h4>
-                <p class="text-light-text">根据最近24小时的数据分析，当前温度变化速率为0.8摄氏度每小时，属于正常范围。系统能够及时响应温度变化，保持环境温度稳定。变化速率在一天内有轻微波动，但整体控制在理想范围内。</p>
-            </div>
-        </div>
+<!-- Nav -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <div class="nl dd on" style="cursor:default">
+    <span><i class="fas fa-chart-line"></i>分析</span>
+    <div class="dd-menu">
+      <a href="analysis.html">🌡 温度变化</a>
+      <a href="cooling-analysis.html">📊 负荷分析</a>
+      <a href="a-cooling-analysis.html">❄ 商业制冷</a>
+      <a href="b-cooling-analysis.html">🏠 居民制冷</a>
+    </div>
+  </div>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+</nav>
 
-        <!-- 温度范围板块 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-8">
-            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
-                <i class="fa fa-area-chart mr-3 text-primary"></i>
-                温度范围分析
-            </h3>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2">
-                    <div class="h-80">
-                        <canvas id="rangeChart"></canvas>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">当前温度范围</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-primary">22°C</span>
-                            <span class="text-lg text-light-text/50 mx-2 mb-1">-</span>
-                            <span class="text-3xl font-bold text-primary">26°C</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">符合设定标准</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">温度波动幅度</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-warning">±1.5</span>
-                            <span class="text-lg text-warning ml-1 mb-1">°C</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">相对于目标温度24°C</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">超出设定范围时间占比</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-accent">3.2</span>
-                            <span class="text-lg text-accent ml-1 mb-1">%</span>
-                        </div>
-                        <div class="flex items-center mt-1">
-                            <span class="text-sm font-bold text-accent">良好</span>
-                            <div class="ml-2 w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 3.2%"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
-                <h4 class="font-bold text-secondary mb-2">分析结论</h4>
-                <p class="text-light-text">当前温度范围控制在22°C到26°C之间，符合设定标准。温度波动幅度为±1.5°C，在可接受范围内。系统在96.8%的时间内保持温度在设定范围内，超出范围的时间占比仅为3.2%，整体表现良好。在高峰期（10:00-14:00和18:00-21:00）温度波动略大，但仍在可控范围内。</p>
-            </div>
-        </div>
+<!-- Main -->
+<div id="main">
 
-        <!-- 控制精度板块 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
-            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
-                <i class="fa fa-bullseye mr-3 text-primary"></i>
-                控制精度分析
-            </h3>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2">
-                    <div class="h-80">
-                        <canvas id="precisionChart"></canvas>
-                    </div>
-                </div>
-                <div class="space-y-4">
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">温度控制精度</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-primary">±0.5</span>
-                            <span class="text-lg text-primary ml-1 mb-1">°C</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">系统控制精度指标</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">温度控制稳定性</h4>
-                        <div class="flex items-center">
-                            <span class="text-2xl font-bold text-accent">优秀</span>
-                            <div class="ml-auto flex">
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                                <i class="fa fa-star text-warning"></i>
-                            </div>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">系统在设定温度附近保持稳定的能力</p>
-                    </div>
-                    
-                    <div class="metric-card bg-dark/50 p-4 rounded-lg">
-                        <h4 class="text-sm text-light-text/70 mb-1">温度恢复时间</h4>
-                        <div class="flex items-end">
-                            <span class="text-3xl font-bold text-secondary">8</span>
-                            <span class="text-lg text-secondary ml-1 mb-1">分钟</span>
-                        </div>
-                        <p class="text-xs text-light-text/50 mt-2">从偏离到恢复设定范围的平均时间</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="p-4 bg-dark/50 rounded-lg">
-                    <h4 class="font-bold text-secondary mb-2">PID控制器参数分析</h4>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>比例增益 (P)</span>
-                                <span class="text-primary">2.5</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-primary h-2 rounded-full" style="width: 65%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>积分时间 (I)</span>
-                                <span class="text-primary">3.2 分钟</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>微分时间 (D)</span>
-                                <span class="text-primary">0.8 分钟</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-primary h-2 rounded-full" style="width: 45%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-light-text/50 mt-3">当前PID参数配置良好，系统响应迅速且稳定</p>
-                </div>
-                
-                <div class="p-4 bg-dark/50 rounded-lg">
-                    <h4 class="font-bold text-secondary mb-2">负载变化适应性</h4>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>轻负载适应性</span>
-                                <span class="text-accent">优秀</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 90%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>中负载适应性</span>
-                                <span class="text-accent">优秀</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 95%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>重负载适应性</span>
-                                <span class="text-primary">良好</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-primary h-2 rounded-full" style="width: 80%"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-xs text-light-text/50 mt-3">系统在不同负载条件下均能保持良好的温度控制能力</p>
-                </div>
-            </div>
-            
-            <div class="mt-6 p-4 bg-dark/50 rounded-lg">
-                <h4 class="font-bold text-secondary mb-2">节能效率分析</h4>
-                <p class="text-light-text">温度控制精度与能耗呈现正相关关系。当前系统在保持高精度控制的同时，能耗效率达到87%，优于行业平均水平。通过优化PID参数和负载预测算法，系统能够在满足温度控制要求的前提下，最小化能源消耗。建议在非高峰期（22:00-08:00）适当放宽温度控制范围至±2.0°C，预计可进一步降低能耗12%。</p>
-            </div>
-        </div>
-    </main>
+  <!-- Left -->
+  <div class="pn" id="left" style="display:flex;flex-direction:column;gap:5px;">
 
-    <!-- 底部区域 -->
-    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
-        <div class="container mx-auto text-center text-sm text-light-text/70">
-            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
-        </div>
-    </footer>
+    <!-- 变化速率分析参数 -->
+    <div class="tt" style="font-size:12px;color:var(--cyan);margin-bottom:4px;">变化速率分析</div>
+    <div class="slider-group">
+      <label>室外温度变化率 (°C/min) <span class="slider-val" id="vRate">0.15</span></label>
+      <input type="range" id="sRate" min="0.01" max="0.5" step="0.01" value="0.15" oninput="onSlider()">
+    </div>
+    <div class="slider-group">
+      <label>目标温度变化率 <span class="slider-val" id="vTrate">0.08</span></label>
+      <input type="range" id="sTrate" min="0.01" max="0.3" step="0.01" value="0.08" oninput="onSlider()">
+    </div>
+    <div class="kp" style="margin-top:4px;">
+      <div class="lbl">商业区温度响应延迟</div>
+      <div class="val" id="kDelay" style="color:var(--amber);">--</div>
+      <div class="unit">分钟</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">居民区温度响应延迟</div>
+      <div class="val" id="kRdelay" style="color:var(--green);">--</div>
+      <div class="unit">分钟</div>
+    </div>
 
-    <!-- JavaScript -->
-    <script>
-        // 更新当前时间
-        function updateCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const timeString = `${hours}:${minutes}`;
-            document.getElementById('current-time').textContent = timeString;
-            return timeString;
-        }
+    <div class="tt" style="font-size:12px;color:var(--cyan);margin-bottom:4px;margin-top:8px;">温度范围分析</div>
+    <div class="slider-group">
+      <label>室外温度范围 (°C) <span class="slider-val" id="vTrange">28-36</span></label>
+      <input type="range" id="sTrange" min="0" max="3" step="1" value="1" oninput="onTempRange()">
+    </div>
+    <div class="kp" style="margin-top:4px;">
+      <div class="lbl">商业区功率变化范围</div>
+      <div class="val" id="kPrangeA" style="color:var(--cyan);">--</div>
+      <div class="unit">kW</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">居民区功率变化范围</div>
+      <div class="val" id="kPrangeB" style="color:var(--green);">--</div>
+      <div class="unit">kW</div>
+    </div>
 
-        // 初始更新时间
-        updateCurrentTime();
+    <div class="tt" style="font-size:12px;color:var(--cyan);margin-bottom:4px;margin-top:8px;">控制精度分析</div>
+    <div class="kp" style="margin-top:4px;">
+      <div class="lbl">PID 比例系数 Kp</div>
+      <div class="val" id="kKp" style="color:var(--amber);">--</div>
+      <div class="unit">（最优: 0.8-1.2）</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">负载适应性评分</div>
+      <div class="val" id="kAdapt" style="color:var(--green);">--</div>
+      <div class="unit">/ 100</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">节能效率</div>
+      <div class="val" id="kSave" style="color:var(--cyan);">--</div>
+      <div class="unit">%</div>
+    </div>
 
-        // 每分钟更新一次时间
-        setInterval(updateCurrentTime, 60000);
+    <div style="flex:1;"></div>
+    <div style="font-size:10px;color:rgba(160,200,255,.3);text-align:center;">温度是调控的核心变量<br>变化速率与范围决定调控难度</div>
+  </div>
 
-        // 生成过去24小时的时间标签
-        function generateTimeLabels() {
-            const labels = [];
-            const now = new Date();
-            
-            for (let i = 23; i >= 0; i--) {
-                const time = new Date(now - i * 60 * 60 * 1000);
-                const hours = String(time.getHours()).padStart(2, '0');
-                labels.push(`${hours}:00`);
-            }
-            
-            return labels;
-        }
+  <!-- Center -->
+  <div style="display:flex;flex-direction:column;gap:5px;min-height:0;">
 
-        // 生成变化速率图表数据
-        function generateRateData() {
-            const labels = generateTimeLabels();
-            const data = [];
-            
-            // 生成模拟的温度变化速率数据
-            for (let i = 0; i < labels.length; i++) {
-                // 模拟一天中的变化速率波动
-                let baseRate;
-                const hour = parseInt(labels[i]);
-                
-                if (hour >= 8 && hour <= 10) {
-                    // 早晨温度上升较快
-                    baseRate = 1.2 + Math.random() * 0.4;
-                } else if (hour >= 10 && hour <= 14) {
-                    // 中午温度变化适中
-                    baseRate = 0.8 + Math.random() * 0.3;
-                } else if (hour >= 14 && hour <= 18) {
-                    // 下午温度变化较小
-                    baseRate = 0.5 + Math.random() * 0.3;
-                } else if (hour >= 18 && hour <= 22) {
-                    // 晚上温度下降
-                    baseRate = 0.9 + Math.random() * 0.4;
-                } else {
-                    // 夜间温度变化最小
-                    baseRate = 0.3 + Math.random() * 0.2;
-                }
-                
-                data.push(parseFloat(baseRate.toFixed(1)));
-            }
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '温度变化速率 (°C/小时)',
-                        data: data,
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                        borderWidth: 3,
-                        pointRadius: 2,
-                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: '理想变化速率',
-                        data: Array(labels.length).fill(0.7),
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    }
-                ]
-            };
-        }
+    <!-- Tab bar -->
+    <div class="tab-bar" style="padding:0 8px;">
+      <button class="tab-btn active" onclick="switchTab('rate')">变化速率</button>
+      <button class="tab-btn" onclick="switchTab('range')">温度范围</button>
+      <button class="tab-btn" onclick="switchTab('precision')">控制精度</button>
+    </div>
 
-        // 生成温度范围图表数据
-        function generateRangeData() {
-            const labels = generateTimeLabels();
-            const minTempData = [];
-            const maxTempData = [];
-            const avgTempData = [];
-            
-            // 生成模拟的温度范围数据
-            for (let i = 0; i < labels.length; i++) {
-                const hour = parseInt(labels[i]);
-                let baseTemp;
-                
-                if (hour >= 6 && hour <= 12) {
-                    // 上午温度逐渐升高
-                    baseTemp = 23 + (hour - 6) * 0.5;
-                } else if (hour > 12 && hour <= 18) {
-                    // 下午温度保持高位后逐渐下降
-                    baseTemp = 26 - (hour - 12) * 0.3;
-                } else if (hour > 18 && hour <= 22) {
-                    // 傍晚温度下降较快
-                    baseTemp = 24.2 - (hour - 18) * 0.6;
-                } else {
-                    // 夜间温度较低且稳定
-                    baseTemp = 22 + Math.random() * 0.5;
-                }
-                
-                // 添加随机波动
-                const minTemp = baseTemp - 0.5 - Math.random() * 0.5;
-                const maxTemp = baseTemp + 0.5 + Math.random() * 0.5;
-                const avgTemp = (minTemp + maxTemp) / 2;
-                
-                minTempData.push(parseFloat(minTemp.toFixed(1)));
-                maxTempData.push(parseFloat(maxTemp.toFixed(1)));
-                avgTempData.push(parseFloat(avgTemp.toFixed(1)));
-            }
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '最低温度',
-                        data: minTempData,
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: '平均温度',
-                        data: avgTempData,
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 3,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: '最高温度',
-                        data: maxTempData,
-                        borderColor: 'rgba(249, 115, 22, 1)',
-                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: '目标温度',
-                        data: Array(labels.length).fill(24),
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    }
-                ]
-            };
-        }
+    <!-- Chart 1: 变化速率 -->
+    <div class="chart-box" id="pRate" style="flex:1;min-height:0;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> 温度与功率变化速率分析</div>
+      <div id="cRate" style="min-height:280px;height:100%;width:100%;"></div>
+    </div>
 
-        // 生成控制精度图表数据
-        function generatePrecisionData() {
-            const labels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
-            const accuracyData = [];
-            const targetAccuracy = 0.5;
-            
-            // 生成模拟的控制精度数据
-            for (let i = 0; i < labels.length; i++) {
-                const hour = parseInt(labels[i]);
-                let accuracy;
-                
-                if (hour >= 9 && hour <= 18) {
-                    // 白天控制精度较高
-                    accuracy = targetAccuracy - 0.1 + Math.random() * 0.2;
-                } else {
-                    // 夜间控制精度略低
-                    accuracy = targetAccuracy + Math.random() * 0.3;
-                }
-                
-                accuracyData.push(parseFloat(accuracy.toFixed(2)));
-            }
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '控制精度 (°C)',
-                        data: accuracyData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderWidth: 1,
-                        borderRadius: 5,
-                        barThickness: 30
-                    },
-                    {
-                        label: '目标精度',
-                        data: Array(labels.length).fill(targetAccuracy),
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
-                        borderWidth: 2,
-                        borderDash: [5, 5],
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false,
-                        type: 'line'
-                    }
-                ]
-            };
-        }
+    <!-- Chart 2: 温度范围（隐藏） -->
+    <div class="chart-box" id="pRange" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> 不同温度范围内的功率响应</div>
+      <div id="cRange" style="min-height:280px;height:100%;width:100%;"></div>
+    </div>
 
-        // 初始化变化速率图表
-        const rateCtx = document.getElementById('rateChart').getContext('2d');
-        const rateData = generateRateData();
-        const rateChart = new Chart(rateCtx, {
-            type: 'line',
-            data: rateData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 8
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' °C/h';
-                            }
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 2
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)'
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1
-                    }
-                }
-            }
+    <!-- Chart 3: 控制精度（隐藏） -->
+    <div class="chart-box" id="pPrecision" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> PID 参数优化与控制精度分析</div>
+      <div id="cPrecision" style="min-height:280px;height:100%;width:100%;"></div>
+    </div>
+
+    <!-- 分析结论 -->
+    <div class="pn" style="padding:8px 12px;">
+      <div style="font-size:12px;color:rgba(180,210,255,.7);margin-bottom:4px;">分析结论</div>
+      <div id="conclusion" style="font-size:11px;color:rgba(160,200,255,.6);line-height:1.6;">
+        调整左侧参数查看不同场景下的温度变化速率对功率的影响...
+      </div>
+    </div>
+  </div>
+
+  <!-- Right -->
+  <div class="pn" id="right" style="display:flex;flex-direction:column;gap:5px;">
+
+    <div class="tt" style="font-size:12px;color:var(--cyan);">PID 参数分析</div>
+    <div class="slider-group">
+      <label>Kp (比例) <span class="slider-val" id="vKp">1.0</span></label>
+      <input type="range" id="sKp" min="0.2" max="2.0" step="0.1" value="1.0" oninput="onPidSlider()">
+    </div>
+    <div class="slider-group">
+      <label>Ki (积分) <span class="slider-val" id="vKi">0.5</span></label>
+      <input type="range" id="sKi" min="0.05" max="1.5" step="0.05" value="0.5" oninput="onPidSlider()">
+    </div>
+    <div class="slider-group">
+      <label>Kd (微分) <span class="slider-val" id="vKd">0.2</span></label>
+      <input type="range" id="sKd" min="0.01" max="1.0" step="0.01" value="0.2" oninput="onPidSlider()">
+    </div>
+
+    <div class="tt" style="font-size:12px;color:var(--cyan);margin-top:6px;">负载适应性</div>
+    <div id="adaptBar" style="height:80px;"></div>
+
+    <div class="tt" style="font-size:12px;color:var(--cyan);margin-top:6px;">节能效率对比</div>
+    <div id="saveBar" style="height:80px;"></div>
+
+    <div style="flex:1;"></div>
+    <div class="pn" style="padding:6px 8px;">
+      <div style="font-size:10px;color:rgba(160,200,255,.4);line-height:1.5;">
+        <span style="color:var(--cyan);">▶</span> PID 参数直接影响控制精度与系统稳定性<br>
+        <span style="color:var(--green);">▶</span> Kp 过大易振荡，过小响应慢<br>
+        <span style="color:var(--amber);">▶</span> 最优区间：Kp∈[0.8,1.2]
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
         });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
 
-        // 初始化温度范围图表
-        const rangeCtx = document.getElementById('rangeChart').getContext('2d');
-        const rangeData = generateRangeData();
-        const rangeChart = new Chart(rangeCtx, {
-            type: 'line',
-            data: rangeData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 8
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' °C';
-                            }
-                        },
-                        suggestedMin: 21,
-                        suggestedMax: 27
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)'
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1
-                    }
-                }
-            }
-        });
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script>
+// ========== 工具 ==========
+function $(id){ return document.getElementById(id); }
 
-        // 初始化控制精度图表
-        const precisionCtx = document.getElementById('precisionChart').getContext('2d');
-        const precisionData = generatePrecisionData();
-        const precisionChart = new Chart(precisionCtx, {
-            type: 'bar',
-            data: precisionData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)'
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' °C';
-                            }
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 1
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)'
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1
-                    }
-                }
-            }
-        });
-    </script>
+function tick(){
+  const n=new Date();
+  $('clk').textContent=n.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick,1000); tick();
+
+// ========== Tab 切换 ==========
+function switchTab(tab){
+  ['rate','range','precision'].forEach(t=>{
+    $(`p${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display='none';
+    document.querySelectorAll('.tab-btn')[['rate','range','precision'].indexOf(t)].classList.remove('active');
+  });
+  const idx={'rate':0,'range':1,'precision':2}[tab];
+  $(`p${tab.charAt(0).toUpperCase()+tab.slice(1)}`).style.display='flex';
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  setTimeout(()=>{ if(tab==='rate'&&chartRate) chartRate.resize(); if(tab==='range'&&chartRange) chartRange.resize(); if(tab==='precision'&&chartPrecision) chartPrecision.resize(); },50);
+}
+
+// ========== 滑块响应 ==========
+function onSlider(){
+  $('vRate').textContent=(+$('sRate').value).toFixed(2);
+  $('vTrate').textContent=(+$('sTrate').value).toFixed(2);
+  updateRateChart();
+  // 更新延迟
+  $('kDelay').textContent = (Math.random()*3+1).toFixed(1);
+  $('kRdelay').textContent = (Math.random()*5+2).toFixed(1);
+  updateConclusion();
+}
+
+function onTempRange(){
+  const ranges = ['26-32','28-36','30-38','32-40','34-42','36-44'];
+  const v = +$('sTrange').value;
+  $('vTrange').textContent = ranges[v];
+  updateRangeChart();
+  $('kPrangeA').textContent = Math.round(1200 + v*150) + '~' + Math.round(1600 + v*80);
+  $('kPrangeB').textContent = Math.round(900 + v*100) + '~' + Math.round(1300 + v*60);
+  updateConclusion();
+}
+
+function onPidSlider(){
+  $('vKp').textContent=(+$('sKp').value).toFixed(1);
+  $('vKi').textContent=(+$('sKi').value).toFixed(2);
+  $('vKd').textContent=(+$('sKd').value).toFixed(2);
+  updatePrecisionChart();
+  // 更新 PID 评分
+  const kp=+$('sKp').value;
+  const score = Math.max(0, 100 - Math.abs(kp-1.0)*60);
+  $('kKp').textContent = kp.toFixed(1) + ' (' + (kp>=0.8&&kp<=1.2?'✓ 最优':'偏'+(kp<0.8?'小':'大')) + ')';
+  $('kAdapt').textContent = Math.round(score);
+  $('kSave').textContent = Math.round(12 + score*0.15);
+  updateRightCharts(score);
+}
+
+// ========== 图表：变化速率 ==========
+let chartRate;
+function initRateChart(){
+  chartRate = echarts.init($('cRate'));
+  window.charts = window.charts || []; window.charts.push(chartRate);
+  updateRateChart();
+}
+function updateRateChart(){
+  const rate = +$('sRate').value;
+  const trate = +$('sTrate').value;
+  const hrs = Array.from({length:48},(_,i)=>`${String(Math.floor(i/2)).padStart(2,'0')}:${String((i%2)*30).padStart(2,'0')}`);
+
+  // 模拟室外温度随时间变化（不同变化速率）
+  const outTemp = hrs.map((_,i)=> 30 + Math.sin(i/48*2*Math.PI - Math.PI/2)*6 + rate*i*0.1);
+  // 商业区温度响应（延迟+平滑）
+  const comTemp = outTemp.map((t,i)=> 22 + (t-30)*0.3 + Math.sin(i/48*2*Math.PI)*0.5);
+  // 居民区温度响应（更大延迟）
+  const resTemp = outTemp.map((t,i)=> 26 + (t-30)*0.2 + Math.sin(i/48*2*Math.PI + 0.5)*0.8);
+
+  // 功率跟随温度
+  const comPw = comTemp.map(t=> 800 + (t-24)*80 + (Math.random()-0.5)*40);
+  const resPw = resTemp.map(t=> 400 + (t-26)*60 + (Math.random()-0.5)*30);
+
+  chartRate.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['室外温度','商业区温度','居民区温度','商业区功率','居民区功率'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:42, top:36, bottom:28 },
+    xAxis:{ type:'category', data:hrs.filter((_,i)=>i%4===0), axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    yAxis:[
+      { type:'value', name:'温度(°C)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+      { type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{show:false}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    ],
+    series:[
+      { name:'室外温度', type:'line', data:outTemp.map(v=>v.toFixed(1)), lineStyle:{color:'#ffb300',width:1.5}, itemStyle:{color:'#ffb300'}, symbol:'none', smooth:true },
+      { name:'商业区温度', type:'line', data:comTemp.map(v=>v.toFixed(1)), lineStyle:{color:'#00d2ff',width:1.5}, itemStyle:{color:'#00d2ff'}, symbol:'none', smooth:true },
+      { name:'居民区温度', type:'line', data:resTemp.map(v=>v.toFixed(1)), lineStyle:{color:'#00e5a0',width:1.5}, itemStyle:{color:'#00e5a0'}, symbol:'none', smooth:true },
+      { name:'商业区功率', type:'line', yAxisIndex:1, data:comPw.map(v=>Math.round(v)), lineStyle:{color:'#00d2ff',width:1.2,type:'dashed'}, itemStyle:{color:'#00d2ff'}, symbol:'none', smooth:true },
+      { name:'居民区功率', type:'line', yAxisIndex:1, data:resPw.map(v=>Math.round(v)), lineStyle:{color:'#00e5a0',width:1.2,type:'dashed'}, itemStyle:{color:'#00e5a0'}, symbol:'none', smooth:true },
+    ],
+  });
+}
+
+// ========== 图表：温度范围 ==========
+let chartRange;
+function initRangeChart(){
+  chartRange = echarts.init($('cRange'));
+  window.charts = window.charts || []; window.charts.push(chartRange);
+  updateRangeChart();
+}
+function updateRangeChart(){
+  const v = +$('sTrange').value;
+  const baseTemp = 26 + v*2;
+  const labels = ['06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'];
+
+  // 不同温度范围下，功率响应曲线
+  const ranges = [
+    {name:'低温范围', tBase:26, comPw:[800,900,1050,1200,1350,1280,1180,1050,950], resPw:[400,430,480,520,560,540,510,480,440]},
+    {name:'中温范围', tBase:32, comPw:[1000,1150,1350,1500,1650,1580,1450,1300,1150], resPw:[500,550,620,680,720,700,660,600,540]},
+    {name:'高温范围', tBase:38, comPw:[1200,1400,1650,1850,2000,1920,1780,1600,1420], resPw:[620,690,780,850,900,870,820,740,660]},
+  ];
+
+  chartRange.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['低温(26-32°C)','中温(32-38°C)','高温(38-44°C)'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    yAxis:{ type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    series:[
+      { name:'低温(26-32°C)', type:'line', data:ranges[0].comPw, lineStyle:{color:'#00d2ff',width:2}, itemStyle:{color:'#00d2ff'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.25)'},{offset:1,color:'rgba(0,210,255,.02)'}])}, smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'中温(32-38°C)', type:'line', data:ranges[1].comPw, lineStyle:{color:'#ffb300',width:2}, itemStyle:{color:'#ffb300'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,179,0,.2)'},{offset:1,color:'rgba(255,179,0,.02)'}])}, smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'高温(38-44°C)', type:'line', data:ranges[2].comPw, lineStyle:{color:'#ff3d57',width:2}, itemStyle:{color:'#ff3d57'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,61,87,.2)'},{offset:1,color:'rgba(255,61,87,.02)'}])}, smooth:true, symbol:'circle', symbolSize:4 },
+    ],
+  });
+}
+
+// ========== 图表：控制精度 ==========
+let chartPrecision;
+function initPrecisionChart(){
+  chartPrecision = echarts.init($('cPrecision'));
+  window.charts = window.charts || []; window.charts.push(chartPrecision);
+  updatePrecisionChart();
+}
+function updatePrecisionChart(){
+  const kp = +$('sKp').value;
+  const ki = +$('sKi').value;
+  const kd = +$('sKd').value;
+
+  // 模拟 PID 控制下的温度跟踪曲线
+  const steps = 60;
+  const target = 24; // 目标温度
+  let comTemp = 22;
+  let resTemp = 26;
+  const comTrace = [], resTrace = [], errCom = [], errRes = [];
+
+  for(let i=0;i<steps;i++){
+    // 模拟室外温度扰动
+    const disturb = 30 + 5*Math.sin(i/20) + (Math.random()-0.5)*2;
+    // PID 控制模拟
+    const errC = target - comTemp;
+    const errR = target - resTemp;
+    errCom.push(Math.abs(errC));
+    errRes.push(Math.abs(errR));
+
+    comTemp += kp*errC*0.05 - kd*0.02 + (disturb-30)*0.02 + (Math.random()-0.5)*0.1;
+    resTemp += kp*errR*0.03 - kd*0.01 + (disturb-30)*0.03 + (Math.random()-0.5)*0.15;
+    comTrace.push(+comTemp.toFixed(2));
+    resTrace.push(+resTemp.toFixed(2));
+  }
+
+  const labels = Array.from({length:steps},(_,i)=>i);
+
+  chartPrecision.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['商业区温度','居民区温度','目标线'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9,formatter:v=>v%10===0?v:''} },
+    yAxis:{ type:'value', name:'温度(°C)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    series:[
+      { name:'商业区温度', type:'line', data:comTrace, lineStyle:{color:'#00d2ff',width:1.5}, itemStyle:{color:'#00d2ff'}, symbol:'none', smooth:true },
+      { name:'居民区温度', type:'line', data:resTrace, lineStyle:{color:'#00e5a0',width:1.5}, itemStyle:{color:'#00e5a0'}, symbol:'none', smooth:true },
+      { name:'目标线', type:'line', data:Array(steps).fill(target), lineStyle:{color:'rgba(255,179,0,.5)',width:1,type:'dashed'}, itemStyle:{color:'rgba(255,179,0,.5)'}, symbol:'none' },
+    ],
+  });
+}
+
+// ========== 右侧小图 ==========
+let chartAdapt, chartSave;
+function initRightCharts(){
+  chartAdapt = echarts.init($('adaptBar'));
+  window.charts = window.charts || []; window.charts.push(chartAdapt);
+  chartSave = echarts.init($('saveBar'));
+  window.charts = window.charts || []; window.charts.push(chartSave);
+  updateRightCharts(82);
+}
+function updateRightCharts(score){
+  // 负载适应性（雷达图用 bar 代替）
+  chartAdapt.setOption({
+    grid:{ left:30, right:12, top:8, bottom:14 },
+    xAxis:{ type:'category', data:['商业A','商业B','居民A','居民B','工业'], axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8}, axisTick:{show:false} },
+    yAxis:{ type:'value', max:100, show:false },
+    series:[{ type:'bar', data:[score+Math.round((Math.random()-0.5)*10), score+Math.round((Math.random()-0.5)*8), score+Math.round((Math.random()-0.5)*12), score+Math.round((Math.random()-0.5)*10), score+Math.round((Math.random()-0.5)*6)].map(v=>Math.max(30,Math.min(100,v))), barWidth:14, itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#00e5a0'},{offset:1,color:'rgba(0,229,160,.2)'}]), borderRadius:[2,2,0,0]} }],
+  });
+
+  // 节能效率对比
+  const methods = ['PID','预冷','分区','夜间'];
+  const saved = [12+score*0.15, 18+Math.random()*5, 15+Math.random()*4, 22+Math.random()*3].map(v=>Math.round(v));
+  chartSave.setOption({
+    grid:{ left:30, right:12, top:8, bottom:14 },
+    xAxis:{ type:'category', data:methods, axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8}, axisTick:{show:false} },
+    yAxis:{ type:'value', max:35, show:false },
+    series:[{ type:'bar', data:saved, barWidth:14, itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#00d2ff'},{offset:1,color:'rgba(0,210,255,.2)'}]), borderRadius:[2,2,0,0]} }],
+  });
+}
+
+// ========== 分析结论 ==========
+function updateConclusion(){
+  const rate = +$('sRate').value;
+  const trange = $('vTrange').textContent;
+  const kp = +$('sKp').value;
+  let html = '';
+  html += `<span style="color:var(--cyan);">▶ 变化速率 ${rate}°C/min</span>：室外温度变化越快，商业/居民区温度响应延迟越明显，功率波动幅度增大 ${Math.round(rate*80)}~${Math.round(rate*120)}kW。<br>`;
+  html += `<span style="color:var(--amber);">▶ 温度范围 ${trange}°C</span>：高温范围下商业区功率峰值增加 ${(rate*20).toFixed(0)}%，居民区增加 ${(rate*15).toFixed(0)}%，需提前预冷。<br>`;
+  html += `<span style="color:var(--green);">▶ PID 参数 Kp=${kp.toFixed(1)}</span>：${kp>=0.8&&kp<=1.2?'参数在最优区间，控制精度高，系统稳定。':'参数偏离最优区间，建议调整至 0.8~1.2 之间。'}`;
+  $('conclusion').innerHTML = html;
+}
+
+// ========== WebSocket ==========
+let ws;
+function connectWS(){
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = ()=>{ $('wsSt').textContent='● 实时'; $('wsSt').style.color='var(--green)'; };
+  ws.onclose = ()=>{ $('wsSt').textContent='● 断开'; $('wsSt').style.color='var(--red)'; setTimeout(connectWS,3000); };
+}
+connectWS();
+
+// ========== 初始化 ==========
+window.addEventListener('DOMContentLoaded', ()=>{
+  initRateChart();
+  initRangeChart();
+  initPrecisionChart();
+  initRightCharts();
+  onSlider();
+  onTempRange();
+  onPidSlider();
+});
+window.addEventListener('resize', ()=>{
+  if(chartRate) chartRate.resize();
+  if(chartRange) chartRange.resize();
+  if(chartPrecision) chartPrecision.resize();
+  if(chartAdapt) chartAdapt.resize();
+  if(chartSave) chartSave.resize();
+});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
 </body>
 </html>

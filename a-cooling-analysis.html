@@ -1,532 +1,532 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>万达商场制冷分析 - 发电厂温度控制系统</title>
-    <!-- Tailwind CSS v3 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#93c5fd',
-                        accent: '#10b981',
-                        warning: '#f97316',
-                        dark: '#0f172a',
-                        'dark-light': '#1e293b',
-                        'light-text': '#e2e8f0'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 2s linear infinite',
-                    },
-                    keyframes: {
-                        flow: {
-                            '0%': { strokeDashoffset: '24' },
-                            '100%': { strokeDashoffset: '0' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .text-shadow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-            .border-glow { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-            .bg-grid {
-                background-image: 
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            .card-hover { transition: all 0.3s ease; }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商业区制冷分析 - 阶序智调</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root { --bg:#060d1f; --panel:rgba(8,18,42,.92); --border:rgba(0,210,255,.12); --cyan:#00d2ff; --green:#00e5a0; --amber:#ffb300; --red:#ff3d57; --t2:#8ab4d8; --t1:#d8eaf8; --t3:#2e4a66; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:#e0e8ff; font-family:'Segoe UI','Microsoft YaHei',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  #hd { height:96px; min-height:96px; background:linear-gradient(90deg,#060d1f 0%,#0a1a3f 50%,#060d1f 100%); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 18px; flex-shrink:0; }
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+  .hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+  .hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+  #nb { height:34px; background:rgba(0,210,255,.04); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:flex-start; padding:0 16px; gap:1px; overflow-x:auto; }
+  .nl { display:flex; align-items:center; gap:4px; height:28px; padding:0 13px; border-radius:3px; font-size:11px; color:rgba(180,210,255,.6); cursor:pointer; transition:.2s; white-space:nowrap; text-decoration:none; border:1px solid transparent; letter-spacing:.3px; }
+  .nl:hover { color:var(--cyan); background:rgba(0,210,255,.05); border-color:rgba(0,210,255,.08); }
+  .nl.on { color:var(--cyan); background:rgba(0,210,255,.08); border-color:rgba(0,210,255,.16); box-shadow:0 0 8px rgba(0,210,255,.06); }
+  .nl i { font-size:7px; }
+  .nl.dd { position:relative; }
+  .nl.dd:hover .dd-menu { display:block; }
+  .dd-menu { display:none; position:absolute; top:100%; left:0; background:rgba(8,18,42,.95); border:1px solid rgba(0,210,255,.12); border-radius:4px; padding:4px 0; min-width:120px; z-index:100; }
+  .dd-menu a { display:block; padding:6px 14px; font-size:11px; color:rgba(180,210,255,.6); text-decoration:none; transition:.2s; white-space:nowrap; }
+  .dd-menu a:hover { color:var(--cyan); background:rgba(0,210,255,.05); }
+  #main { flex:1; display:grid; grid-template-columns:250px 1fr 270px; gap:5px; padding:5px; min-height:0; }
+  .pn { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; overflow:auto; }
+  .kp { background:rgba(0,210,255,.04); border:1px solid var(--border); border-radius:5px; padding:7px 10px; margin-bottom:5px; }
+  .kp .lbl { font-size:10px; color:rgba(160,200,255,.5); margin-bottom:2px; }
+  .kp .val { font-size:18px; font-weight:700; }
+  .kp .unit { font-size:10px; color:rgba(160,200,255,.5); }
+  .chart-box { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; }
+  .chart-box .tt { font-size:12px; color:rgba(180,210,255,.7); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:rgba(0,210,255,.2); border-radius:3px; }
+  .tab-bar { display:flex; gap:4px; margin-bottom:8px; }
+  .tab-btn { padding:4px 12px; border-radius:4px; font-size:11px; cursor:pointer; border:1px solid var(--border); color:rgba(180,210,255,.6); background:transparent; transition:.2s; }
+  .tab-btn.active { background:rgba(0,210,255,.12); color:var(--cyan); border-color:rgba(0,210,255,.3); }
+  .slider-group { margin-bottom:8px; }
+  .slider-group label { font-size:10px; color:rgba(160,200,255,.6); display:block; margin-bottom:2px; }
+  .slider-group input[type=range] { width:100%; accent-color:var(--cyan); height:4px; }
+  .slider-val { font-size:11px; color:var(--cyan); float:right; }
+  .param-row { display:flex; gap:8px; margin-bottom:6px; align-items:center; }
+  .param-row label { font-size:10px; color:rgba(160,200,255,.5); width:60px; }
+  .param-row input { flex:1; background:rgba(0,210,255,.06); border:1px solid var(--border); border-radius:4px; padding:3px 6px; color:#e0e8ff; font-size:11px; outline:none; }
+  .param-row input:focus { border-color:rgba(0,210,255,.4); }
+  .plan-summary { background:rgba(0,210,255,.04); border:1px solid var(--border); border-radius:5px; padding:6px 8px; margin-bottom:4px; font-size:10px; line-height:1.6; }
+  .plan-a { border-left:3px solid var(--cyan); }
+  .plan-b { border-left:3px solid var(--green); }
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
 </head>
-<body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部区域 -->
-    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <a href="index.html" class="flex items-center">
-                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
-                </a>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
-                    <i class="fa fa-clock-o text-secondary mr-2"></i>
-                    <span id="current-time" class="text-xl font-mono"></span>
-                </div>
-                <a href="a-area.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-arrow-left mr-2"></i>
-                    返回万达商场
-                </a>
-            </div>
-        </div>
-    </header>
+<body>
 
-    <!-- 主要内容区域 -->
-    <main class="flex-grow container mx-auto p-6 bg-grid">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-secondary mb-2">万达商场制冷分析</h2>
-            <p class="text-light-text/70">方案一与方案二功率对比分析</p>
-        </div>
+<!-- Header -->
+<div id="hd">
+  <div style="display:flex;align-items:center;gap:8px;width:80px;flex-shrink:0"><span class="hd-brace">[</span><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div style="display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0"><span id="clk" style="font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)">--:--:--</span><span id="wsSt" style="display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap">● 实时</span></div>
+</div>
 
-        <!-- 分析按钮 -->
-        <div class="flex justify-center mb-6">
-            <button id="analyzePowerBtn" class="bg-accent hover:bg-accent/80 text-white px-8 py-3 rounded-lg flex items-center transition-colors duration-300 text-lg font-semibold">
-                <i class="fa fa-bar-chart mr-3"></i>
-                分析功率需求
-            </button>
-        </div>
+<!-- Nav -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <div class="nl dd on" style="cursor:default">
+    <span><i class="fas fa-chart-line"></i>分析</span>
+    <div class="dd-menu">
+      <a href="analysis.html">🌡 温度变化</a>
+      <a href="cooling-analysis.html">📊 负荷分析</a>
+      <a href="a-cooling-analysis.html">❄ 商业制冷</a>
+      <a href="b-cooling-analysis.html">🏠 居民制冷</a>
+    </div>
+  </div>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+</nav>
 
-        <!-- 功率需求分析结果 (V47版本样式) -->
-        <div id="powerAnalysisResult" class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-6">
-            <h3 class="text-xl font-bold text-secondary mb-4 flex items-center">
-                <i class="fa fa-lightbulb-o text-warning mr-3"></i>
-                功率需求分析结果
-            </h3>
+<!-- Main -->
+<div id="main">
 
-            <!-- 冷负荷特性分析 -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold text-primary mb-3">冷负荷特性分析</h4>
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>当前冷负荷启动功率为 <strong class="text-accent">1.78 万kW</strong>，处于正常运行范围</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>冷负荷启动功率与环境温度呈 <strong class="text-accent">强正相关</strong>，相关系数 <strong class="text-accent">0.85</strong></span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>工作日 <strong class="text-accent">10:00-16:00</strong> 为冷负荷高峰期，平均功率 <strong class="text-accent">1.68 万kW</strong></span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>夜间 <strong class="text-accent">22:00-08:00</strong> 为冷负荷低峰期，平均功率 <strong class="text-accent">1.55 万kW</strong></span>
-                    </div>
-                </div>
-            </div>
+  <!-- Left: 参数面板 -->
+  <div class="pn" style="display:flex;flex-direction:column;gap:5px;">
 
-            <!-- 避免冷负荷启动策略 -->
-            <div>
-                <h4 class="text-lg font-semibold text-primary mb-3">避免冷负荷启动策略</h4>
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">预冷策略：</strong>在商场开门前2小时（08:00-10:00）提前降温，减少开业后峰值负荷</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">分区控制：</strong>根据商场不同区域的人流密度，动态调整制冷功率分配</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">夜间蓄冷：</strong>利用夜间低谷电价进行蓄冷，白天释放冷量，降低高峰时段用电负荷</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div style="font-size:12px;color:var(--cyan);margin-bottom:4px;">▶ 方案一/方案二 参数调整</div>
 
-        <!-- 功率-时间图像 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-6">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-secondary">功率-时间图像分析</h3>
-                <div class="flex items-center">
-                    <span class="text-sm text-light-text/70 mr-2">基准功率:</span>
-                    <span class="text-lg font-bold text-primary">1.6 万kW</span>
-                </div>
-            </div>
-            <div class="h-80">
-                <canvas id="powerTimeChart"></canvas>
-            </div>
-        </div>
+    <!-- 温度设定 -->
+    <div class="kp">
+      <div class="lbl">商业区目标温度</div>
+      <div class="val" id="kTarget" style="color:var(--cyan);">24.0</div>
+      <div class="unit">°C</div>
+    </div>
+    <div class="slider-group">
+      <label>目标温度 <span class="slider-val" id="vTarget">24.0</span></label>
+      <input type="range" id="sTarget" min="20" max="28" step="0.5" value="24.0" oninput="onParamChange()">
+    </div>
 
-        <!-- 对比分析图表 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-secondary">方案一与方案二功率对比</h3>
-                <div class="flex items-center space-x-4">
-                    <button id="showPlan1Btn" class="bg-warning hover:bg-warning/80 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                        方案一
-                    </button>
-                    <button id="showPlan2Btn" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                        方案二
-                    </button>
-                </div>
-            </div>
-            <div class="h-80">
-                <canvas id="comparisonChart"></canvas>
-            </div>
-            <!-- 图例说明 -->
-            <div class="mt-4 flex items-center justify-center space-x-8">
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-orange-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">方案一</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-green-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">方案二</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-blue-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">基准功率</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-red-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">功率上限阈值</span>
-                </div>
-            </div>
-        </div>
-    </main>
+    <!-- 功率基准 -->
+    <div class="kp">
+      <div class="lbl">基准功率</div>
+      <div class="val" id="kBasePw" style="color:var(--amber);">800</div>
+      <div class="unit">kW</div>
+    </div>
+    <div class="slider-group">
+      <label>基准功率 <span class="slider-val" id="vBasePw">800</span></label>
+      <input type="range" id="sBasePw" min="500" max="1200" step="10" value="800" oninput="onParamChange()">
+    </div>
 
-    <!-- 底部区域 -->
-    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
-        <div class="container mx-auto text-center text-sm text-light-text/70">
-            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
-        </div>
-    </footer>
+    <!-- 方案一参数 -->
+    <div style="font-size:11px;color:rgba(180,210,255,.5);margin-top:4px;margin-bottom:4px;">方案一：优先商圈</div>
+    <div class="plan-summary plan-a">
+      商业区功率 = 基准 × <span id="p1Ratio">0.8</span><br>
+      居民区功率 = <span id="p1Res">0</span> kW（断电）<br>
+      预计能耗 = <span id="p1Energy">--</span> kWh/天
+    </div>
 
-    <!-- JavaScript -->
-    <script>
-        // 更新当前时间
-        function updateCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('current-time').textContent = `${hours}:${minutes}`;
-        }
-        updateCurrentTime();
-        setInterval(updateCurrentTime, 60000);
+    <!-- 方案二参数 -->
+    <div style="font-size:11px;color:rgba(180,210,255,.5);margin-top:4px;margin-bottom:4px;">方案二：兼顾居民</div>
+    <div class="slider-group">
+      <label>商业区分配比 <span class="slider-val" id="vP2Com">0.50</span></label>
+      <input type="range" id="sP2Com" min="0.20" max="0.80" step="0.01" value="0.50" oninput="onParamChange()">
+    </div>
+    <div class="slider-group">
+      <label>居民区最低保障 <span class="slider-val" id="vP2Res">0.30</span></label>
+      <input type="range" id="sP2Res" min="0.10" max="0.60" step="0.01" value="0.30" oninput="onParamChange()">
+    </div>
+    <div class="plan-summary plan-b">
+      商业区功率 = 基准 × <span id="p2ComVal">0.50</span><br>
+      居民区功率 = 基准 × <span id="p2ResVal">0.30</span><br>
+      预计能耗 = <span id="p2Energy">--</span> kWh/天
+    </div>
 
-        // 生成时间标签（更详细的时间刻度）
-        const timeLabels = [];
-        for (let i = 0; i < 24; i++) {
-            timeLabels.push(`${String(i).padStart(2, '0')}:00`);
-        }
+    <div style="flex:1;"></div>
 
-        // 生成符合客观规律的功率数据
-        // 正常运行时功率应当是很平稳的，不是一直锯齿状
-        function generateNormalOperationPower() {
-            const base = 1.6; // 基准功率1.6万kW
-            return timeLabels.map((time, i) => {
-                const hour = parseInt(time.split(':')[0]);
-                let power = base;
-                
-                // 根据时间段调整功率
-                if (hour >= 10 && hour <= 16) { // 高峰期 10:00-16:00
-                    power = base + 0.08; // 略高于基准功率
-                } else if (hour >= 22 || hour <= 8) { // 低峰期 22:00-08:00
-                    power = base - 0.05; // 略低于基准功率
-                }
-                
-                // 正常运行时波动很小，保持平稳
-                const smallFluctuation = (Math.random() - 0.5) * 0.01; // ±0.005万kW的微小波动
-                return (power + smallFluctuation).toFixed(3);
-            });
-        }
+    <!-- 冷负荷启动优化 -->
+    <div style="font-size:12px;color:var(--amber);margin-bottom:4px;">▶ 冷负荷启动优化</div>
+    <div class="kp">
+      <div class="lbl">优化后日节能</div>
+      <div class="val" id="kOptimized" style="color:var(--green);">--</div>
+      <div class="unit">kWh</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">冷负荷启动峰值削减</div>
+      <div class="val" id="kPeakCut" style="color:var(--green);">--</div>
+      <div class="unit">%</div>
+    </div>
+  </div>
 
-        // 生成方案一功率数据（根据参考图形状）
-        function generatePlan1Power() {
-            const base = 1.7; // 初始和最终功率1.7万kW
-            const minPower = 1.36; // 方案一最低功率1.36万kW
-            return timeLabels.map((time, i) => {
-                let power = base;
-                
-                // 根据参考图的曲线形状设计，左右对称
-                if (i >= 0 && i <= 3) { // 起点平台期
-                    power = base;
-                } else if (i === 4) {
-                    power = base - 0.05;
-                } else if (i === 5) {
-                    power = base - 0.15;
-                } else if (i >= 6 && i <= 11) { // 稳定在最低功率
-                    power = minPower;
-                } else if (i === 12) {
-                    power = base - 0.15;
-                } else if (i === 13) {
-                    power = base - 0.05;
-                } else if (i >= 14 && i <= 23) { // 终点平台期
-                    power = base;
-                }
-                
-                // 添加小波动使曲线更自然
-                const fluctuation = (Math.random() - 0.5) * 0.005;
-                return (power + fluctuation).toFixed(3);
-            });
-        }
+  <!-- Center: 主图表区 -->
+  <div style="display:flex;flex-direction:column;gap:5px;min-height:0;">
 
-        // 生成方案二功率数据（根据参考图形状）
-        function generatePlan2Power() {
-            const base = 1.7; // 初始和最终功率1.7万kW
-            const minPower = 0.85; // 方案二最低功率0.85万kW
-            return timeLabels.map((time, i) => {
-                let power = base;
-                
-                // 根据参考图的曲线形状设计，左右对称
-                if (i >= 0 && i <= 3) { // 起点平台期
-                    power = base;
-                } else if (i === 4) {
-                    power = base - 0.10;
-                } else if (i === 5) {
-                    power = base - 0.30;
-                } else if (i === 6) {
-                    power = base - 0.50;
-                } else if (i >= 7 && i <= 10) { // 稳定在最低功率
-                    power = minPower;
-                } else if (i === 11) {
-                    power = base - 0.50;
-                } else if (i === 12) {
-                    power = base - 0.30;
-                } else if (i === 13) {
-                    power = base - 0.10;
-                } else if (i >= 14 && i <= 23) { // 终点平台期
-                    power = base;
-                }
-                
-                // 添加小波动
-                const fluctuation = (Math.random() - 0.5) * 0.005;
-                return (power + fluctuation).toFixed(3);
-            });
-        }
+    <!-- Tab 栏 -->
+    <div class="tab-bar" style="padding:0 8px;">
+      <button class="tab-btn active" onclick="switchTab('power')">功率对比</button>
+      <button class="tab-btn" onclick="switchTab('cooling')">冷负荷特性</button>
+      <button class="tab-btn" onclick="switchTab('optimize')">启动优化</button>
+    </div>
 
-        // 初始化功率-时间图像图表
-        const powerTimeCtx = document.getElementById('powerTimeChart').getContext('2d');
-        const powerTimeChart = new Chart(powerTimeCtx, {
-            type: 'line',
-            data: {
-                labels: timeLabels,
-                datasets: [
-                    {
-                        label: '正常运行功率',
-                        data: generateNormalOperationPower(),
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: '高峰期',
-                        data: timeLabels.map((time, i) => {
-                            const hour = parseInt(time.split(':')[0]);
-                            return (hour >= 10 && hour <= 16) ? generateNormalOperationPower()[i] : null;
-                        }),
-                        borderColor: 'rgba(249, 115, 22, 0.8)',
-                        backgroundColor: 'rgba(249, 115, 22, 0.2)',
-                        borderWidth: 0,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: 'origin'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            maxRotation: 45, 
-                            autoSkip: true,
-                            maxTicksLimit: 12
-                        } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            callback: v => v + ' 万kW',
-                            stepSize: 0.05 // 分度值0.1万kW
-                        },
-                        suggestedMin: 1.50,
-                        suggestedMax: 1.75
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.raw} 万kW`;
-                            }
-                        }
-                    }
-                }
-            }
+    <!-- 功率对比图 -->
+    <div class="chart-box" id="pPower" style="flex:1;min-height:0;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> 方案一 vs 方案二 功率对比</div>
+      <div id="cPower" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
+
+    <!-- 冷负荷特性图（隐藏） -->
+    <div class="chart-box" id="pCooling" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> 冷负荷启动特性分析</div>
+      <div id="cCooling" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
+
+    <!-- 启动优化图（隐藏） -->
+    <div class="chart-box" id="pOptimize" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--cyan);">▶</span> 避免冷负荷启动优化策略</div>
+      <div id="cOptimize" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
+
+    <!-- 分析结论 -->
+    <div class="pn" style="padding:8px 12px;">
+      <div style="font-size:12px;color:rgba(180,210,255,.7);margin-bottom:4px;">分析结论</div>
+      <div id="conclusion" style="font-size:11px;color:rgba(160,200,255,.6);line-height:1.6;">
+        调整左侧参数查看方案一与方案二的功率对比，以及冷负荷启动优化效果...
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: 右侧信息面板 -->
+  <div class="pn" style="display:flex;flex-direction:column;gap:5px;">
+
+    <div style="font-size:12px;color:var(--cyan);">方案对比摘要</div>
+
+    <div class="kp">
+      <div class="lbl">方案一总能耗</div>
+      <div class="val" id="kP1Total" style="color:var(--amber);">--</div>
+      <div class="unit">kWh/天</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">方案二总能耗</div>
+      <div class="val" id="kP2Total" style="color:var(--green);">--</div>
+      <div class="unit">kWh/天</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">方案二节能率</div>
+      <div class="val" id="kSaveRate" style="color:var(--green);">--</div>
+      <div class="unit">%</div>
+    </div>
+
+    <div style="font-size:12px;color:var(--cyan);margin-top:6px;">温度变化趋势</div>
+    <div id="tempTrend" style="min-height:280px;width:100%;height:100%;"></div>
+
+    <div style="font-size:12px;color:var(--cyan);margin-top:6px;">功率分布</div>
+    <div id="powerDist" style="min-height:280px;width:100%;height:100%;"></div>
+
+    <div style="flex:1;"></div>
+
+    <div class="pn" style="padding:6px 8px;">
+      <div style="font-size:10px;color:rgba(160,200,255,.4);line-height:1.5;">
+        <span style="color:var(--cyan);">▶</span> 方案一适合短期紧急故障<br>
+        <span style="color:var(--green);">▶</span> 方案二适合长期故障场景<br>
+        <span style="color:var(--amber);">▶</span> 避免冷负荷启动可降低峰值 15~25%
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
         });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
 
-        // 初始化对比图表
-        const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-        const powerLimit = 1.85; // 功率上限阈值（红色虚线）
-        const comparisonChart = new Chart(comparisonCtx, {
-            type: 'line',
-            data: {
-                labels: timeLabels,
-                datasets: [
-                    {
-                        label: '方案一功率',
-                        data: generatePlan1Power(),
-                        borderColor: '#f97316', // 橙色
-                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 5
-                    },
-                    {
-                        label: '方案二功率',
-                        data: generatePlan2Power(),
-                        borderColor: '#10b981', // 绿色
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0,
-                        pointHoverRadius: 5
-                    },
-                    {
-                        label: '基准功率',
-                        data: timeLabels.map(() => 1.6),
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderDash: [5, 5],
-                        borderWidth: 1,
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    },
-                    {
-                        label: '功率上限阈值',
-                        data: timeLabels.map(() => powerLimit),
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderDash: [5, 3],
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            maxRotation: 45, 
-                            autoSkip: true,
-                            maxTicksLimit: 12
-                        } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            callback: v => v + ' 万kW',
-                            stepSize: 0.05 // 分度值0.1万kW
-                        },
-                        min: 0.8,
-                        max: 2.0
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.raw} 万kW`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script>
+// ========== 工具 ==========
+function $(id){ return document.getElementById(id); }
 
-        // 按钮事件处理
-        document.getElementById('analyzePowerBtn').addEventListener('click', function() {
-            // 模拟分析过程
-            this.disabled = true;
-            this.innerHTML = '<i class="fa fa-spinner fa-spin mr-3"></i> 分析中...';
-            
-            setTimeout(() => {
-                // 显示分析结果
-                document.getElementById('powerAnalysisResult').style.display = 'block';
-                
-                // 更新图表数据
-                powerTimeChart.data.datasets[0].data = generateNormalOperationPower();
-                powerTimeChart.update();
-                
-                comparisonChart.data.datasets[0].data = generatePlan1Power();
-                comparisonChart.data.datasets[1].data = generatePlan2Power();
-                comparisonChart.update();
-                
-                // 恢复按钮状态
-                this.disabled = false;
-                this.innerHTML = '<i class="fa fa-bar-chart mr-3"></i> 重新分析';
-            }, 1500);
-        });
+function tick(){
+  const n=new Date();
+  $('clk').textContent=n.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick,1000); tick();
 
-        // 显示/隐藏方案一曲线
-        document.getElementById('showPlan1Btn').addEventListener('click', function() {
-            const isHidden = comparisonChart.isDatasetVisible(0);
-            comparisonChart.setDatasetVisibility(0, !isHidden);
-            comparisonChart.update();
-            this.textContent = isHidden ? '隐藏方案一' : '显示方案一';
-        });
+// ========== Tab 切换 ==========
+function switchTab(tab){
+  ['power','cooling','optimize'].forEach(t=>{
+    $(`p${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display='none';
+    document.querySelectorAll('.tab-btn')[['power','cooling','optimize'].indexOf(t)].classList.remove('active');
+  });
+  const idx={'power':0,'cooling':1,'optimize':2}[tab];
+  $(`p${tab.charAt(0).toUpperCase()+tab.slice(1)}`).style.display='flex';
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  setTimeout(()=>{ if(tab==='power'&&chartPower) chartPower.resize(); if(tab==='cooling'&&chartCooling) chartCooling.resize(); if(tab==='optimize'&&chartOptimize) chartOptimize.resize(); },50);
+}
 
-        // 显示/隐藏方案二曲线
-        document.getElementById('showPlan2Btn').addEventListener('click', function() {
-            const isHidden = comparisonChart.isDatasetVisible(1);
-            comparisonChart.setDatasetVisibility(1, !isHidden);
-            comparisonChart.update();
-            this.textContent = isHidden ? '隐藏方案二' : '显示方案二';
-        });
+// ========== 参数变更 ==========
+function onParamChange(){
+  const target = +$('sTarget').value;
+  const basePw = +$('sBasePw').value;
+  const p2Com = +$('sP2Com').value;
+  const p2Res = +$('sP2Res').value;
 
-        // 初始化时隐藏分析结果
-        document.getElementById('powerAnalysisResult').style.display = 'none';
+  $('vTarget').textContent = target.toFixed(1);
+  $('vBasePw').textContent = basePw;
+  $('vP2Com').textContent = p2Com.toFixed(2);
+  $('vP2Res').textContent = p2Res.toFixed(2);
 
-        // 每10秒更新一次图表数据，保持数据的实时性
-        setInterval(() => {
-            if (document.getElementById('powerAnalysisResult').style.display !== 'none') {
-                powerTimeChart.data.datasets[0].data = generateNormalOperationPower();
-                powerTimeChart.update();
-                
-                comparisonChart.data.datasets[0].data = generatePlan1Power();
-                comparisonChart.data.datasets[1].data = generatePlan2Power();
-                comparisonChart.update();
-            }
-        }, 10000);
-    </script>
+  $('kTarget').textContent = target.toFixed(1);
+  $('kBasePw').textContent = basePw;
+
+  // 方案一
+  const p1Com = Math.round(basePw * 0.8);
+  const p1Res = 0;
+  const p1Eng = Math.round((p1Com * 14 + p1Res * 10) * 24 / 10);
+  $('p1Ratio').textContent = '0.80';
+  $('p1Res').textContent = p1Res;
+  $('p1Energy').textContent = p1Eng;
+
+  // 方案二
+  const p2ComVal = Math.round(basePw * p2Com);
+  const p2ResVal = Math.round(basePw * p2Res);
+  const p2Eng = Math.round((p2ComVal * 14 + p2ResVal * 10) * 24 / 10);
+  $('p2ComVal').textContent = p2Com.toFixed(2);
+  $('p2ResVal').textContent = p2Res.toFixed(2);
+  $('p2Energy').textContent = p2Eng;
+
+  // 更新右侧摘要
+  $('kP1Total').textContent = p1Eng;
+  $('kP2Total').textContent = p2Eng;
+  const saveRate = ((p1Eng - p2Eng) / p1Eng * 100).toFixed(1);
+  $('kSaveRate').textContent = saveRate;
+
+  // 优化指标
+  const optimized = Math.round(p2Eng * 0.18);
+  const peakCut = Math.round(15 + Math.random() * 10);
+  $('kOptimized').textContent = optimized;
+  $('kPeakCut').textContent = peakCut;
+
+  updatePowerChart();
+  updateRightCharts(p1Eng, p2Eng);
+  updateConclusion(p1Eng, p2Eng, saveRate);
+}
+
+// ========== 图表：功率对比 ==========
+let chartPower;
+function initPowerChart(){
+  chartPower = echarts.init($('cPower'));
+  window.charts = window.charts || []; window.charts.push(chartPower);
+  updatePowerChart();
+}
+function updatePowerChart(){
+  const basePw = +$('sBasePw').value;
+  const p2Com = +$('sP2Com').value;
+  const p2Res = +$('sP2Res').value;
+
+  const labels = ['06:00','08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00','24:00'];
+
+  // 方案一：商业区 80% 基准，居民区 0
+  const p1Com = labels.map((_,i)=> Math.round(basePw*0.8 + Math.sin(i/3)*basePw*0.1 + (Math.random()-0.5)*30));
+  const p1Res = labels.map(()=> 0);
+
+  // 方案二：可调
+  const p2Com = labels.map((_,i)=> Math.round(basePw*p2Com + Math.sin(i/3)*basePw*0.08 + (Math.random()-0.5)*20));
+  const p2Res = labels.map((_,i)=> Math.round(basePw*p2Res + Math.cos(i/3)*basePw*0.05 + (Math.random()-0.5)*15));
+
+  chartPower.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['方案一-商业','方案一-居民','方案二-商业','方案二-居民'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    yAxis:{ type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    series:[
+      { name:'方案一-商业', type:'line', data:p1Com, lineStyle:{color:'#00d2ff',width:2}, itemStyle:{color:'#00d2ff'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.2)'},{offset:1,color:'rgba(0,210,255,.02)'}]) , smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'方案一-居民', type:'line', data:p1Res, lineStyle:{color:'#00d2ff',width:1.5,type:'dashed'}, itemStyle:{color:'#00d2ff'}, smooth:true, symbol:'none' },
+      { name:'方案二-商业', type:'line', data:p2Com, lineStyle:{color:'#00e5a0',width:2}, itemStyle:{color:'#00e5a0'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.2)'},{offset:1,color:'rgba(0,229,160,.02)'}]) , smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'方案二-居民', type:'line', data:p2Res, lineStyle:{color:'#00e5a0',width:1.5,type:'dashed'}, itemStyle:{color:'#00e5a0'}, smooth:true, symbol:'none' },
+    ],
+  });
+}
+
+// ========== 图表：冷负荷特性 ==========
+let chartCooling;
+function initCoolingChart(){
+  chartCooling = echarts.init($('cCooling'));
+  window.charts = window.charts || []; window.charts.push(chartCooling);
+  updateCoolingChart();
+}
+function updateCoolingChart(){
+  const labels = Array.from({length:24},(_,i)=>i);
+
+  // 冷负荷启动特性：启动瞬间功率骤增，然后逐渐回落到稳态
+  const coldStart = labels.map(i=>{
+    if(i<2) return 1800 + i*200; // 启动峰值
+    if(i<6) return 1800 - (i-2)*250; // 快速下降
+    return 800 + Math.sin(i/4)*80 + (Math.random()-0.5)*30; // 稳态
+  });
+
+  // 避免冷负荷启动：分步启动
+  const avoidStart = labels.map(i=>{
+    if(i<8) return 400 + i*50; // 逐步上升
+    return 800 + Math.sin(i/4)*40 + (Math.random()-0.5)*20; // 稳态
+  });
+
+  chartCooling.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['冷负荷启动','避免冷负荷启动'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9, formatter:v=>v%4===0?v+'h':''} },
+    yAxis:{ type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    series:[
+      { name:'冷负荷启动', type:'line', data:coldStart.map(v=>Math.round(v)), lineStyle:{color:'#ff3d57',width:2}, itemStyle:{color:'#ff3d57'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,61,87,.2)'},{offset:1,color:'rgba(255,61,87,.02)'}]) , smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'避免冷负荷启动', type:'line', data:avoidStart.map(v=>Math.round(v)), lineStyle:{color:'#00e5a0',width:2}, itemStyle:{color:'#00e5a0'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.2)'},{offset:1,color:'rgba(0,229,160,.02)'}]) , smooth:true, symbol:'circle', symbolSize:4 },
+    ],
+  });
+}
+
+// ========== 图表：启动优化 ==========
+let chartOptimize;
+function initOptimizeChart(){
+  chartOptimize = echarts.init($('cOptimize'));
+  window.charts = window.charts || []; window.charts.push(chartOptimize);
+  updateOptimizeChart();
+}
+function updateOptimizeChart(){
+  const k = +$('sBasePw').value / 800; // 恢复斜率因子
+  const b = 1.0; // PID 参数
+  const c = 2.0; // 温度差
+
+  // 数学模型：y = k*b*c / x，目标最小化 xy 乘积
+  const xVals = [0.5, 1, 2, 3, 4, 5, 6, 7, 8];
+  const yVals = xVals.map(x => k*b*c / x);
+  const xyProduct = xVals.map((x,i) => +(x * yVals[i]).toFixed(2));
+
+  // 最优 x（使 xy 最小）
+  const optimalX = 4.5;
+  const optimalY = k*b*c / optimalX;
+
+  chartOptimize.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['y = kbc/x','xy 乘积'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:48, right:16, top:36, bottom:28 },
+    xAxis:[{ type:'category', data:xVals.map(v=>v.toFixed(1)), axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9}, name:'x (控制参数)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9} }],
+    yAxis:[
+      { type:'value', name:'y', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+      { type:'value', name:'xy 乘积', nameTextStyle:{color:'rgba(255,179,0,.7)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(255,179,0,.3)'}}, splitLine:{show:false}, axisLabel:{color:'rgba(255,179,0,.5)',fontSize:9} },
+    ],
+    series:[
+      { name:'y = kbc/x', type:'line', data:yVals.map(v=>Math.round(v)), lineStyle:{color:'#00d2ff',width:2}, itemStyle:{color:'#00d2ff'}, smooth:true, symbol:'circle', symbolSize:5 },
+      { name:'xy 乘积', type:'line', yAxisIndex:1, data:xyProduct, lineStyle:{color:'#ffb300',width:1.5,type:'dashed'}, itemStyle:{color:'#ffb300'}, smooth:true, symbol:'none' },
+      { name:'最优区间', type:'line', data:Array(xVals.length).fill(null).map((_,i)=> i>=3&&i<=5 ? xyProduct[i] : null), lineStyle:{color:'#00e5a0',width:3}, itemStyle:{color:'#00e5a0'}, symbol:'circle', symbolSize:6, connectNulls:false },
+    ],
+  });
+}
+
+// ========== 右侧小图 ==========
+let chartTemp, chartDist;
+function initRightCharts(){
+  chartTemp = echarts.init($('tempTrend'));
+  window.charts = window.charts || []; window.charts.push(chartTemp);
+  chartDist = echarts.init($('powerDist'));
+  window.charts = window.charts || []; window.charts.push(chartDist);
+  updateRightCharts(14000, 12000);
+}
+function updateRightCharts(p1,p2){
+  const hrs = ['6h','8h','10h','12h','14h','16h','18h','20h','22h'];
+  const tA = hrs.map((_,i)=> +(22 + Math.sin(i/3)*2 + (Math.random()-0.5)*0.5).toFixed(1));
+  const tB = hrs.map((_,i)=> +(26 + Math.cos(i/3)*1.5 + (Math.random()-0.5)*0.8).toFixed(1));
+  chartTemp.setOption({
+    grid:{ left:28, right:8, top:6, bottom:14 },
+    xAxis:{ type:'category', data:hrs, axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8}, axisTick:{show:false} },
+    yAxis:{ type:'value', show:false },
+    series:[
+      { type:'line', data:tA, lineStyle:{color:'#00d2ff',width:1.2}, itemStyle:{color:'#00d2ff'}, symbol:'none', smooth:true },
+      { type:'line', data:tB, lineStyle:{color:'#00e5a0',width:1.2}, itemStyle:{color:'#00e5a0'}, symbol:'none', smooth:true },
+    ],
+  });
+
+  chartDist.setOption({
+    grid:{ left:28, right:8, top:6, bottom:14 },
+    xAxis:{ type:'category', data:['方案一','方案二'], axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8}, axisTick:{show:false} },
+    yAxis:{ type:'value', show:false },
+    series:[{ type:'bar', data:[p1,p2], barWidth:30, itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#ffb300'},{offset:1,color:'rgba(255,179,0,.2)'}]), borderRadius:[3,3,0,0]} }],
+  });
+}
+
+// ========== 分析结论 ==========
+function updateConclusion(p1,p2,saveRate){
+  let html = '';
+  html += `<span style="color:var(--cyan);">▶ 方案一（优先商圈）</span>：商业区获 80% 功率，居民区断电，日能耗 ${p1} kWh。<br>`;
+  html += `<span style="color:var(--green);">▶ 方案二（兼顾居民）</span>：商业区获 ${+$('sP2Com').value*100}% 功率，居民区获 ${+$('sP2Res').value*100}% 最低保障，日能耗 ${p2} kWh。<br>`;
+  html += `<span style="color:var(--amber);">▶ 节能对比</span>：方案二比方案一节能 ${saveRate}%，长期故障场景优先选择方案二。<br>`;
+  html += `<span style="color:var(--green);">▶ 冷负荷优化</span>：避免冷负荷启动策略可降低峰值 ${$('kPeakCut').textContent}%，建议商业区空调系统采用分步启动策略。`;
+  $('conclusion').innerHTML = html;
+}
+
+// ========== WebSocket ==========
+let ws;
+function connectWS(){
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = ()=>{ $('wsSt').textContent='● 实时'; $('wsSt').style.color='var(--green)'; };
+  ws.onclose = ()=>{ $('wsSt').textContent='● 断开'; $('wsSt').style.color='var(--red)'; setTimeout(connectWS,3000); };
+}
+connectWS();
+
+// ========== 初始化 ==========
+window.addEventListener('DOMContentLoaded', ()=>{
+  initPowerChart();
+  initCoolingChart();
+  initOptimizeChart();
+  initRightCharts();
+  onParamChange();
+});
+window.addEventListener('resize', ()=>{
+  if(chartPower) chartPower.resize();
+  if(chartCooling) chartCooling.resize();
+  if(chartOptimize) chartOptimize.resize();
+  if(chartTemp) chartTemp.resize();
+  if(chartDist) chartDist.resize();
+});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
 </body>
 </html>

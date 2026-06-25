@@ -1,0 +1,681 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>调度操作日志 — 阶序智调</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.3);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+  --mono:"SF Mono","Fira Code","Consolas",monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(57,128,255,.18)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(57,128,255,.2);border-radius:2px}
+::-webkit-scrollbar-track{background:transparent}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%,rgba(57,128,255,.18),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(57,128,255,.05),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(0,210,255,.04),transparent 55%);
+}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ===== HEADER ===== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98)0%,rgba(6,13,31,.94)100%);border-bottom:1px solid rgba(0,210,255,.12);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,#00d2ff,transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:#00e5a0;animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ===== NAV BAR ===== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative}
+.nl.dd:hover .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:120px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ===== MAIN GRID ===== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:1fr 250px;gap:5px;padding:5px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.cl.mid{grid-row:1/2}
+.pnl{background:rgba(8,18,42,.92);border:1px solid rgba(0,210,255,.12);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:rgba(0,210,255,.28);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.col{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.col.center{grid-row:1/1}
+
+/* ===== PANEL ===== */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 10px rgba(0,0,0,.3)}
+.panel:hover{border-color:var(--border-h);box-shadow:0 1px 10px rgba(0,0,0,.3),0 0 12px rgba(57,128,255,.06)}
+
+.ph{display:flex;align-items:center;gap:6px;padding:6px 10px 4px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}
+.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}
+.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}
+.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1}
+.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+
+/* ===== KPI GRID ===== */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 7px}
+.kpi-c{padding:6px 7px;background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;transition:.2s}
+.kpi-c:hover{background:rgba(57,128,255,.04)}
+.kpi-cl{font-size:8px;color:var(--t2)}
+.kpi-cv{font-family:var(--mono);font-size:15px;font-weight:700;line-height:1.15}
+.kpi-cv.c{color:var(--cyan)}.kpi-cv.g{color:var(--green)}.kpi-cv.a{color:var(--amber)}.kpi-cv.r{color:var(--red)}.kpi-cv.b{color:var(--blue)}.kpi-cv.p{color:var(--purple)}
+.kpi-bar{height:2px;background:rgba(57,128,255,.04);border-radius:1px;margin-top:3px;overflow:hidden}
+.kpi-bf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ===== CHART WRAPPER ===== */
+.cw{flex:1;min-height:0;position:relative;padding:4px 7px 5px}
+.cw>div{width:100%;height:100%}
+.chart-w{flex:1;min-height:0;position:relative;padding:3px 6px}
+.chart-w>div{width:100%;height:100%}
+
+/* ===== TIMELINE (CENTER TOP) ===== */
+.tl-wrap{flex:1;min-height:0;position:relative;overflow:hidden}
+.tl-mask{position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 8%,#000 92%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 8%,#000 92%,transparent 100%)}
+.tl-inner{position:absolute;top:0;left:0;right:0;will-change:transform;padding:8px 10px}
+.tl-item{display:flex;gap:8px;padding:6px 4px 6px 0;border-bottom:1px solid rgba(57,128,255,.02);transition:.15s}
+.tl-item:hover{background:rgba(57,128,255,.025)}
+.tl-rail{position:relative;width:14px;flex-shrink:0;display:flex;flex-direction:column;align-items:center}
+.tl-dot{width:9px;height:9px;border-radius:50%;margin-top:4px;flex-shrink:0;position:relative;z-index:2;box-shadow:0 0 0 2px rgba(6,13,31,1)}
+.tl-dot.success{background:var(--green);box-shadow:0 0 0 2px rgba(6,13,31,1),0 0 8px rgba(0,229,160,.5)}
+.tl-dot.warning{background:var(--amber);box-shadow:0 0 0 2px rgba(6,13,31,1),0 0 8px rgba(255,179,0,.5)}
+.tl-dot.error{background:var(--red);box-shadow:0 0 0 2px rgba(6,13,31,1),0 0 8px rgba(255,61,87,.5)}
+.tl-dot.info{background:var(--cyan);box-shadow:0 0 0 2px rgba(6,13,31,1),0 0 8px rgba(0,210,255,.5)}
+.tl-line{position:absolute;top:14px;bottom:-6px;width:1px;background:linear-gradient(180deg,rgba(57,128,255,.12),rgba(57,128,255,.04))}
+.tl-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.tl-row1{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tl-time{font-family:var(--mono);font-size:7px;color:var(--t2)}
+.tl-op{font-weight:600;font-size:10px;color:var(--t1)}
+.tl-badge{font-size:7px;padding:1px 5px;border-radius:3px;border:1px solid;letter-spacing:.3px}
+.tl-badge.precool{background:rgba(0,210,255,.07);color:var(--cyan);border-color:rgba(0,210,255,.15)}
+.tl-badge.zoning{background:rgba(57,128,255,.08);color:var(--blue);border-color:rgba(57,128,255,.18)}
+.tl-badge.storage{background:rgba(179,136,255,.07);color:var(--purple);border-color:rgba(179,136,255,.15)}
+.tl-badge.peakshift{background:rgba(255,179,0,.07);color:var(--amber);border-color:rgba(255,179,0,.15)}
+.tl-badge.emergency{background:rgba(255,61,87,.07);color:var(--red);border-color:rgba(255,61,87,.15)}
+.tl-status{font-size:7px;padding:1px 5px;border-radius:3px;margin-left:auto}
+.tl-status.success{background:rgba(0,229,160,.08);color:var(--green)}
+.tl-status.warning{background:rgba(255,179,0,.08);color:var(--amber)}
+.tl-status.error{background:rgba(255,61,87,.08);color:var(--red)}
+.tl-status.info{background:rgba(0,210,255,.08);color:var(--cyan)}
+.tl-row2{display:flex;align-items:center;gap:6px;font-size:7px;color:var(--t2)}
+.tl-zone{color:var(--blue)}
+.tl-zone i{font-size:7px;margin-right:2px}
+.tl-desc{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--t2)}
+.tl-op-name{font-size:8px;color:var(--t3);font-family:var(--mono)}
+
+/* ===== ALERT TRACKING (RIGHT) ===== */
+.at-list{display:flex;flex-direction:column;gap:5px;padding:5px 7px}
+.at-item{padding:5px 7px;border-radius:4px;background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);transition:.2s}
+.at-item:hover{background:rgba(57,128,255,.03);border-color:rgba(57,128,255,.08)}
+.at-row1{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.at-icon{width:14px;height:14px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.at-icon.c{background:rgba(255,61,87,.1);color:var(--red)}
+.at-icon.w{background:rgba(255,179,0,.1);color:var(--amber)}
+.at-icon.i{background:rgba(57,128,255,.1);color:var(--blue)}
+.at-name{font-size:10px;font-weight:600;color:var(--t1);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.at-elapsed{font-family:var(--mono);font-size:8px;color:var(--amber)}
+.at-row2{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--t2);margin-bottom:3px}
+.at-handler{color:var(--blue)}
+.at-handler i{font-size:7px;margin-right:2px}
+.at-progress{display:flex;align-items:center;gap:4px}
+.at-prog-label{font-size:7px;color:var(--t3);width:30px}
+.at-prog-track{flex:1;height:3px;background:rgba(57,128,255,.04);border-radius:1.5px;overflow:hidden}
+.at-prog-fill{height:100%;border-radius:1.5px;transition:width 1s ease}
+.at-prog-pct{font-family:var(--mono);font-size:8px;color:var(--t2);width:24px;text-align:right}
+
+/* ===== SYSTEM HEALTH ===== */
+.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 7px}
+.sh-item{padding:5px 6px;border-radius:3px;background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.03)}
+.sh-label{font-size:8px;color:var(--t2);display:flex;align-items:center;gap:3px}
+.sh-label i{font-size:7px}
+.sh-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--t1);line-height:1.2;margin-top:1px}
+.sh-val.g{color:var(--green)}.sh-val.a{color:var(--amber)}.sh-val.r{color:var(--red)}.sh-val.b{color:var(--blue)}
+.sh-bar{height:2px;background:rgba(57,128,255,.04);border-radius:1px;margin-top:3px;overflow:hidden}
+.sh-bar-fill{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ===== KPI GRID (new) ===== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px}
+.kc{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:17px;font-weight:700;line-height:1.2}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+@media(max-width:1500px){#mn{grid-template-columns:1fr 230px}}
+@media(max-width:1280px){#mn{grid-template-columns:1fr 200px}.nl{padding:0 10px;font-size:10px}}
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl on" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- CENTER COLUMN -->
+  <div class="col center">
+    <!-- 今日调度统计 KPI -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi b"><i class="fas fa-chart-line"></i></div><span class="pht">今日调度统计</span><span class="phtag">实时</span></div>
+      <div class="kpi-grid">
+        <div class="kpi-c">
+          <div class="kpi-cl">总调度次数</div>
+          <div><span class="kpi-cv b" id="kpiTotal">186</span><span style="font-size:8px;color:var(--t2)"> 次</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:78%;background:linear-gradient(90deg,#0d47a1,#3980ff)"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">成功率</div>
+          <div><span class="kpi-cv g" id="kpiRate">98.4</span><span style="font-size:8px;color:var(--t2)"> %</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:98%;background:linear-gradient(90deg,#00704a,#00e5a0)"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">平均响应时间</div>
+          <div><span class="kpi-cv c" id="kpiResp">2.3</span><span style="font-size:8px;color:var(--t2)"> s</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:35%;background:linear-gradient(90deg,#0d47a1,#00d2ff)"></div></div>
+        </div>
+        <div class="kpi-c">
+          <div class="kpi-cl">异常处理</div>
+          <div><span class="kpi-cv a" id="kpiAbnormal">3</span><span style="font-size:8px;color:var(--t2)"> 次</span></div>
+          <div class="kpi-bar"><div class="kpi-bf" style="width:18%;background:linear-gradient(90deg,#b85c00,#ffb300)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作类型分布 + 每小时调度频次 — 并排 -->
+    <div style="flex:1.2;min-height:0;display:flex;flex-direction:row;gap:5px">
+      <div class="panel" style="flex:1;min-height:0;overflow:hidden">
+        <div class="ph"><div class="phi p"><i class="fas fa-chart-pie"></i></div><span class="pht">操作类型分布</span><span class="phtag">今日</span></div>
+        <div class="chart-w"><div id="typeChart" style="min-height:200px;height:100%;width:100%"></div></div>
+      </div>
+      <div class="panel" style="flex:1;min-height:0;overflow:hidden">
+        <div class="ph"><div class="phi c"><i class="fas fa-chart-bar"></i></div><span class="pht">每小时调度频次</span><span class="phtag">24h</span></div>
+        <div class="chart-w"><div id="hourChart" style="min-height:200px;height:100%;width:100%"></div></div>
+      </div>
+    </div>
+
+    <!-- 调度时间线 -->
+    <div class="panel" style="flex:.8;min-height:0">
+      <div class="ph">
+        <div class="phi b"><i class="fas fa-stream"></i></div>
+        <span class="pht">调度时间线</span>
+        <span class="phtag" id="tlBadge">实时更新</span>
+      </div>
+      <div class="tl-wrap">
+        <div class="tl-mask"><div class="tl-inner" id="tlScroll"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col">
+    <!-- 当前追踪告警 -->
+    <div class="panel" style="flex:1;min-height:0;overflow-y:auto">
+      <div class="ph"><div class="phi r"><i class="fas fa-bell"></i></div><span class="pht">当前追踪告警</span><span class="phtag" id="atBadge" style="color:var(--red);border-color:rgba(255,61,87,.15);background:rgba(255,61,87,.05)">3条</span></div>
+      <div class="at-list" id="atList"></div>
+    </div>
+
+    <!-- 系统运行健康度 -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph"><div class="phi g"><i class="fas fa-heart-pulse"></i></div><span class="pht">系统运行健康度</span><span class="phtag" style="color:var(--green)">良好</span></div>
+      <div class="sh-grid">
+        <div class="sh-item">
+          <div class="sh-label"><i class="fas fa-microchip"></i>CPU 使用率</div>
+          <div class="sh-val b" id="shCpu">42%</div>
+          <div class="sh-bar"><div class="sh-bar-fill" id="shCpuBar" style="width:42%;background:linear-gradient(90deg,#0d47a1,#3980ff)"></div></div>
+        </div>
+        <div class="sh-item">
+          <div class="sh-label"><i class="fas fa-memory"></i>内存占用</div>
+          <div class="sh-val g" id="shMem">68%</div>
+          <div class="sh-bar"><div class="sh-bar-fill" id="shMemBar" style="width:68%;background:linear-gradient(90deg,#00704a,#00e5a0)"></div></div>
+        </div>
+        <div class="sh-item">
+          <div class="sh-label"><i class="fas fa-stopwatch"></i>API 延迟</div>
+          <div class="sh-val g" id="shLat">86ms</div>
+          <div class="sh-bar"><div class="sh-bar-fill" id="shLatBar" style="width:22%;background:linear-gradient(90deg,#00704a,#00e5a0)"></div></div>
+        </div>
+        <div class="sh-item">
+          <div class="sh-label"><i class="fas fa-database"></i>DB 连接数</div>
+          <div class="sh-val a" id="shDb">42/100</div>
+          <div class="sh-bar"><div class="sh-bar-fill" id="shDbBar" style="width:42%;background:linear-gradient(90deg,#b85c00,#ffb300)"></div></div>
+        </div>
+      </div>
+    </div>
+
+
+</main><!-- /main -->
+
+</div><!-- /app -->
+
+<!-- Scripts -->
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
+        });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<script>
+// ========== UTILS ==========
+let WS=null;
+const el=id=>document.getElementById(id);
+const fmt=(n,d)=>d?Number(n).toFixed(d):Math.round(n).toLocaleString();
+const pad=n=>String(n).padStart(2,'0');
+
+// ========== MOCK DATA (fallback local sim) ==========
+const OPERATORS=['张志远','李明轩','王雅琴','陈思远','刘建国','赵晓峰','黄文博','周慧敏'];
+const OP_TYPES=[
+  {key:'precool',label:'预冷控制',cls:'precool'},
+  {key:'zoning',label:'分区调控',cls:'zoning'},
+  {key:'storage',label:'夜间蓄冷',cls:'storage'},
+  {key:'peakshift',label:'错峰运行',cls:'peakshift'},
+  {key:'emergency',label:'应急调度',cls:'emergency'},
+];
+const ZONES=['万达商场A区','幸福小区B区','中央CBD','工业园C区','数据中心','医院','学校','居民A区'];
+const DESCRIPTIONS={
+  precool:['提前启动预冷，目标温度24°C','商场预冷负荷下调15%','空调预冷启动，覆盖3栋楼宇','温控设备预冷模式开启'],
+  zoning:['A区负荷转B区，平衡电网压力','分区轮换调控，缓解峰值','商业区与居民区负荷重新分配','按区域优先级重新调度'],
+  storage:['夜间蓄冷池充满，备用容量92%','蓄冷系统充能完成','冰蓄冷系统启动，预计4小时充满','夜间低谷蓄冷，释放白天峰值'],
+  peakshift:['错峰运行启动，工业负荷转移至22:00后','可调负荷错峰，预计降峰18%','居民用电错峰，避开18:00-21:00','商业空调错峰，温度上调2°C'],
+  emergency:['10kV母线B告警，应急切换至母线A','故障区域紧急隔离，启动备用电源','应急预案III级响应，负荷转供','突发告警处置，恢复供电'],
+};
+const STATUS_POOL=[
+  {key:'success',label:'成功',weight:8},
+  {key:'info',label:'执行中',weight:1.5},
+  {key:'warning',label:'部分异常',weight:0.4},
+  {key:'error',label:'失败',weight:0.1},
+];
+
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+function pickStatus(){const r=Math.random()*10;let s=0;for(const st of STATUS_POOL){s+=st.weight;if(r<=s)return st;}return STATUS_POOL[0];}
+
+function genTimelineEntry(timeOverride){
+  const now=new Date();
+  const t=timeOverride||(pad(now.getHours())+':'+pad(Math.max(0,now.getMinutes()-Math.floor(Math.random()*30)))+':'+pad(now.getSeconds()));
+  const tp=pick(OP_TYPES);
+  const st=pickStatus();
+  const op=pick(OPERATORS);
+  const zone=pick(ZONES);
+  const desc=pick(DESCRIPTIONS[tp.key]);
+  return {time:t,type:tp,status:st,operator:op,zone,desc};
+}
+
+// Generate initial timeline data (30 entries spanning the day)
+function genInitialTimeline(){
+  const arr=[];
+  const now=new Date();
+  for(let i=29;i>=0;i--){
+    const t=new Date(now.getTime()-i*180000-Math.random()*60000);
+    const time=pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds());
+    arr.push(genTimelineEntry(time));
+  }
+  return arr;
+}
+
+// ========== CLOCK ==========
+function updClock(){const d=new Date();el('clk').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+updClock();setInterval(updClock,1000);
+
+// ========== ECHARTS: 操作类型分布 (Donut) ==========
+let typeChart;
+function initTypeChart(){
+  typeChart=echarts.init(el('typeChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(typeChart);
+  const data=[
+    {name:'预冷控制',value:48,itemStyle:{color:'#00d2ff'}},
+    {name:'分区调控',value:62,itemStyle:{color:'#3980ff'}},
+    {name:'夜间蓄冷',value:34,itemStyle:{color:'#b388ff'}},
+    {name:'错峰运行',value:29,itemStyle:{color:'#ffb300'}},
+    {name:'应急调度',value:13,itemStyle:{color:'#ff3d57'}},
+  ];
+  typeChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(57,128,255,.18)',textStyle:{color:'#d8eaf8',fontSize:10},formatter:'{b}: {c}次 ({d}%)'},
+    legend:{orient:'vertical',right:4,top:'center',textStyle:{color:'#6a8ba8',fontSize:8},itemWidth:8,itemHeight:8,itemGap:6,
+      formatter:name=>{const d=data.find(x=>x.name===name);return name+' '+d.value;}},
+    series:[{
+      type:'pie',radius:['52%','78%'],center:['32%','50%'],avoidLabelOverlap:false,
+      itemStyle:{borderColor:'#060d1f',borderWidth:2},
+      label:{show:false},labelLine:{show:false},
+      emphasis:{label:{show:true,position:'center',formatter:'{c}\n{b}',fontSize:10,color:'#d8eaf8',fontWeight:'bold'},itemStyle:{shadowBlur:14,shadowColor:'rgba(57,128,255,.3)'}},
+      data:data
+    }]
+  });
+}
+
+// ========== ECHARTS: 每小时调度频次 (Bar) ==========
+let hourChart;
+function initHourChart(){
+  hourChart=echarts.init(el('hourChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(hourChart);
+  const hours=[],data=[];
+  const now=new Date();
+  for(let i=23;i>=0;i--){
+    const h=new Date(now.getTime()-i*3600000).getHours();
+    hours.push(pad(h)+':00');
+    // Simulate: more operations during 9-11 and 14-17, less at night
+    let base=4;
+    if(h>=9&&h<=11)base=14;
+    else if(h>=14&&h<=17)base=16;
+    else if(h>=18&&h<=21)base=10;
+    else if(h>=22||h<=5)base=2;
+    data.push(Math.round(base+Math.random()*6));
+  }
+  hourChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(57,128,255,.18)',textStyle:{color:'#d8eaf8',fontSize:9},axisPointer:{type:'shadow',shadowStyle:{color:'rgba(57,128,255,.06)'}},formatter:p=>p[0].name+'<br/>'+p[0].marker+' 调度次数: '+p[0].value+'次'},
+    grid:{left:'4%',right:'3%',top:'10%',bottom:'10%',containLabel:true},
+    xAxis:{type:'category',data:hours,axisLine:{lineStyle:{color:'rgba(57,128,255,.08)'}},axisLabel:{color:'#6a8ba8',fontSize:7,interval:1},axisTick:{show:false}},
+    yAxis:{type:'value',splitLine:{lineStyle:{color:'rgba(57,128,255,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:7}},
+    series:[{
+      type:'bar',data:data,barWidth:'55%',
+      itemStyle:{borderRadius:[2,2,0,0],color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#3980ff'},{offset:1,color:'rgba(57,128,255,.15)'}])},
+      emphasis:{itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#00d2ff'},{offset:1,color:'rgba(0,210,255,.2)'}])}},
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(255,179,0,.2)',type:'dashed',width:1},label:{formatter:'均值',color:'#ffb300',fontSize:7},data:[{type:'average'}]}
+    }]
+  });
+}
+
+// ========== TIMELINE ==========
+let tlEntries=[];
+let tlOffset=0,tlPaused=false,tlTimer=null,tlHeight=0,tlInnerHeight=0;
+
+function renderTimeline(){
+  const sc=el('tlScroll');
+  let h='';
+  tlEntries.forEach(e=>{
+    h+=`<div class="tl-item">
+      <div class="tl-rail">
+        <div class="tl-dot ${e.status.key}"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-row1">
+          <span class="tl-time">${e.time}</span>
+          <span class="tl-op">${e.type.label}</span>
+          <span class="tl-badge ${e.type.cls}">${e.type.label}</span>
+          <span class="tl-status ${e.status.key}">${e.status.label}</span>
+        </div>
+        <div class="tl-row2">
+          <span class="tl-zone"><i class="fas fa-map-marker-alt"></i>${e.zone}</span>
+          <span class="tl-desc">${e.desc}</span>
+          <span class="tl-op-name"><i class="fas fa-user-shield" style="font-size:7px;margin-right:2px"></i>${e.operator}</span>
+        </div>
+      </div>
+    </div>`;
+  });
+  sc.innerHTML=h;
+  tlInnerHeight=sc.scrollHeight;
+}
+
+function initTimeline(){
+  tlEntries=genInitialTimeline();
+  renderTimeline();
+  // Start auto-scroll
+  startTlScroll();
+  // Pause on hover
+  const wrap=el('tlScroll').parentElement;
+  wrap.addEventListener('mouseenter',()=>{tlPaused=true;});
+  wrap.addEventListener('mouseleave',()=>{tlPaused=false;});
+  // Add new entry every 8 seconds
+  setInterval(()=>{
+    if(tlEntries.length>40)tlEntries.shift();
+    tlEntries.push(genTimelineEntry());
+    renderTimeline();
+    // Reset to bottom when new entry added if user is at the bottom
+    tlOffset=tlInnerHeight-tlHeight;
+    el('tlScroll').style.transform=`translateY(${-tlOffset}px)`;
+  },8000);
+}
+
+function startTlScroll(){
+  const wrap=el('tlScroll').parentElement.parentElement;
+  function step(){
+    if(!tlPaused){
+      tlHeight=wrap.clientHeight;
+      tlInnerHeight=el('tlScroll').scrollHeight;
+      if(tlInnerHeight>tlHeight){
+        tlOffset+=0.4;
+        if(tlOffset>tlInnerHeight-tlHeight+10){
+          tlOffset=-tlHeight+10; // loop back to top
+        }
+        el('tlScroll').style.transform=`translateY(${-tlOffset}px)`;
+      }
+    }
+    tlTimer=requestAnimationFrame(step);
+  }
+  step();
+}
+
+// ========== ALERT TRACKING ==========
+let alertsData=[
+  {level:'c',icon:'fa-bolt',name:'10kV母线B电压异常',handler:'张志远',elapsed:'00:04:23',progress:65},
+  {level:'w',icon:'fa-temperature-high',name:'商业区负荷超阈值',handler:'李明轩',elapsed:'00:12:08',progress:42},
+  {level:'i',icon:'fa-wifi',name:'居民区RTU通信中断',handler:'王雅琴',elapsed:'00:08:45',progress:78},
+];
+
+function renderAlerts(){
+  const list=el('atList');
+  let h='';
+  alertsData.forEach(a=>{
+    const fill=a.level==='c'?'linear-gradient(90deg,#b85c00,#ff3d57)':a.level==='w'?'linear-gradient(90deg,#b85c00,#ffb300)':'linear-gradient(90deg,#0d47a1,#3980ff)';
+    const pctColor=a.level==='c'?'var(--red)':a.level==='w'?'var(--amber)':'var(--blue)';
+    h+=`<div class="at-item">
+      <div class="at-row1">
+        <div class="at-icon ${a.level}"><i class="fas ${a.icon}"></i></div>
+        <div class="at-name">${a.name}</div>
+        <div class="at-elapsed">${a.elapsed}</div>
+      </div>
+      <div class="at-row2">
+        <span class="at-handler"><i class="fas fa-user-shield"></i>${a.handler}</span>
+      </div>
+      <div class="at-progress">
+        <span class="at-prog-label">处置</span>
+        <div class="at-prog-track"><div class="at-prog-fill" style="width:${a.progress}%;background:${fill}"></div></div>
+        <span class="at-prog-pct" style="color:${pctColor}">${a.progress}%</span>
+      </div>
+    </div>`;
+  });
+  list.innerHTML=h;
+  el('atBadge').textContent=alertsData.length+'条';
+}
+
+function tickAlerts(){
+  alertsData.forEach(a=>{
+    // Increment elapsed time
+    const parts=a.elapsed.split(':').map(Number);
+    let sec=parts[0]*3600+parts[1]*60+parts[2]+1;
+    const hh=pad(Math.floor(sec/3600)),mm=pad(Math.floor((sec%3600)/60)),ss=pad(sec%60);
+    a.elapsed=`${hh}:${mm}:${ss}`;
+    // Increment progress slowly
+    if(a.progress<100)a.progress=Math.min(100,a.progress+Math.random()*0.3);
+  });
+  renderAlerts();
+}
+
+// ========== SYSTEM HEALTH ==========
+let sysHealth={cpu:42,mem:68,latency:86,dbConn:42};
+function updateSysHealth(){
+  sysHealth.cpu=Math.max(20,Math.min(85,sysHealth.cpu+(Math.random()-0.5)*8));
+  sysHealth.mem=Math.max(40,Math.min(90,sysHealth.mem+(Math.random()-0.5)*4));
+  sysHealth.latency=Math.max(20,Math.min(250,sysHealth.latency+(Math.random()-0.5)*30));
+  sysHealth.dbConn=Math.max(15,Math.min(95,sysHealth.dbConn+(Math.random()-0.5)*6));
+  const cpu=Math.round(sysHealth.cpu),mem=Math.round(sysHealth.mem),lat=Math.round(sysHealth.latency),db=Math.round(sysHealth.dbConn);
+  el('shCpu').textContent=cpu+'%';
+  el('shCpu').className='sh-val '+(cpu>75?'r':cpu>60?'a':'b');
+  el('shCpuBar').style.width=cpu+'%';
+  el('shMem').textContent=mem+'%';
+  el('shMem').className='sh-val '+(mem>85?'r':mem>75?'a':'g');
+  el('shMemBar').style.width=mem+'%';
+  el('shLat').textContent=lat+'ms';
+  el('shLat').className='sh-val '+(lat>180?'r':lat>120?'a':'g');
+  el('shLatBar').style.width=Math.min(100,lat/250*100)+'%';
+  el('shDb').textContent=db+'/100';
+  el('shDb').className='sh-val '+(db>80?'r':db>60?'a':'g');
+  el('shDbBar').style.width=db+'%';
+}
+
+// ========== KPI UPDATES ==========
+function updateKPIs(){
+  // Slight live drift on KPI values
+  const total=el('kpiTotal');
+  if(total){
+    const cur=parseInt(total.textContent.replace(/,/g,''));
+    if(Math.random()<0.3){
+      total.textContent=(cur+1).toLocaleString();
+    }
+  }
+  const resp=el('kpiResp');
+  if(resp){
+    resp.textContent=(2.0+Math.random()*1.2).toFixed(1);
+  }
+}
+
+// ========== QUICK ACTIONS ==========
+// ========== WEBSOCKET ==========
+function connectWS(){
+  if(WS){try{WS.close();}catch(e){}}
+  try{
+    WS=new WebSocket('ws://localhost:3080');
+    WS.onopen=()=>console.log('[WS] Connected');
+    WS.onmessage=e=>{
+      try{
+        const m=JSON.parse(e.data);
+        if(m.type==='dispatch-log'&&m.data){
+          // Apply remote data if provided
+          if(m.data.timeline&&Array.isArray(m.data.timeline)){
+            tlEntries=m.data.timeline;
+            renderTimeline();
+          }
+          if(m.data.kpis)applyKPIs(m.data.kpis);
+          if(m.data.alerts){alertsData=m.data.alerts;renderAlerts();}
+        }
+      }catch(ex){}
+    };
+    WS.onclose=()=>setTimeout(connectWS,3000);
+    WS.onerror=()=>{};
+  }catch(e){
+    setTimeout(connectWS,3000);
+  }
+}
+
+function applyKPIs(k){
+  if(k.total!==undefined)el('kpiTotal').textContent=fmt(k.total);
+  if(k.rate!==undefined)el('kpiRate').textContent=fmt(k.rate,1);
+  if(k.response!==undefined)el('kpiResp').textContent=fmt(k.response,1);
+  if(k.abnormal!==undefined)el('kpiAbnormal').textContent=fmt(k.abnormal);
+}
+
+// ========== INIT ==========
+function init(){
+  initTypeChart();
+  initHourChart();
+  initTimeline();
+  renderAlerts();
+  updateSysHealth();
+  connectWS();
+  // Periodic updates
+  setInterval(updateSysHealth,3000);
+  setInterval(updateKPIs,5000);
+  setInterval(tickAlerts,1000);
+  // Resize charts on window resize
+  window.addEventListener('resize',()=>{
+    if(typeChart)typeChart.resize();
+    if(hourChart)hourChart.resize();
+  });
+}
+
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
+</body>
+</html>

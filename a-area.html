@@ -1,491 +1,693 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>万达商场监控中心 - 发电厂温度控制系统</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#93c5fd',
-                        accent: '#10b981',
-                        warning: '#f97316',
-                        dark: '#0f172a',
-                        'dark-light': '#1e293b',
-                        'light-text': '#e2e8f0'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .text-shadow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-            .border-glow { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-            .bg-grid {
-                background-image: 
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            .card-hover { transition: all 0.3s ease; }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>万达商场 · 商业区温控监测 | 阶序智调</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ========== RESET & BASE (VERBATIM FROM index.html) ========== */
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.28);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(0,210,255,.15)}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(0,210,255,.15);border-radius:2px}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,120,200,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,210,255,.03),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.03),transparent 55%);}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ========== HEADER (VERBATIM) ========== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98) 0%,rgba(6,13,31,.94) 100%);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ========== NAV BAR (VERBATIM — 9 items) ========== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative}
+.nl.dd:hover .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:120px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ========== MAIN GRID (VERBATIM) ========== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:250px 1fr 270px;grid-template-rows:1fr;gap:5px;padding:5px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.cl.mid{grid-row:1/2}
+
+/* ========== PANEL (VERBATIM) ========== */
+.pnl{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:var(--border-h);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.ph{display:flex;align-items:center;gap:6px;padding:6px 10px 4px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1}.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+
+/* ========== TAB BAR (VERBATIM) ========== */
+.tab-bar{display:flex;align-items:center;gap:0;padding:0 10px;height:32px;flex-shrink:0;border-bottom:1px solid rgba(0,210,255,.05)}
+.tb{height:24px;padding:0 14px;border-radius:3px 3px 0 0;font-size:10px;color:var(--t2);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:4px;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;background:transparent}
+.tb:hover{color:var(--cyan);background:rgba(0,210,255,.04)}
+.tb.on{color:var(--cyan);background:rgba(0,210,255,.07);border-color:rgba(0,210,255,.12);border-bottom:1px solid var(--panel)}
+.tb i{font-size:8px}
+
+/* ========== KPI GRID (VERBATIM) ========== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px}
+.kc{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kc:hover{background:rgba(0,210,255,.03)}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:17px;font-weight:700;line-height:1.2}
+.kcv.c{color:var(--cyan)}.kcv.g{color:var(--green)}.kcv.a{color:var(--amber)}.kcv.r{color:var(--red)}.kcv.p{color:var(--purple)}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ========== CHART WRAPPER (VERBATIM) ========== */
+.cw{flex:1;min-height:0;position:relative;padding:4px 7px 5px}
+.cw>div{width:100%;height:100%}
+
+/* ========== PAGE-SPECIFIC CSS (a-area) ========== */
+/* AC unit grid */
+.acg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px;flex:1;min-height:0;overflow:hidden;align-content:start}
+.acu{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s;display:flex;flex-direction:column;gap:3px}
+.acu:hover{background:rgba(0,210,255,.03)}
+.acn{font-size:10px;font-weight:600;color:var(--t1)}.act{font-size:7px;color:var(--t3)}
+.acr{display:flex;justify-content:space-between;align-items:center;font-size:8px}.acr .l{color:var(--t2)}
+.acr .v{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:7px;font-weight:600}
+.acr .v.c{color:var(--cyan)}.acr .v.g{color:var(--green)}.acr .v.a{color:var(--amber)}.acr .v.r{color:var(--red)}
+.aclb{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden;margin-top:2px}
+.aclf{height:100%;border-radius:1.5px;transition:width .8s ease}
+.acs{display:inline-flex;align-items:center;gap:4px;font-size:7px;padding:1px 5px;border-radius:3px;align-self:flex-start;margin-top:2px}
+.acs.run{background:rgba(0,229,160,.08);color:var(--green);border:1px solid rgba(0,229,160,.12)}
+.acs.stop{background:rgba(255,61,87,.08);color:var(--red);border:1px solid rgba(255,61,87,.12)}
+.acs.warn{background:rgba(255,179,0,.08);color:var(--amber);border:1px solid rgba(255,179,0,.12)}
+.acs .d{width:4px;height:4px;border-radius:50%}
+.acs.run .d{background:var(--green);box-shadow:0 0 4px rgba(0,229,160,.5);animation:pulse 1.8s ease infinite}
+.acs.warn .d{background:var(--amber);box-shadow:0 0 4px rgba(255,179,0,.5)}
+.acs.stop .d{background:var(--red)}
+
+/* Temperature control panel */
+.tcb{padding:7px 10px 9px}
+.tcl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:7px}
+.tcl .l{color:var(--t2)}.tcl .v{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:15px;font-weight:700;color:var(--cyan)}
+.tcs{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:linear-gradient(90deg,#0d47a1,var(--cyan));outline:none;cursor:pointer}
+.tcs::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);border:2px solid #fff;cursor:pointer;box-shadow:0 0 8px rgba(0,210,255,.4)}
+.tct{display:flex;justify-content:space-between;font-size:7px;color:var(--t3);margin-top:3px}
+.tcm{display:flex;gap:4px;margin-top:7px}
+.tcmd{flex:1;padding:5px 4px;border-radius:4px;border:1px solid rgba(0,210,255,.1);background:rgba(0,210,255,.02);color:var(--t2);font-size:8px;text-align:center;cursor:pointer;transition:.2s}
+.tcmd:hover{border-color:rgba(0,210,255,.25);background:rgba(0,210,255,.04);color:var(--t1)}
+.tcmd.on{border-color:var(--cyan);background:rgba(0,210,255,.1);color:var(--cyan);box-shadow:0 0 8px rgba(0,210,255,.1)}
+.tcmd i{font-size:8px;display:block;margin-bottom:2px}
+
+/* Environment metric cards row */
+.envr{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;padding:7px 9px;flex:1;min-height:0}
+.envc{padding:8px 7px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;display:flex;flex-direction:column;gap:3px;justify-content:center}
+.envc:hover{background:rgba(0,210,255,.03)}
+.envi{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.envi.c{background:rgba(0,210,255,.08);color:var(--cyan)}.envi.g{background:rgba(0,229,160,.08);color:var(--green)}
+.envi.a{background:rgba(255,179,0,.08);color:var(--amber)}.envi.p{background:rgba(179,136,255,.08);color:var(--purple)}
+.envl{font-size:8px;color:var(--t2)}
+.envv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:15px;font-weight:700;line-height:1.1}
+.envv.c{color:var(--cyan)}.envv.g{color:var(--green)}.envv.a{color:var(--amber)}.envv.p{color:var(--purple)}
+.envu{font-size:8px;color:var(--t2);font-weight:400;margin-left:2px}
+.envb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:2px;overflow:hidden}
+.envf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ========== TEMP POINT MANAGEMENT ========== */
+.tpm{padding:7px 9px;flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.tpm-row{display:flex;gap:4px;align-items:center}
+.tpm-inp{flex:1;min-width:0;height:22px;background:rgba(0,210,255,.02);border:1px solid rgba(0,210,255,.1);border-radius:3px;color:var(--t1);font-size:7px;padding:0 6px;outline:none;font-family:inherit}
+.tpm-inp:focus{border-color:var(--cyan)}
+.tpm-inp::placeholder{color:var(--t3)}
+.tpm-btn{height:22px;padding:0 8px;border-radius:3px;border:1px solid rgba(0,210,255,.15);background:rgba(0,210,255,.06);color:var(--cyan);font-size:7px;cursor:pointer;transition:.2s;white-space:nowrap;display:inline-flex;align-items:center;gap:3px}
+.tpm-btn:hover{background:rgba(0,210,255,.12);border-color:var(--cyan)}
+.tpm-btn.g{border-color:rgba(0,229,160,.15);background:rgba(0,229,160,.06);color:var(--green)}
+.tpm-btn.g:hover{background:rgba(0,229,160,.12);border-color:var(--green)}
+.tpm-btn:disabled{opacity:.5;cursor:not-allowed}
+.tpm-list{flex:1;min-height:50px;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
+.tpm-item{display:flex;align-items:center;justify-content:space-between;padding:4px 7px;background:rgba(0,210,255,.02);border:1px solid rgba(0,210,255,.06);border-radius:3px;font-size:7px;transition:.2s}
+.tpm-item:hover{background:rgba(0,210,255,.04);border-color:rgba(0,210,255,.12)}
+.tpm-iinfo{display:flex;align-items:center;gap:5px;min-width:0}
+.tpm-ipos{color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tpm-itemp{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:700;color:var(--cyan)}
+.tpm-idel{color:var(--t3);cursor:pointer;font-size:11px;transition:.2s;padding:0 2px;flex-shrink:0}
+.tpm-idel:hover{color:var(--red)}
+.tpm-cnt{font-size:8px;color:var(--t2);text-align:center}
+
+/* ========== WEATHER INFO BAR ========== */
+.wbar{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:7px 9px}
+.wbc{padding:6px 7px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;text-align:center;transition:.2s}
+.wbc:hover{background:rgba(0,210,255,.03)}
+.wbl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.wbv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:14px;font-weight:700;line-height:1.1}
+.wbv.c{color:var(--cyan)}.wbv.g{color:var(--green)}.wbv.a{color:var(--amber)}.wbv.r{color:var(--red)}
+.wbu{font-size:8px;color:var(--t2);font-weight:400}
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
 </head>
-<body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部 -->
-    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <a href="index.html" class="flex items-center">
-                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
-                </a>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
-                    <i class="fa fa-clock-o text-secondary mr-2"></i>
-                    <span id="current-time" class="text-xl font-mono"></span>
-                </div>
-                <a href="index.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-home mr-2"></i>
-                    返回首页
-                </a>
-            </div>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl on" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- === LEFT COLUMN === -->
+  <div class="cl">
+    <!-- KPI cards -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-microchip"></i></div><span class="pht">运行概况</span><span class="phtag">实时</span></div>
+      <div class="kg">
+        <div class="kc">
+          <div class="kcl">当前温度/设定值</div>
+          <div><span class="kcv c" id="kvTemp">24.2</span><span style="font-size:8px;color:var(--t2)">°C</span></div>
+          <div style="font-size:8px;color:var(--t2);margin-top:1px">设定 <span id="kvSet" style="color:var(--t1)">24.0°C</span></div>
+          <div class="kcb"><div class="kcf" id="kbTemp" style="width:48%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
         </div>
-    </header>
-
-    <main class="flex-grow container mx-auto p-6 bg-grid">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-secondary mb-2">万达商场监控中心</h2>
-            <p class="text-light-text/70">大型商圈温度与制冷系统实时监控</p>
+        <div class="kc">
+          <div class="kcl">实时功率</div>
+          <div><span class="kcv g" id="kvPwr">1250</span><span style="font-size:8px;color:var(--t2)">kW</span></div>
+          <div style="font-size:8px;color:var(--t2);margin-top:1px">峰值 <span id="kvPeak" style="color:var(--t1)">1520kW</span></div>
+          <div class="kcb"><div class="kcf" id="kbPwr" style="width:50%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div>
         </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-secondary">万达商场温度监控</h3>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-light-text/70 mr-2">目标温度:</span>
-                        <span id="displayTargetTempA" class="text-lg font-bold text-accent">{{baseData.wanda.currentTemp}}°C</span>
-                        
-                        <input type="number" id="targetTempInputA" placeholder="输入温度" step="0.1" min="20" max="30"
-                               class="bg-dark-light border border-primary/50 rounded px-3 py-1 text-light-text w-20 text-center">
-                        <button id="setTargetTempBtnA" 
-                                class="bg-primary hover:bg-primary/80 text-white px-2 py-1 rounded-lg text-sm transition-colors duration-300">
-                            确认
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="mb-6 bg-dark p-4 rounded-lg border border-primary/20">
-                    <h4 class="text-lg font-semibold mb-3 text-secondary">温度数据管理</h4>
-                    
-                    <div class="mb-4">
-                        <button id="locWeatherBtn" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                            <i class="fa fa-cloud-download mr-2"></i> 自动获取实时天气
-                        </button>
-                    
-                    <div class="flex flex-wrap gap-3 items-center mb-3">
-                        <label class="text-light-text/90">时间 (HH:MM):</label>
-                        <input type="text" id="tempTimeInputA" placeholder="例如: 14:30" 
-                               class="bg-dark-light border border-primary/50 rounded px-3 py-2 text-light-text w-24">
-                        <label class="text-light-text/90">温度 (°C):</label>
-                        <input type="number" id="tempValueInputA" placeholder="例如: 24.5" step="0.1"
-                               class="bg-dark-light border border-primary/50 rounded px-3 py-2 text-light-text w-20">
-                        <button id="addTempPointBtnA" 
-                                class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                            <i class="fa fa-plus mr-2"></i> 添加温度点
-                        </button>
-                        <button id="resetTempChartBtnA" 
-                                class="bg-warning hover:bg-warning/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                            <i class="fa fa-refresh mr-2"></i> 重置图表
-                        </button>
-                    </div>
-                    <div class="mt-3 text-sm text-light-text/80">
-                        已添加温度点: <span id="pointCountA">3</span> 个
-                    </div>
-                </div>
-                
-                <div class="h-80">
-                    <canvas id="temperatureChartA"></canvas>
-                </div>
-                <div class="mt-6 flex justify-center">
-                    <a href="analysis.html" class="bg-accent hover:bg-accent/80 text-white px-6 py-2 rounded-lg flex items-center transition-colors duration-300">
-                        <i class="fa fa-line-chart mr-2"></i>
-                        分析温度
-                    </a>
-                </div>
-            </div>
-
-            <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-secondary">万达商场制冷功率</h3>
-                    <div class="flex items-center">
-                        <span class="text-sm text-light-text/70 mr-2">基准功率:</span>
-                        <span class="text-lg font-bold text-primary">1.6 万kW</span>
-                    </div>
-                </div>
-                <div class="h-80">
-                    <canvas id="powerChartA"></canvas>
-                </div>
-            </div>
+        <div class="kc">
+          <div class="kcl">负载率</div>
+          <div><span class="kcv a" id="kvLoad">68.5</span><span style="font-size:8px;color:var(--t2)">%</span></div>
+          <div style="font-size:8px;color:var(--t2);margin-top:1px">额定 <span id="kvRated" style="color:var(--t1)">2500kW</span></div>
+          <div class="kcb"><div class="kcf" id="kbLoad" style="width:68%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
         </div>
-    </main>
-
-    <!-- 底部 -->
-    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
-        <div class="container mx-auto text-center text-sm text-light-text/70">
-            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
+        <div class="kc">
+          <div class="kcl">制冷COP</div>
+          <div><span class="kcv p" id="kvCop">4.2</span><span style="font-size:8px;color:var(--t2)">COP</span></div>
+          <div style="font-size:8px;color:var(--t2);margin-top:1px">制冷量 <span id="kvCool" style="color:var(--t1)">5250kW</span></div>
+          <div class="kcb"><div class="kcf" id="kbCop" style="width:52%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div>
         </div>
-    </footer>
+      </div>
+    </div>
 
-    <script>
-        function updateCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('current-time').textContent = `${hours}:${minutes}`;
-        }
-        updateCurrentTime();
-        setInterval(updateCurrentTime, 60000);
+    <!-- AC unit status -->
+    <div class="pnl" style="flex:0 0 auto;max-height:145px">
+      <div class="ph"><div class="phi g"><i class="fas fa-fan"></i></div><span class="pht">冷水机组运行状态</span><span class="phtag" style="color:var(--green);border-color:rgba(0,229,160,.12);background:rgba(0,229,160,.04)">4台</span></div>
+      <div class="acg" id="acGrid" style="max-height:110px;overflow-y:auto"></div>
+    </div>
 
-        let tempPointsA = [
-            { time: '14:00', temp: 24.5 },
-            { time: '14:10', temp: 24.7 },
-            { time: '14:20', temp: 24.6 }
-        ];
-        let targetTempA = 24.0; 
-        document.getElementById('displayTargetTempA').textContent = `${targetTempA.toFixed(1)}°C`;
-        document.getElementById('targetTempInputA').value = targetTempA;
-        document.getElementById('pointCountA').textContent = tempPointsA.length;
+    <!-- Temperature point management -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi b"><i class="fas fa-map-marker-alt"></i></div><span class="pht">温度点管理</span><span class="phtag" id="tpmTag">0点</span></div>
+      <div class="tpm">
+        <button class="tpm-btn g" id="weatherBtn" style="width:100%;justify-content:center"><i class="fas fa-cloud-download-alt"></i> 获取天气API温度</button>
+        <div class="tpm-row">
+          <input type="text" class="tpm-inp" id="tpmPos" placeholder="位置/时间">
+          <input type="number" class="tpm-inp" id="tpmTemp" placeholder="°C" step="0.1" min="0" max="50" style="max-width:55px">
+          <button class="tpm-btn" id="tpmAdd"><i class="fas fa-plus"></i></button>
+        </div>
+        <div class="tpm-list" id="tpmList"></div>
+        <div class="tpm-cnt" id="tpmCnt">共 0 个温度点</div>
+      </div>
+    </div>
 
-        function getTempDataA() {
-            tempPointsA.sort((a, b) => a.time.split(':').join('') - b.time.split(':').join(''));
-            return {
-                labels: tempPointsA.map(p => p.time),
-                target: tempPointsA.map(() => targetTempA), 
-                actual: tempPointsA.map(p => p.temp)
-            };
-        }
+    <!-- Control panel -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi a"><i class="fas fa-sliders-h"></i></div><span class="pht">温度控制面板</span><span class="phtag" style="color:var(--amber);border-color:rgba(255,179,0,.12);background:rgba(255,179,0,.04)">手动</span></div>
+      <div class="tcb">
+        <div class="tcl"><span class="l">目标温度设定</span><span class="v" id="tcVal">24.0°C</span></div>
+        <input type="range" class="tcs" id="tcSlider" min="18" max="30" step="0.5" value="24">
+        <div class="tct"><span>18</span><span>21</span><span>24</span><span>27</span><span>30°C</span></div>
+        <div class="tcm" id="tcModes">
+          <div class="tcmd on" data-mode="auto"><i class="fas fa-robot"></i>自动</div>
+          <div class="tcmd" data-mode="cool"><i class="fas fa-snowflake"></i>制冷</div>
+          <div class="tcmd" data-mode="dehumidify"><i class="fas fa-tint"></i>除湿</div>
+          <div class="tcmd" data-mode="fan"><i class="fas fa-wind"></i>送风</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        function getPowerDataA(labels) {
-            return labels.map((_, i) => {
-                const base = 1.6;
-                const tempDiff = tempPointsA[i].temp - targetTempA;
-                const tempRelatedPower = base + (tempDiff * 0.15);
-                const fluctuation = (Math.random() - 0.5) * 0.02;
-                const finalPower = Math.max(1.4, Math.min(1.8, tempRelatedPower + fluctuation));
-                
-                return finalPower.toFixed(2);
-            });
-        }
+  <!-- === MID COLUMN === -->
+  <div class="cl">
+    <!-- Chart panel with tabs -->
+    <div class="pnl" style="flex:1.8;min-height:0">
+      <div class="tab-bar" id="midTabs">
+        <div class="tb on" data-chart="trend"><i class="fas fa-chart-line"></i>温度趋势</div>
+        <div class="tb" data-chart="corr"><i class="fas fa-exchange-alt"></i>温度-功率联动</div>
+      </div>
+      <div class="cw" id="trendWrap"><div id="tempChart" style="min-height:280px;height:100%;width:100%"></div></div>
+      <div class="cw" id="corrWrap" style="display:none"><div id="corrChart" style="min-height:280px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
 
-        const tempCtxA = document.getElementById('temperatureChartA').getContext('2d');
-        const tempDataA = getTempDataA();
-        const tempChartA = new Chart(tempCtxA, {
-            type: 'line',
-            data: {
-                labels: tempDataA.labels,
-                datasets: [
-                    {
-                        label: '目标温度',
-                        data: tempDataA.target,
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderDash: [5, 5],
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.1,
-                        fill: false
-                    },
-                    {
-                        label: '实际温度',
-                        data: tempDataA.actual,
-                        borderColor: 'rgba(249, 115, 22, 1)',
-                        borderWidth: 2,
-                        pointRadius: 3,
-                        pointBackgroundColor: 'rgba(249, 115, 22, 1)',
-                        tension: 0.5,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { color: 'rgba(226, 232, 240, 0.7)', maxRotation: 45, autoSkip: false } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { color: 'rgba(226, 232, 240, 0.7)', callback: v => v + ' °C' },
-                        suggestedMin: 23,
-                        suggestedMax: 26
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: 'rgba(226, 232, 240, 0.9)' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1
-                    }
-                }
-            }
+  <!-- === RIGHT COLUMN === -->
+  <div class="cl">
+    <!-- Weather info bar -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi g"><i class="fas fa-cloud-sun-rain"></i></div><span class="pht">天气温度联动</span><span class="phtag" id="weatherTag">本地模拟</span></div>
+      <div class="wbar">
+        <div class="wbc"><div class="wbl">室外温度</div><div><span class="wbv c" id="wbOut">--</span><span class="wbu">°C</span></div></div>
+        <div class="wbc"><div class="wbl">目标温度</div><div><span class="wbv g" id="wbTarget">24.0</span><span class="wbu">°C</span></div></div>
+        <div class="wbc"><div class="wbl">温度差</div><div><span class="wbv a" id="wbDiff">--</span><span class="wbu">°C</span></div></div>
+        <div class="wbc"><div class="wbl">预测功率</div><div><span class="wbv r" id="wbPower">--</span><span class="wbu">kW</span></div></div>
+      </div>
+    </div>
+    <!-- Environment metrics -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi b"><i class="fas fa-cloud-sun"></i></div><span class="pht">环境指标监测</span></div>
+      <div class="envr">
+        <div class="envc">
+          <div class="envi c"><i class="fas fa-sun"></i></div>
+          <div class="envl">室外温度</div>
+          <div><span class="envv c" id="evTemp">31.9</span><span class="envu">°C</span></div>
+          <div class="envb"><div class="envf" id="ebTemp" style="width:65%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
+        </div>
+        <div class="envc">
+          <div class="envi g"><i class="fas fa-tint"></i></div>
+          <div class="envl">相对湿度</div>
+          <div><span class="envv g" id="evHum">68.0</span><span class="envu">%RH</span></div>
+          <div class="envb"><div class="envf" id="ebHum" style="width:68%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div>
+        </div>
+        <div class="envc">
+          <div class="envi a"><i class="fas fa-smile"></i></div>
+          <div class="envl">舒适度指数</div>
+          <div><span class="envv a" id="evComf">78.5</span><span class="envu">分</span></div>
+          <div class="envb"><div class="envf" id="ebComf" style="width:78%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
+        </div>
+        <div class="envc">
+          <div class="envi p"><i class="fas fa-wind"></i></div>
+          <div class="envl">风速</div>
+          <div><span class="envv p" id="evWind">3.2</span><span class="envu">m/s</span></div>
+          <div class="envb"><div class="envf" id="ebWind" style="width:45%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+</div>
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
         });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
 
-        const powerCtxA = document.getElementById('powerChartA').getContext('2d');
-        const powerChartA = new Chart(powerCtxA, {
-            type: 'line',
-            data: {
-                labels: tempDataA.labels,
-                datasets: [{
-                    label: '制冷功率',
-                    data: getPowerDataA(tempDataA.labels),
-                    borderColor: 'rgba(59, 130, 246, 1)',
-                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                    borderWidth: 2,
-                    pointRadius: 2,
-                    pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                    tension: 0.5,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { color: 'rgba(226, 232, 240, 0.7)', maxRotation: 45, autoSkip: false } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            callback: v => v + ' 万kW',
-                            stepSize: 0.1
-                        },
-                        suggestedMin: 1.5,
-                        suggestedMax: 1.7
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: 'rgba(226, 232, 240, 0.9)' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return `制冷功率: ${context.raw} 万kW`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+'use strict';
+var WS=null;
+var fmt=function(n,d){d=d||0;return d?Number(n).toFixed(d):Math.round(n).toLocaleString();};
+var $=function(id){return document.getElementById(id);};
 
-        document.getElementById('setTargetTempBtnA').addEventListener('click', function() {
-            const newTemp = parseFloat(document.getElementById('targetTempInputA').value);
-            
-            if (isNaN(newTemp) || newTemp < 20 || newTemp > 30) {
-                alert('请输入20-30之间的有效温度值');
-                return;
-            }
-            
-            targetTempA = newTemp;
-            document.getElementById('displayTargetTempA').textContent = `${targetTempA.toFixed(1)}°C`;
-            
-            const newTempData = getTempDataA();
-            tempChartA.data.datasets[0].data = newTempData.target;
-            tempChartA.update();
-            powerChartA.data.datasets[0].data = getPowerDataA(newTempData.labels);
-            powerChartA.update();
-            document.getElementById('targetTempInputA').value = '';
-        });
+var D={
+  currentTemp:24.2,setpoint:24.0,power:1250,peakPower:1520,ratedPower:2500,
+  loadRate:68.5,cop:4.2,coolingCapacity:5250,
+  outsideTemp:31.9,humidity:68.0,comfortIndex:78.5,windSpeed:3.2,mode:'auto',
+  units:[
+    {name:'离心机组 #1',type:'Carrier 19XR 1200RT',power:350,waterTemp:6.8,loadRate:78,status:'run'},
+    {name:'离心机组 #2',type:'Carrier 19XR 1200RT',power:320,waterTemp:7.0,loadRate:72,status:'run'},
+    {name:'螺杆机组 #1',type:'York YVWA 400RT',power:180,waterTemp:6.5,loadRate:65,status:'run'},
+    {name:'螺杆机组 #2',type:'York YVWA 400RT',power:0,waterTemp:null,loadRate:0,status:'stop'}
+  ]
+};
 
-        async function locWeather() {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            
-            try {
-                // 显示加载状态
-                const btn = document.getElementById('locWeatherBtn');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 获取中...';
-                
-                // 获取当前日期
-                const now = new Date();
-                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                
-                // 计算下午4点到5点的时间点（每15分钟一个点，共7个点）
-                const targetTimes = [
-                    new Date(today.getTime() + 16 * 60 * 60 * 1000),          // 16:00
-                    new Date(today.getTime() + 16 * 60 * 60 * 1000 + 15 * 60 * 1000), // 16:15
-                    new Date(today.getTime() + 16 * 60 * 60 * 1000 + 30 * 60 * 1000), // 16:30
-                    new Date(today.getTime() + 16 * 60 * 60 * 1000 + 45 * 60 * 1000), // 16:45
-                    new Date(today.getTime() + 17 * 60 * 60 * 1000),          // 17:00
-                    new Date(today.getTime() + 17 * 60 * 60 * 1000 + 15 * 60 * 1000), // 17:15
-                    new Date(today.getTime() + 17 * 60 * 60 * 1000 + 30 * 60 * 1000)  // 17:30
-                ];
-                
-                // 获取天气预报数据（请求2天的数据以确保覆盖今天）
-                const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${Lat}&longitude=${Lon}&hourly=temperature_2m&forecast_days=2&timezone=Asia/Shanghai`;
-                const forecastResponse = await fetch(forecastUrl);
-                const forecastData = await forecastResponse.json();
-                
-                // 处理数据
-                const weatherData = [];
-                
-                // 为每个目标时间点查找对应的温度数据
-                targetTimes.forEach(targetTime => {
-                    // 查找对应的预报数据
-                    const forecastIndex = forecastData.hourly.time.findIndex(t => {
-                        const tDate = new Date(t);
-                        return tDate.getHours() === targetTime.getHours() && 
-                               tDate.getDate() === targetTime.getDate() &&
-                               tDate.getMonth() === targetTime.getMonth() &&
-                               tDate.getFullYear() === targetTime.getFullYear();
-                    });
-                    
-                    if (forecastIndex !== -1) {
-                        const hour = targetTime.getHours().toString().padStart(2, '0');
-                        const minute = targetTime.getMinutes().toString().padStart(2, '0');
-                        weatherData.push({
-                            time: `${hour}:${minute}`,
-                            temp: parseFloat(forecastData.hourly.temperature_2m[forecastIndex].toFixed(1))
-                        });
-                    }
-                });
-                
-                // 如果没有找到足够的数据，使用模拟数据
-                if (weatherData.length < 6) {
-                    console.log('未找到足够的预报数据，使用模拟数据');
-                    const baseTemp = 24.5;
-                    targetTimes.forEach((targetTime, index) => {
-                        const hour = targetTime.getHours().toString().padStart(2, '0');
-                        const minute = targetTime.getMinutes().toString().padStart(2, '0');
-                        // 生成一些温度变化
-                        const tempVariation = Math.sin(index * Math.PI / 6) * 0.8;
-                        weatherData.push({
-                            time: `${hour}:${minute}`,
-                            temp: parseFloat((baseTemp + tempVariation).toFixed(1))
-                        });
-                    });
-                }
-                
-                // 确保只有7个数据点
-                tempPointsA = weatherData.slice(0, 7);
-                document.getElementById('pointCountA').textContent = tempPointsA.length;
-                
-                // 更新图表
-                const newData = getTempDataA();
-                tempChartA.data.labels = newData.labels;
-                tempChartA.data.datasets[0].data = newData.target;
-                tempChartA.data.datasets[1].data = newData.actual;
-                tempChartA.update();
-                
-                powerChartA.data.labels = newData.labels;
-                powerChartA.data.datasets[0].data = getPowerDataA(newData.labels);
-                powerChartA.update();
-                
-                // 显示成功提示
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-accent text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
-                toast.innerHTML = `<i class="fa fa-check-circle mr-2"></i> 成功获取温度数据`;
-                document.body.appendChild(toast);
-                
-                // 3秒后移除提示
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
-                
-            } catch (error) {
-                console.error('获取天气数据失败:', error);
-                alert('获取天气数据失败，请稍后重试。错误信息：' + error.message);
-            } finally {
-                // 恢复按钮状态
-                const btn = document.getElementById('locWeatherBtn');
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa fa-cloud-download mr-2"></i> 自动获取实时天气';
-            }
-        }
+/* TEMP POINT & POWER MODEL */
+var tempPoints=[];
+var BASE_POWER=1200;  /* 基准功率 kW */
+var TEMP_COEFF=150;   /* 温度系数 kW/°C (0.15×1000) */
 
-        // 绑定自动获取天气按钮事件
-        document.getElementById('locWeatherBtn').addEventListener('click', locWeather);
+/* CLOCK */
+function tick(){var d=new Date();$('clk').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
+tick();setInterval(tick,1000);
 
-        // 万达商场添加温度点
-        document.getElementById('addTempPointBtnA').addEventListener('click', function() {
-            const time = document.getElementById('tempTimeInputA').value.trim();
-            const temp = parseFloat(document.getElementById('tempValueInputA').value);
-            
-            // 验证
-            if (!/^\d{2}:\d{2}$/.test(time)) { alert('时间格式错误（如：14:30）'); return; }
-            if (isNaN(temp) || temp < 20 || temp > 30) { alert('温度需在20-30°C之间'); return; }
-            if (tempPointsA.some(p => p.time === time)) { alert('该时间点已存在'); return; }
-            
-            // 添加数据
-            tempPointsA.push({ time, temp });
-            document.getElementById('pointCountA').textContent = tempPointsA.length;
-            
-            // 更新图表
-            const newData = getTempDataA();
-            tempChartA.data.labels = newData.labels;
-            tempChartA.data.datasets[0].data = newData.target;
-            tempChartA.data.datasets[1].data = newData.actual;
-            tempChartA.update();
-            
-            powerChartA.data.labels = newData.labels;
-            powerChartA.data.datasets[0].data = getPowerDataA(newData.labels);
-            powerChartA.update();
-            
-            // 清空输入
-            document.getElementById('tempTimeInputA').value = '';
-            document.getElementById('tempValueInputA').value = '';
-        });
+/* AC UNITS */
+function renderAC(){
+  var h='';
+  D.units.forEach(function(u,i){
+    var lc=u.loadRate>75?'a':'g';
+    var loadColor=u.loadRate>75?'#ffb300':'#00e5a0';
+    h+='<div class="acu">'+
+      '<div class="acn">'+u.name+'</div><div class="act">'+u.type+'</div>'+
+      '<div class="acr"><span class="l">运行功率</span><span class="v c">'+u.power+'kW</span></div>'+
+      '<div class="acr"><span class="l">冷冻水温</span><span class="v '+(u.waterTemp!==null?'g':'')+'">'+(u.waterTemp!==null?fmt(u.waterTemp,1)+'°C':'--')+'</span></div>'+
+      '<div class="acr"><span class="l">负载率</span><span class="v '+lc+'">'+u.loadRate+'%</span></div>'+
+      '<div class="aclb"><div class="aclf" style="width:'+u.loadRate+'%;background:linear-gradient(90deg,'+(u.loadRate>75?'#b85c00':'#00704a')+','+loadColor+')"></div></div>'+
+      '<div class="acs '+u.status+'"><span class="d"></span>'+(u.status==='run'?'运行中':u.status==='warn'?'告警':'待机')+'</div>'+
+      '</div>';
+  });
+  $('acGrid').innerHTML=h;
+}
 
-        // 万达商场重置图表
-        document.getElementById('resetTempChartBtnA').addEventListener('click', function() {
-            tempPointsA = [
-                { time: '14:00', temp: 24.5 },
-                { time: '14:10', temp: 24.7 },
-                { time: '14:20', temp: 24.6 }
-            ];
-            // 重置目标温度为默认值
-            targetTempA = 24.0;
-            document.getElementById('displayTargetTempA').textContent = `${targetTempA.toFixed(1)}°C`;
-            document.getElementById('targetTempInputA').value = targetTempA;
-            
-            document.getElementById('pointCountA').textContent = tempPointsA.length;
-            
-            const newData = getTempDataA();
-            tempChartA.data.labels = newData.labels;
-            tempChartA.data.datasets[0].data = newData.target;
-            tempChartA.data.datasets[1].data = newData.actual;
-            tempChartA.update();
-            
-            powerChartA.data.labels = newData.labels;
-            powerChartA.data.datasets[0].data = getPowerDataA(newData.labels);
-            powerChartA.update();
-        });
-    </script>
+/* KPI UPDATE */
+function updateKPI(){
+  $('kvTemp').textContent=fmt(D.currentTemp,1);
+  $('kvSet').textContent=fmt(D.setpoint,1)+'°C';
+  $('kbTemp').style.width=Math.min(100,Math.abs(D.currentTemp-D.setpoint)*40+20)+'%';
+  $('kvPwr').textContent=fmt(D.power);
+  $('kvPeak').textContent=fmt(D.peakPower)+'kW';
+  $('kbPwr').style.width=Math.min(100,(D.power/D.ratedPower)*100)+'%';
+  $('kvLoad').textContent=fmt(D.loadRate,1);
+  $('kvRated').textContent=fmt(D.ratedPower)+'kW';
+  $('kbLoad').style.width=D.loadRate+'%';
+  $('kvCop').textContent=fmt(D.cop,1);
+  $('kvCool').textContent=fmt(D.coolingCapacity)+'kW';
+  $('kbCop').style.width=Math.min(100,(D.cop/8)*100)+'%';
+  /* env */
+  $('evTemp').textContent=fmt(D.outsideTemp,1);
+  $('ebTemp').style.width=Math.min(100,((D.outsideTemp-20)/20)*100)+'%';
+  $('evHum').textContent=fmt(D.humidity,1);
+  $('ebHum').style.width=D.humidity+'%';
+  $('evComf').textContent=fmt(D.comfortIndex,1);
+  $('ebComf').style.width=D.comfortIndex+'%';
+  $('evWind').textContent=fmt(D.windSpeed,1);
+  $('ebWind').style.width=Math.min(100,(D.windSpeed/8)*100)+'%';
+}
+
+/* ECHARTS */
+var tempChart;
+function initChart(){
+  tempChart=echarts.init($('tempChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(tempChart);
+  var d=Date.now(),indoor=[],setpt=[];
+  for(var i=95;i>=0;i--){
+    var t=d-i*1800000,h=new Date(t).getHours()+new Date(t).getMinutes()/60;
+    var oe;
+    if(h<6)oe=26+2*Math.pow(Math.cos(Math.PI*h/12),2);
+    else if(h<=14)oe=26+12*Math.pow(Math.sin(Math.PI*(h-6)/16),2);
+    else oe=27.5+10.5*Math.pow(Math.cos(Math.PI*(h-14)/20),2);
+    var ind=24.0+(oe-31)*0.15+(Math.random()-0.5)*0.3;
+    indoor.push([t,Math.round(ind*10)/10]);
+    setpt.push([t,24.0]);
+  }
+  tempChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.15)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:function(p){return new Date(p[0].value[0]).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'<br/>'+p.map(function(i){return i.marker+' '+i.seriesName+': '+i.value[1]+'°C';}).join('<br/>');}},
+    legend:{data:['室内温度','设定温度'],textStyle:{color:'#6a8ba8',fontSize:8},top:2,right:6,itemWidth:10,itemHeight:5},
+    grid:{left:'5%',right:'4%',top:'16%',bottom:'8%'},
+    xAxis:{type:'time',axisLine:{lineStyle:{color:'rgba(0,210,255,.06)'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:function(v){return new Date(v).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});}},splitLine:{show:false}},
+    yAxis:{type:'value',min:20,max:28,splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:'{value}°C'}},
+    series:[
+      {name:'室内温度',type:'line',smooth:true,symbol:'none',data:indoor,lineStyle:{color:'#00d2ff',width:2},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.15)'},{offset:1,color:'rgba(0,210,255,.005)'}])}},
+      {name:'设定温度',type:'line',smooth:false,symbol:'none',data:setpt,lineStyle:{color:'#3980ff',width:1.5,type:'dashed'},areaStyle:{color:'transparent'}}
+    ]
+  });
+}
+
+/* SLIDER & MODES */
+function initCtrl(){
+  var sl=$('tcSlider'),val=$('tcVal');
+  var updBg=function(){var p=((sl.value-sl.min)/(sl.max-sl.min))*100;sl.style.background='linear-gradient(90deg,#0d47a1 '+Math.max(0,p-5)+'%,var(--cyan) '+p+'%)';};
+  sl.addEventListener('input',function(){D.setpoint=parseFloat(this.value);val.textContent=fmt(D.setpoint,1)+'°C';updBg();updateKPI();updateWeatherBar();updateCorrChart();});
+  updBg();
+  var modes=$('tcModes').querySelectorAll('.tcmd');
+  modes.forEach(function(m){m.addEventListener('click',function(){modes.forEach(function(x){x.classList.remove('on');});this.classList.add('on');D.mode=this.dataset.mode;});});
+}
+
+/* SIMULATION */
+function simulate(){
+  var t=Date.now(),h=new Date(t).getHours()+new Date(t).getMinutes()/60;
+  var oe;
+  if(h<6)oe=26+2*Math.pow(Math.cos(Math.PI*h/12),2);
+  else if(h<=14)oe=26+12*Math.pow(Math.sin(Math.PI*(h-6)/16),2);
+  else oe=27.5+10.5*Math.pow(Math.cos(Math.PI*(h-14)/20),2);
+  oe=Math.round(oe*10)/10;
+  var target=D.setpoint+(oe-31)*0.12;
+  D.currentTemp+=(target-D.currentTemp)*0.3;
+  D.currentTemp=Math.round(D.currentTemp*10)/10;
+  var diff=D.currentTemp-D.setpoint,base=800;
+  if(diff>0)base+=diff*200;
+  var tf; if(h>=10&&h<12)tf=1.35;else if(h>=12&&h<14)tf=1.45;else if(h>=14&&h<17)tf=1.25;else if(h>=17&&h<21)tf=1.35;else if(h>=21||h<8)tf=0.6;else tf=1.0;
+  D.power=Math.round(base*tf+(Math.random()-0.5)*30);
+  D.loadRate=Math.round((D.power/D.ratedPower)*1000)/10;
+  D.cop=Math.round((4.5-(D.loadRate/100)*1.0+(Math.random()-0.5)*0.3)*10)/10;
+  if(D.cop<2.5)D.cop=2.5;if(D.cop>5.5)D.cop=5.5;
+  D.coolingCapacity=Math.round(D.power*D.cop);
+  D.outsideTemp=oe;
+  D.humidity=Math.round((55+20*Math.sin(Math.PI*(h-6)/16)+(Math.random()-0.5)*4)*10)/10;
+  if(D.humidity<45)D.humidity=45;if(D.humidity>85)D.humidity=85;
+  D.comfortIndex=Math.round((85-Math.abs(oe-25)*2.5-Math.abs(D.humidity-55)*0.5+(Math.random()-0.5)*2)*10)/10;
+  if(D.comfortIndex<40)D.comfortIndex=40;if(D.comfortIndex>95)D.comfortIndex=95;
+  D.windSpeed=Math.round((2+2*Math.sin(Math.PI*h/12)+(Math.random()-0.5)*1)*10)/10;
+  if(D.windSpeed<0.5)D.windSpeed=0.5;
+  D.units.forEach(function(u,i){
+    if(i===3){u.power=0;u.loadRate=0;u.status='stop';u.waterTemp=null;return;}
+    var bp=i<2?350:180;u.power=Math.round(bp+(Math.random()-0.5)*40);
+    u.loadRate=Math.round((u.power/(i<2?450:280))*100);
+    u.status=u.loadRate>85?'warn':'run';
+    u.waterTemp=Math.round((6.5+(Math.random()-0.5)*1.5)*10)/10;
+  });
+  updateKPI();renderAC();updateWeatherBar();
+}
+
+/* WEBSOCKET */
+function connectWS(){
+  if(WS){try{WS.close();}catch(e){}}
+  try{
+    WS=new WebSocket('ws://localhost:3080');
+    WS.onopen=function(){console.log('[WS a-area] OK');};
+    WS.onmessage=function(e){
+      try{
+        var m=JSON.parse(e.data),d=m.commercial||m;
+        if(d.currentTemp!==undefined)D.currentTemp=d.currentTemp;
+        if(d.setpoint!==undefined)D.setpoint=d.setpoint;
+        if(d.power!==undefined)D.power=d.power;
+        if(d.loadRate!==undefined)D.loadRate=d.loadRate;
+        if(d.cop!==undefined)D.cop=d.cop;
+        if(d.outsideTemp!==undefined)D.outsideTemp=d.outsideTemp;
+        if(d.humidity!==undefined)D.humidity=d.humidity;
+        if(d.comfortIndex!==undefined)D.comfortIndex=d.comfortIndex;
+        if(d.windSpeed!==undefined)D.windSpeed=d.windSpeed;
+        if(d.units)D.units=d.units;
+        updateKPI();renderAC();
+      }catch(ex){}
+    };
+    WS.onclose=function(){setTimeout(connectWS,3000);};
+    WS.onerror=function(){};
+  }catch(ex){console.warn('[WS a-area] fallback to local sim');}
+}
+
+/* WEATHER API (Open-Meteo) */
+function fetchWeather(){
+  var btn=$('weatherBtn');
+  var orig=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 获取中...';
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.0060&current=temperature_2m')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var temp=Math.round(data.current.temperature_2m*10)/10;
+      D.outsideTemp=temp;
+      var now=new Date();
+      var pos=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      tempPoints.push({pos:pos,temp:temp,weather:true});
+      renderTPM();updateKPI();updateWeatherBar();
+      $('weatherTag').textContent='API已获取';
+      btn.innerHTML='<i class="fas fa-check"></i> 已获取';
+      setTimeout(function(){btn.disabled=false;btn.innerHTML=orig;},2000);
+    })
+    .catch(function(err){
+      console.warn('[Weather] fetch failed:',err);
+      btn.disabled=false;btn.innerHTML=orig;
+      var temp=D.outsideTemp;
+      var now=new Date();
+      var pos=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      tempPoints.push({pos:pos,temp:temp,weather:true});
+      renderTPM();updateWeatherBar();
+      $('weatherTag').textContent='本地模拟';
+    });
+}
+
+/* TEMP POINT MANAGEMENT */
+function renderTPM(){
+  var h='';
+  tempPoints.forEach(function(p,i){
+    h+='<div class="tpm-item">'+
+      '<div class="tpm-iinfo"><span class="tpm-ipos">'+p.pos+'</span><span class="tpm-itemp">'+fmt(p.temp,1)+'°C</span>'+(p.weather?'<i class="fas fa-cloud" style="font-size:8px;color:var(--green)"></i>':'')+'</div>'+
+      '<span class="tpm-idel" data-idx="'+i+'"><i class="fas fa-times"></i></span>'+
+      '</div>';
+  });
+  $('tpmList').innerHTML=h;
+  $('tpmCnt').textContent='共 '+tempPoints.length+' 个温度点';
+  $('tpmTag').textContent=tempPoints.length+'点';
+  $('tpmList').querySelectorAll('.tpm-idel').forEach(function(el){
+    el.addEventListener('click',function(){
+      tempPoints.splice(parseInt(this.dataset.idx),1);
+      renderTPM();updateWeatherBar();
+    });
+  });
+  updateCorrChart();
+}
+
+function addTempPoint(){
+  var pos=$('tpmPos').value.trim();
+  var temp=parseFloat($('tpmTemp').value);
+  if(!pos){alert('请输入位置/时间');return;}
+  if(isNaN(temp)||temp<0||temp>50){alert('请输入0-50°C之间的温度');return;}
+  tempPoints.push({pos:pos,temp:temp,weather:false});
+  $('tpmPos').value='';$('tpmTemp').value='';
+  renderTPM();updateWeatherBar();
+}
+
+/* WEATHER INFO BAR */
+function updateWeatherBar(){
+  $('wbOut').textContent=fmt(D.outsideTemp,1);
+  $('wbTarget').textContent=fmt(D.setpoint,1);
+  var diff=Math.round((D.outsideTemp-D.setpoint)*10)/10;
+  $('wbDiff').textContent=(diff>=0?'+':'')+fmt(diff,1);
+  var power=BASE_POWER+diff*TEMP_COEFF;
+  if(power<0)power=0;
+  $('wbPower').textContent=fmt(power);
+}
+
+/* CORRELATION CHART */
+var corrChart;
+function initCorrChart(){
+  corrChart=echarts.init($('corrChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(corrChart);
+  updateCorrChart();
+}
+
+function updateCorrChart(){
+  if(!corrChart)return;
+  var data=[];
+  for(var t=18;t<=35;t+=0.5){
+    var diff=t-D.setpoint;
+    var pw=Math.round((BASE_POWER+diff*TEMP_COEFF)*10)/10;
+    if(pw<0)pw=0;
+    data.push([t,pw]);
+  }
+  var curDiff=D.outsideTemp-D.setpoint;
+  var curPower=Math.round((BASE_POWER+curDiff*TEMP_COEFF)*10)/10;
+  if(curPower<0)curPower=0;
+  corrChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.15)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:function(p){return '温度: '+p[0].value[0]+'°C<br/>功率: '+p[0].value[1]+' kW';}},
+    grid:{left:'8%',right:'5%',top:'12%',bottom:'10%'},
+    xAxis:{type:'value',name:'温度(°C)',nameTextStyle:{color:'#6a8ba8',fontSize:8},min:18,max:35,
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.06)'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:'{value}°C'},splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}}},
+    yAxis:{type:'value',name:'功率(kW)',nameTextStyle:{color:'#6a8ba8',fontSize:8},
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.06)'}},axisLabel:{color:'#6a8ba8',fontSize:8},splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}}},
+    series:[
+      {name:'温度-功率曲线',type:'line',smooth:true,symbol:'none',data:data,
+        lineStyle:{color:'#00d2ff',width:2.5},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.15)'},{offset:1,color:'rgba(0,210,255,.005)'}])}},
+      {name:'当前运行点',type:'scatter',symbolSize:12,data:[[D.outsideTemp,curPower]],
+        itemStyle:{color:'#ffb300',borderColor:'#fff',borderWidth:2,shadowBlur:10,shadowColor:'rgba(255,179,0,.6)'},
+        label:{show:true,position:'top',formatter:'当前 '+fmt(D.outsideTemp,1)+'°C',color:'#ffb300',fontSize:9}}
+    ]
+  });
+}
+
+/* MID TABS */
+function initMidTabs(){
+  var tabs=$('midTabs').querySelectorAll('.tb');
+  tabs.forEach(function(t){
+    t.addEventListener('click',function(){
+      tabs.forEach(function(x){x.classList.remove('on');});
+      this.classList.add('on');
+      var chart=this.dataset.chart;
+      $('trendWrap').style.display=chart==='trend'?'':'none';
+      $('corrWrap').style.display=chart==='corr'?'':'none';
+      if(chart==='trend'&&tempChart)tempChart.resize();
+      if(chart==='corr'&&corrChart)corrChart.resize();
+    });
+  });
+}
+
+/* INIT */
+function init(){
+  initChart();initCtrl();updateKPI();renderAC();connectWS();
+  initCorrChart();initMidTabs();renderTPM();updateWeatherBar();
+  $('weatherBtn').addEventListener('click',fetchWeather);
+  $('tpmAdd').addEventListener('click',addTempPoint);
+  $('tpmTemp').addEventListener('keypress',function(e){if(e.key==='Enter')addTempPoint();});
+  setInterval(function(){if(!WS||WS.readyState!==WebSocket.OPEN)simulate();},2000);
+}
+window.addEventListener('resize',function(){if(tempChart)tempChart.resize();if(corrChart)corrChart.resize();});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
 </body>
 </html>

@@ -1,0 +1,530 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>阶序智调 — 负荷分析</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ========== RESET & BASE (ALL PAGES MUST COPY THIS EXACTLY) ========== */
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.28);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(0,210,255,.15)}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(0,210,255,.15);border-radius:2px}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,120,200,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,210,255,.03),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.03),transparent 55%);}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ========== HEADER (ALL PAGES IDENTICAL) ========== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98) 0%,rgba(6,13,31,.94) 100%);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ========== NAV BAR (ALL PAGES IDENTICAL — 9 items) ========== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative}
+.nl.dd:hover .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:120px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ========== MAIN GRID ========== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:270px 1fr 270px;grid-template-rows:1fr;gap:8px;padding:6px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:6px;min-height:0;overflow:hidden}
+.cl.mid{grid-row:1/2}
+
+/* ========== PANEL ========== */
+.pnl{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:var(--border-h);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.ph{display:flex;align-items:center;gap:6px;padding:6px 10px 4px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1}.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+
+/* ========== TAB BAR (sub-nav within page, like references) ========== */
+.tab-bar{display:flex;align-items:center;gap:1px;padding:0 6px;height:26px;flex-shrink:0;border-bottom:1px solid rgba(0,210,255,.05);overflow:hidden}
+.tb{height:20px;padding:0 7px;border-radius:3px 3px 0 0;font-size:7px;color:var(--t2);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:1px;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;background:transparent;white-space:nowrap;flex-shrink:0}
+.tb:hover{color:var(--cyan);background:rgba(0,210,255,.04)}
+.tb.on{color:var(--cyan);background:rgba(0,210,255,.07);border-color:rgba(0,210,255,.12);border-bottom:1px solid var(--panel)}
+.tb i{font-size:7px}
+
+/* ========== LEFT COLUMN KPI ========== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 7px}
+.kc{padding:6px 7px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kc:hover{background:rgba(0,210,255,.03)}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:17px;font-weight:700;line-height:1.2}
+.kcv.c{color:var(--cyan)}.kcv.g{color:var(--green)}.kcv.a{color:var(--amber)}.kcv.r{color:var(--red)}.kcv.p{color:var(--purple)}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* RIGHT COLUMN — stat list */
+.sl{display:flex;flex-direction:column;gap:4px;padding:7px 10px}
+.si{display:flex;flex-direction:column;gap:1px}
+.sh{display:flex;justify-content:space-between;font-size:7px}
+.sn{color:var(--t2)}.sv{font-family:"SF Mono","Fira Code","Consolas",monospace;color:var(--t1);font-size:7px}
+.sk{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden}
+.sf{height:100%;border-radius:1.5px;transition:width 1.2s ease}
+
+.rl{display:flex;flex-direction:column;gap:4px;padding:6px 9px}
+.ri2{display:flex;flex-direction:column;gap:1px}
+.rh{display:flex;justify-content:space-between;font-size:7px}
+.rb{color:var(--t2)}.rp{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:600;font-size:7px}
+.rt{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden}
+.rf{height:100%;border-radius:1.5px;transition:width 1.2s ease}
+
+/* CHART WRAPPER */
+.cw{flex:1;min-height:0;position:relative;padding:4px 7px 5px}
+.cw>div{width:100%;height:100%}
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl on" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- === LEFT COLUMN === -->
+  <div class="cl">
+    <!-- Main chart: 温度-负荷共同趋势 — full left height -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi c"><i class="fas fa-wave-square"></i></div><span class="pht">温度-负荷共同趋势</span><span class="phtag" id="mainTag">24h</span></div>
+      <div class="cw"><div id="mainChart" style="min-height:240px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- === CENTER COLUMN === -->
+  <div class="cl mid">
+    <!-- Tab bar: 5 tabs -->
+    <div class="tab-bar">
+      <div class="tb on" data-tab="overview"><i class="fas fa-eye"></i>负荷总览</div>
+      <div class="tb" data-tab="correlation"><i class="fas fa-temperature-half"></i>温度-负荷关联</div>
+      <div class="tb" data-tab="hourly"><i class="fas fa-clock"></i>分时负荷</div>
+      <div class="tb" data-tab="region"><i class="fas fa-map"></i>区域对比</div>
+      <div class="tb" data-tab="forecast"><i class="fas fa-chart-line"></i>负荷预测</div>
+    </div>
+    <!-- KPI: 峰值负荷 / 平均负荷 / 负载率 / COP -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-microchip"></i></div><span class="pht">负荷概况</span><span class="phtag">实时</span></div>
+      <div class="kg">
+        <div class="kc"><div class="kcl">峰值负荷</div><div><span class="kcv c" id="kpiPeak">4,876</span><span style="font-size:8px;color:var(--t2)">kW</span></div><div class="kcb"><div class="kcf" style="width:82%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div></div>
+        <div class="kc"><div class="kcl">平均负荷</div><div><span class="kcv g" id="kpiAvg">3,210</span><span style="font-size:8px;color:var(--t2)">kW</span></div><div class="kcb"><div class="kcf" style="width:65%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div></div>
+        <div class="kc"><div class="kcl">负载率</div><div><span class="kcv a" id="kpiRate">72.6</span><span style="font-size:8px;color:var(--t2)">%</span></div><div class="kcb"><div class="kcf" style="width:72%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div></div>
+        <div class="kc"><div class="kcl">COP</div><div><span class="kcv p" id="kpiCop">4.82</span></div><div class="kcb"><div class="kcf" style="width:88%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div></div>
+      </div>
+    </div>
+    <!-- Area ranking: horizontal bar chart -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi a"><i class="fas fa-sort-amount-down"></i></div><span class="pht">区域负荷排名</span><span class="phtag">kW</span></div>
+      <div class="cw"><div id="rankChart" style="min-height:240px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- === RIGHT COLUMN === -->
+  <div class="cl">
+    <!-- 负荷变化速率 -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi b"><i class="fas fa-bolt"></i></div><span class="pht">负荷变化速率</span><span class="phtag">kW/min</span></div>
+      <div class="cw"><div id="rateChart" style="min-height:200px;height:100%;width:100%"></div></div>
+    </div>
+    <!-- 负荷构成 -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi g"><i class="fas fa-chart-pie"></i></div><span class="pht">负荷构成</span><span class="phtag">占比</span></div>
+      <div class="cw"><div id="donutChart" style="min-height:200px;height:100%;width:100%"></div></div>
+    </div>
+    <!-- Temperature metrics -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi a"><i class="fas fa-temperature-half"></i></div><span class="pht">温度指标</span><span class="phtag">实时</span></div>
+      <div class="sl">
+        <div class="si"><div class="sh"><span class="sn">室外温度</span><span class="sv" id="tOut">34.5°C</span></div><div class="sk"><div class="sf" style="width:78%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div></div>
+        <div class="si"><div class="sh"><span class="sn">供水温度</span><span class="sv" id="tSupply">7.2°C</span></div><div class="sk"><div class="sf" style="width:45%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div></div>
+        <div class="si"><div class="sh"><span class="sn">回水温度</span><span class="sv" id="tReturn">12.8°C</span></div><div class="sk"><div class="sf" style="width:62%;background:linear-gradient(90deg,#0d47a1,var(--blue))"></div></div></div>
+        <div class="si"><div class="sh"><span class="sn">供回温差</span><span class="sv" id="tDelta">5.6 K</span></div><div class="sk"><div class="sf" style="width:56%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div></div>
+        <div class="si"><div class="sh"><span class="sn">室内均温</span><span class="sv" id="tIn">24.6°C</span></div><div class="sk"><div class="sf" style="width:50%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div></div>
+      </div>
+    </div>
+    <!-- Load distribution stats -->
+    <div class="pnl" style="flex:1;min-height:0;overflow-y:auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-chart-bar"></i></div><span class="pht">负荷分布统计</span></div>
+      <div class="rl">
+        <div class="ri2"><div class="rh"><span class="rb">商业区占比</span><span class="rp" style="color:var(--cyan)" id="pCom">42.5%</span></div><div class="rt"><div class="rf" style="width:42.5%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div></div>
+        <div class="ri2"><div class="rh"><span class="rb">居民区占比</span><span class="rp" style="color:var(--green)" id="pRes">31.2%</span></div><div class="rt"><div class="rf" style="width:31.2%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div></div>
+        <div class="ri2"><div class="rh"><span class="rb">工业区占比</span><span class="rp" style="color:var(--amber)" id="pInd">18.6%</span></div><div class="rt"><div class="rf" style="width:18.6%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div></div>
+        <div class="ri2"><div class="rh"><span class="rb">其他占比</span><span class="rp" style="color:var(--purple)" id="pOther">7.7%</span></div><div class="rt"><div class="rf" style="width:7.7%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div></div>
+      </div>
+      <div class="dgg" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 9px 6px">
+        <div class="dgi" style="padding:5px 7px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)"><div style="font-size:8px;color:var(--t2)">峰值时刻</div><div><span style="font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:13px;font-weight:700;color:var(--cyan)" id="peakTime">14:30</span></div></div>
+        <div class="dgi" style="padding:5px 7px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)"><div style="font-size:8px;color:var(--t2)">谷值时刻</div><div><span style="font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:13px;font-weight:700;color:var(--green)" id="valleyTime">04:00</span></div></div>
+        <div class="dgi" style="padding:5px 7px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)"><div style="font-size:8px;color:var(--t2)">峰谷差</div><div><span style="font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:13px;font-weight:700;color:var(--amber)" id="peakValley">3,612</span><span style="font-size:6px;color:var(--t2)">kW</span></div></div>
+        <div class="dgi" style="padding:5px 7px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)"><div style="font-size:8px;color:var(--t2)">负荷波动率</div><div><span style="font-family:'SF Mono','Fira Code','Consolas',monospace;font-size:13px;font-weight:700;color:var(--purple)" id="fluct">12.4%</span></div></div>
+      </div>
+    </div>
+  </div>
+
+
+</main><!-- /main -->
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
+        });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
+
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+// ============ UTILS ============
+const $=id=>document.getElementById(id);
+const fmt=(n,d)=>d?Number(n).toFixed(d):Math.round(n).toLocaleString();
+const rand=(a,b)=>a+Math.random()*(b-a);
+let WS=null,wsOnline=false;
+
+// ============ CLOCK ============
+function tick(){const d=new Date();$('clk').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');}
+tick();setInterval(tick,1000);
+
+// ============ STATE ============
+let mainC,rankC,rateC,donutC;
+let currentTab='overview';
+
+// ============ DATA GENERATION ============
+function genHours(){const a=[];for(let i=0;i<24;i++)a.push(i.toString().padStart(2,'0')+':00');return a;}
+function genLoad(h){const peak=(h>=10&&h<=16)?1.0:(h>=8&&h<=18)?0.78:(h>=19&&h<=22)?0.62:0.32;return Math.round(rand(2800,5200)*peak);}
+function genTemp(h){const t=(h>=13&&h<=16)?1.0:(h>=10&&h<=18)?0.9:0.7;return +(rand(26,38)*t).toFixed(1);}
+
+function genAllData(){
+  const hours=genHours();
+  const total=[],com=[],res=[],temp=[];
+  for(let i=0;i<24;i++){
+    const c=Math.round(rand(1500,2800)*((i>=8&&i<=18)?1:0.35));
+    const r=Math.round(rand(800,2200)*((i>=17&&i<=23)?1:(i>=0&&i<=6)?0.4:0.6));
+    com.push(c);res.push(r);total.push(c+r);temp.push(genTemp(i));
+  }
+  // Rate of change (kW/min) — derive from total
+  const rate=[];
+  for(let i=0;i<24;i++){
+    const prev=i>0?total[i-1]:total[0];
+    rate.push(+(Math.abs(total[i]-prev)/12).toFixed(1));
+  }
+  return {hours,total,com,res,temp,rate};
+}
+
+let data=genAllData();
+
+// ============ MAIN CHART: 温度-负荷共同趋势 ============
+function initMain(){
+  mainC=echarts.init($('mainChart'));
+  window.charts = window.charts || []; window.charts.push(mainC);
+  renderMain();
+}
+function renderMain(){
+  const d=data;
+  mainC.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:10}},
+    legend:{data:['总负荷','商业区','居民区','室外温度'],textStyle:{color:'#6a8ba8',fontSize:8},top:4,right:8,itemWidth:10,itemHeight:5,itemGap:10},
+    grid:{left:42,right:42,top:'18%',bottom:'8%'},
+    xAxis:{type:'category',data:d.hours,boundaryGap:false,
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.06)'}},
+      axisLabel:{color:'#6a8ba8',fontSize:8,interval:1}},
+    yAxis:[
+      {type:'value',name:'kW',nameTextStyle:{color:'#6a8ba8',fontSize:8},min:0,max:6000,
+        splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}},
+        axisLabel:{color:'#6a8ba8',fontSize:8,formatter:v=>(v/1000).toFixed(1)+'k'}},
+      {type:'value',name:'°C',nameTextStyle:{color:'#ffb300',fontSize:8},min:20,max:40,
+        splitLine:{show:false},
+        axisLabel:{color:'#ffb300',fontSize:8}}
+    ],
+    series:[
+      {name:'总负荷',type:'line',smooth:true,symbol:'none',data:d.total,yAxisIndex:0,
+        lineStyle:{color:'#00d2ff',width:2},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.18)'},{offset:1,color:'rgba(0,210,255,.002)'}])}},
+      {name:'商业区',type:'line',smooth:true,symbol:'none',data:d.com,yAxisIndex:0,
+        lineStyle:{color:'#3980ff',width:1.2},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(57,128,255,.06)'},{offset:1,color:'rgba(57,128,255,.002)'}])}},
+      {name:'居民区',type:'line',smooth:true,symbol:'none',data:d.res,yAxisIndex:0,
+        lineStyle:{color:'#00e5a0',width:1.2},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.06)'},{offset:1,color:'rgba(0,229,160,.002)'}])}},
+      {name:'室外温度',type:'line',smooth:true,symbol:'none',data:d.temp,yAxisIndex:1,
+        lineStyle:{color:'#ffb300',width:1.4,type:'dashed'},
+        markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(255,61,87,.2)',type:'dashed',width:1},label:{formatter:'阈值',color:'#ff3d57',fontSize:8},data:[{yAxis:5000,yAxisIndex:0}]}},
+    ]
+  });
+}
+
+// ============ RANK CHART: 区域负荷排名 horizontal bar ============
+function initRank(){
+  rankC=echarts.init($('rankChart'));
+  window.charts = window.charts || []; window.charts.push(rankC);
+  renderRank();
+}
+function renderRank(){
+  const areas=[
+    {n:'万达商场',v:Math.round(rand(1200,1800))},
+    {n:'数据中心',v:Math.round(rand(900,1400))},
+    {n:'幸福小区',v:Math.round(rand(700,1100))},
+    {n:'人民医院',v:Math.round(rand(600,950))},
+    {n:'工业园区',v:Math.round(rand(500,850))},
+    {n:'实验中学',v:Math.round(rand(400,700))},
+    {n:'五星酒店',v:Math.round(rand(300,600))},
+  ].sort((a,b)=>b.v-a.v);
+  const max=Math.max(...areas.map(a=>a.v));
+  rankC.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:10},formatter:p=>p[0].name+'：'+p[0].value+' kW'},
+    grid:{left:60,right:30,top:'5%',bottom:'5%'},
+    xAxis:{type:'value',max:Math.ceil(max/100)*100,
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},
+      axisLabel:{color:'#6a8ba8',fontSize:8,formatter:v=>(v/1000).toFixed(1)+'k'},
+      splitLine:{lineStyle:{color:'rgba(0,210,255,.02)'}}},
+    yAxis:{type:'category',data:areas.map(a=>a.n).reverse(),
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},
+      axisTick:{show:false},
+      axisLabel:{color:'#d8eaf8',fontSize:9}},
+    series:[{
+      type:'bar',data:areas.map(a=>a.v).reverse(),barWidth:8,
+      itemStyle:{borderRadius:[0,4,4,0],
+        color:p=>{const v=p.value;const r=v/max;if(r>0.85)return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(255,61,87,.5)'},{offset:1,color:'#ff3d57'}]);if(r>0.6)return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(255,179,0,.4)'},{offset:1,color:'#ffb300'}]);return new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'rgba(0,210,255,.4)'},{offset:1,color:'#00d2ff'}]);}},
+      label:{show:true,position:'right',color:'#00d2ff',fontSize:8,fontFamily:'SF Mono,monospace',formatter:'{c}'}
+    }]
+  });
+}
+
+// ============ RATE CHART: 负荷变化速率 ============
+function initRate(){
+  rateC=echarts.init($('rateChart'));
+  window.charts = window.charts || []; window.charts.push(rateC);
+  renderRate();
+}
+function renderRate(){
+  const d=data;
+  rateC.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:10},formatter:p=>p[0].axisValue+'<br/>'+p[0].marker+' 速率: '+p[0].value+' kW/min'},
+    grid:{left:36,right:14,top:'10%',bottom:'10%'},
+    xAxis:{type:'category',data:d.hours,boundaryGap:false,
+      axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},
+      axisLabel:{color:'#6a8ba8',fontSize:8,interval:2}},
+    yAxis:{type:'value',name:'kW/min',nameTextStyle:{color:'#6a8ba8',fontSize:8},
+      splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}},
+      axisLabel:{color:'#6a8ba8',fontSize:8}},
+    series:[{
+      type:'line',smooth:true,symbol:'none',data:d.rate,
+      lineStyle:{color:'#3980ff',width:1.8},
+      areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(57,128,255,.22)'},{offset:1,color:'rgba(57,128,255,.002)'}])},
+      markPoint:{symbol:'pin',symbolSize:22,data:[{type:'max',name:'最大'},{type:'min',name:'最小'}],label:{fontSize:7,color:'#fff'},itemStyle:{color:'#3980ff'}}
+    }]
+  });
+}
+
+// ============ DONUT CHART: 负荷构成 ============
+function initDonut(){
+  donutC=echarts.init($('donutChart'));
+  window.charts = window.charts || []; window.charts.push(donutC);
+  renderDonut();
+}
+function renderDonut(){
+  const pieData=[
+    {name:'商业区',value:Math.round(rand(1800,2400))},
+    {name:'居民区',value:Math.round(rand(1300,1700))},
+    {name:'工业区',value:Math.round(rand(700,1000))},
+    {name:'其他',value:Math.round(rand(300,500))}
+  ];
+  const total=pieData.reduce((s,x)=>s+x.value,0);
+  donutC.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'item',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:10},formatter:p=>p.name+': '+p.value+' kW ('+p.percent+'%)'},
+    legend:{orient:'vertical',right:6,top:'center',itemWidth:8,itemHeight:8,itemGap:6,
+      textStyle:{color:'#6a8ba8',fontSize:8},
+      formatter:name=>{const it=pieData.find(x=>x.name===name);return name+' '+it.value+'kW';}},
+    series:[{
+      type:'pie',radius:['46%','72%'],center:['32%','52%'],avoidLabelOverlap:false,
+      itemStyle:{borderColor:'#060d1f',borderWidth:2},
+      label:{show:true,position:'center',formatter:'{a}',color:'#00d2ff',fontSize:13,fontFamily:'SF Mono,monospace',fontWeight:700},
+      emphasis:{label:{show:true,fontSize:14,formatter:p=>p.percent+'%'},labelLine:{show:false}},
+      data:pieData.map((x,i)=>({
+        name:x.name,value:x.value,
+        itemStyle:{color:['#00d2ff','#00e5a0','#ffb300','#b388ff'][i]}
+      })),
+      name:fmt(total,0)+' kW'
+    }]
+  });
+}
+
+// ============ TAB SWITCHING ============
+document.querySelectorAll('.tb').forEach(tb=>{
+  tb.addEventListener('click',()=>{
+    document.querySelectorAll('.tb').forEach(x=>x.classList.remove('on'));
+    tb.classList.add('on');
+    currentTab=tb.dataset.tab;
+    const tag=$('mainTag');
+    if(currentTab==='overview')tag.textContent='24h';
+    else if(currentTab==='correlation')tag.textContent='关联';
+    else if(currentTab==='hourly')tag.textContent='分时';
+    else if(currentTab==='region')tag.textContent='区域';
+    else if(currentTab==='forecast')tag.textContent='预测';
+    data=genAllData();
+    renderMain();renderRank();renderRate();renderDonut();
+  });
+});
+
+// ============ WEBSOCKET ============
+function connectWS(){
+  try{
+    WS=new WebSocket('ws://localhost:3080');
+    WS.onopen=()=>{console.log('[WS] OK');wsOnline=true;};
+    WS.onmessage=e=>{
+      try{const m=JSON.parse(e.data);handleMsg(m);}catch(ex){}
+    };
+    WS.onclose=()=>{wsOnline=false;setTimeout(connectWS,3000);};
+    WS.onerror=()=>{wsOnline=false;};
+  }catch(e){wsOnline=false;setTimeout(connectWS,3000);}
+}
+function handleMsg(m){
+  if(!m)return;
+  if(m.type==='cooling_analysis'||m.type==='full_update'){
+    const d=m.data||m;
+    if(d.hours)data.hours=d.hours;
+    if(d.total)data.total=d.total;
+    if(d.com)data.com=d.com;
+    if(d.res)data.res=d.res;
+    if(d.temp)data.temp=d.temp;
+    if(d.rate)data.rate=d.rate;
+    if(d.kpi){
+      if(d.kpi.peakLoad!=null)$('kpiPeak').textContent=fmt(d.kpi.peakLoad,0);
+      if(d.kpi.avgLoad!=null)$('kpiAvg').textContent=fmt(d.kpi.avgLoad,0);
+      if(d.kpi.loadRate!=null)$('kpiRate').textContent=fmt(d.kpi.loadRate,1);
+      if(d.kpi.cop!=null)$('kpiCop').textContent=fmt(d.kpi.cop,2);
+    }
+    renderMain();renderRank();renderRate();renderDonut();
+  }
+}
+
+// ============ SIMULATION FALLBACK ============
+function simUpdate(){
+  if(wsOnline)return;
+  data=genAllData();
+  // Update KPIs
+  const peak=Math.max(...data.total);
+  const avg=Math.round(data.total.reduce((a,b)=>a+b,0)/24);
+  const rate=+(peak/6500*100).toFixed(1);
+  const cop=+(rand(4.2,5.2)).toFixed(2);
+  $('kpiPeak').textContent=fmt(peak,0);
+  $('kpiAvg').textContent=fmt(avg,0);
+  $('kpiRate').textContent=fmt(rate,1);
+  $('kpiCop').textContent=fmt(cop,2);
+  // Temp metrics
+  $('tOut').textContent=fmt(rand(32,36),1)+'°C';
+  $('tSupply').textContent=fmt(rand(6.5,7.8),1)+'°C';
+  $('tReturn').textContent=fmt(rand(11.5,13.5),1)+'°C';
+  $('tDelta').textContent=fmt(rand(5.0,6.2),1)+' K';
+  $('tIn').textContent=fmt(rand(23.5,25.5),1)+'°C';
+  // Re-render charts
+  renderMain();renderRank();renderRate();renderDonut();
+}
+setInterval(simUpdate,5000);
+
+// ============ INIT ============
+function init(){
+  initMain();initRank();initRate();initDonut();
+  connectWS();
+}
+window.addEventListener('resize',()=>{
+  if(mainC)mainC.resize();
+  if(rankC)rankC.resize();
+  if(rateC)rateC.resize();
+  if(donutC)donutC.resize();
+});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
+</body>
+</html>

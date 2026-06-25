@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>调度优化 — 阶序智调</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.3);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+  --mono:"SF Mono","Fira Code","Consolas",monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(57,128,255,.18)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:rgba(57,128,255,.2);border-radius:2px}
+::-webkit-scrollbar-track{background:transparent}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% -10%,rgba(57,128,255,.18),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(57,128,255,.05),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(0,210,255,.04),transparent 55%);
+}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ===== HEADER ===== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98)0%,rgba(6,13,31,.94)100%);border-bottom:1px solid rgba(0,210,255,.12);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,#00d2ff,transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:var(--mono);font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:#00e5a0;animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ===== NAV BAR ===== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+
+/* ===== MAIN: 2-column grid ===== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:6fr 4fr;gap:5px;padding:5px;overflow:hidden}
+.col{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+
+/* ===== PANEL ===== */
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 10px rgba(0,0,0,.3)}
+.panel:hover{border-color:var(--border-h);box-shadow:0 1px 10px rgba(0,0,0,.3),0 0 12px rgba(57,128,255,.06)}
+
+.ph{display:flex;align-items:center;gap:8px;padding:8px 12px 5px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}
+.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}
+.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}
+.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:12px;font-weight:600;color:var(--t1)}
+.phtag{font-size:9px;padding:2px 6px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+.pb{padding:8px 10px;overflow-y:auto;flex:1;min-height:0}
+
+/* ===== KPI Grid ===== */
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px 8px}
+.kpi-c{padding:8px 9px;background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;transition:.2s}
+.kpi-c:hover{background:rgba(57,128,255,.04)}
+.kpi-cl{font-size:10px;color:var(--t2)}
+.kpi-cv{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1.15}
+.kpi-cv.c{color:var(--cyan)}.kpi-cv.g{color:var(--green)}.kpi-cv.a{color:var(--amber)}.kpi-cv.r{color:var(--red)}.kpi-cv.b{color:var(--blue)}.kpi-cv.p{color:var(--purple)}
+.kpi-bar{height:2px;background:rgba(57,128,255,.04);border-radius:1px;margin-top:4px;overflow:hidden}
+.kpi-bf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ===== Chart wrapper ===== */
+.chart-w{flex:1;min-height:0;position:relative;padding:4px 8px}
+.chart-w>div{width:100%;height:100%}
+
+/* ===== J Value Display ===== */
+.j-display{text-align:center;padding:6px 0}
+.j-val{font-family:var(--mono);font-size:38px;font-weight:700;background:linear-gradient(135deg,#00d2ff,#3980ff,#b388ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.j-label{font-size:9px;color:var(--t2);margin-top:2px}
+.j-breakdown{display:flex;gap:14px;justify-content:center;margin-top:5px}
+.j-bp{text-align:center}
+.j-bv{font-family:var(--mono);font-size:16px;font-weight:600}
+.j-bv.blue{color:var(--blue)}.j-bv.cyan{color:var(--cyan)}.j-bv.purple{color:var(--purple)}
+.j-bl{font-size:8px;color:var(--t2)}
+
+/* ===== Auto-Weight Bars ===== */
+.aw-row{display:flex;align-items:center;gap:8px;margin:3px 0}
+.aw-label{font-size:10px;width:50px;text-align:right;color:var(--t2);flex-shrink:0}
+.aw-bar-wrap{flex:1;height:6px;background:rgba(57,128,255,.04);border-radius:3px;overflow:hidden}
+.aw-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.aw-val{font-family:var(--mono);font-size:10px;width:36px;text-align:right;flex-shrink:0}
+.aw-mode{text-align:center;font-size:10px;margin-top:6px;padding:3px 8px;border-radius:4px;display:inline-block}
+
+/* ===== Strategy Cards ===== */
+.strat-card{background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:.15s;position:relative}
+.strat-card:hover{background:rgba(57,128,255,.03);border-color:rgba(0,210,255,.1)}
+.strat-card.active{border-color:rgba(0,229,160,.25);background:rgba(0,229,160,.02)}
+.strat-card .sc-row{display:flex;align-items:center;gap:8px}
+.strat-card .sc-icon{width:26px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.sc-icon.precool{background:rgba(0,210,255,.08);color:var(--cyan)}
+.sc-icon.zone{background:rgba(179,136,255,.08);color:var(--purple)}
+.sc-icon.night{background:rgba(0,229,160,.08);color:var(--green)}
+.sc-icon.shift{background:rgba(255,179,0,.08);color:var(--amber)}
+.sc-icon.demand{background:rgba(255,61,87,.08);color:var(--red)}
+.sc-name{font-size:11px;font-weight:500;color:var(--t1);flex:1}
+.sc-score{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--cyan)}
+.sc-trigger{font-size:9px;color:var(--t2);margin:4px 0 0 34px}
+.sc-save{font-size:9px;color:var(--green);margin:2px 0 0 34px;font-family:var(--mono)}
+.sc-badge{position:absolute;top:4px;right:6px;font-size:7px;padding:2px 5px;border-radius:2px;text-transform:uppercase}
+.sc-badge.high{background:rgba(0,229,160,.08);color:var(--green)}
+.sc-badge.medium{background:rgba(255,179,0,.06);color:var(--amber)}
+.sc-badge.standby{background:rgba(57,128,255,.04);color:var(--t2)}
+
+/* ===== Recovery Plan Cards ===== */
+.plan-card{background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;padding:10px;cursor:pointer;transition:.2s;position:relative}
+.plan-card:hover{border-color:rgba(0,210,255,.12)}
+.plan-card.recommended{border-color:rgba(0,229,160,.25);background:rgba(0,229,160,.02)}
+.plan-card .pl-ribbon{position:absolute;top:0;right:0;font-size:7px;background:var(--green);color:#000;padding:2px 7px;border-radius:0 4px 0 4px;display:none}
+.plan-card.recommended .pl-ribbon{display:block}
+.pl-name{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:5px}
+.pl-desc{font-size:9px;color:var(--t2);line-height:1.5;margin-bottom:7px}
+.pl-metrics{display:flex;gap:10px}
+.pl-m{text-align:center}
+.pl-mv{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--cyan)}
+.pl-ml{font-size:8px;color:var(--t2)}
+.pl-j{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green);margin-top:5px;text-align:right}
+
+/* ===== Execution Log ===== */
+.exec-log{font-size:10px}
+.exec-item{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid rgba(57,128,255,.02)}
+.exec-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.exec-dot.done{background:var(--green)}
+.exec-dot.active{background:var(--cyan);animation:pulse 1.5s infinite}
+.exec-dot.pending{background:rgba(57,128,255,.1)}
+.exec-body{flex:1}
+.exec-time{font-family:var(--mono);font-size:9px;color:var(--t2)}
+.exec-action{font-size:10px;color:var(--t1);margin:2px 0}
+.exec-effect{font-size:8px;color:var(--green);font-family:var(--mono)}
+
+/* ===== Action Button ===== */
+.btn-action{display:inline-flex;align-items:center;gap:5px;padding:6px 18px;border-radius:4px;border:1px solid rgba(0,210,255,.15);background:linear-gradient(135deg,rgba(0,210,255,.06),rgba(57,128,255,.06));color:var(--cyan);font-size:10px;cursor:pointer;transition:.2s;font-weight:500;letter-spacing:.3px}
+.btn-action:hover{background:linear-gradient(135deg,rgba(0,210,255,.1),rgba(57,128,255,.1));border-color:rgba(0,210,255,.28);box-shadow:0 0 12px rgba(0,210,255,.08)}
+.btn-action i{font-size:9px}
+.btn-action.success{background:linear-gradient(135deg,rgba(0,229,160,.06),rgba(0,229,160,.02));border-color:rgba(0,229,160,.15);color:var(--green)}
+
+/* ===== Toast ===== */
+#toast{position:fixed;top:14px;right:14px;z-index:999;display:flex;flex-direction:column;gap:6px}
+.tmsg{background:rgba(6,13,31,.94);border:1px solid rgba(0,210,255,.08);padding:8px 14px;border-radius:5px;font-size:9px;color:var(--t1);animation:slideIn .25s;max-width:280px}
+.tmsg.success{border-color:rgba(0,229,160,.2)}
+.tmsg.info{border-color:rgba(0,210,255,.15)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;box-shadow:0 0 0 4px rgba(0,210,255,.15)}
+
+@media(max-width:1280px){#mn{grid-template-columns:1fr 1fr}.nl{padding:0 10px;font-size:10px}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot" id="hdDot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl on" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- LEFT COLUMN -->
+  <div class="col">
+    <!-- 优化目标函数（含自适应权重） -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi p"><i class="fas fa-bullseye"></i></div>
+        <span class="pht">优化目标函数 <small style="font-size:8px;color:var(--t2)">v2.1</small></span>
+        <span class="phtag" id="jRating" style="color:var(--cyan)">★★良好</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--t2)" id="srcLabel">实时</span>
+      </div>
+      <div class="pb">
+        <div class="j-display">
+          <div class="j-val" id="Jval">0.6842</div>
+          <div class="j-label">J = w₁E + w₂D + w₃R + w₄C · <span id="jDetail">碳:35.4kg | 越界:0.000 | 舒适:0.010</span></div>
+        </div>
+        <div class="j-breakdown">
+          <div class="j-bp"><div class="j-bv blue" id="jE">0.380</div><div class="j-bl">经济 E</div></div>
+          <div class="j-bp"><div class="j-bv cyan" id="jD">0.217</div><div class="j-bl">稳定 D</div></div>
+          <div class="j-bp"><div class="j-bv purple" id="jR">0.087</div><div class="j-bl">韧性 R</div></div>
+          <div class="j-bp"><div class="j-bv" id="jC" style="color:var(--green)">0.024</div><div class="j-bl">碳 C</div></div>
+        </div>
+        <!-- 自适应权重（只读） -->
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,210,255,.06)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:9px;color:var(--t2)">算法自适应权重</span>
+            <span style="font-size:9px;color:var(--cyan);font-family:var(--mono)" id="awMode">均衡优化</span>
+          </div>
+          <div class="aw-row">
+            <span class="aw-label" style="color:var(--blue)">经济 w₁</span>
+            <div class="aw-bar-wrap"><div class="aw-bar" id="awBar1" style="width:40%;background:var(--blue)"></div></div>
+            <span class="aw-val" id="awVal1">0.40</span>
+          </div>
+          <div class="aw-row">
+            <span class="aw-label" style="color:var(--cyan)">稳定 w₂</span>
+            <div class="aw-bar-wrap"><div class="aw-bar" id="awBar2" style="width:35%;background:var(--cyan)"></div></div>
+            <span class="aw-val" id="awVal2">0.35</span>
+          </div>
+          <div class="aw-row">
+            <span class="aw-label" style="color:var(--purple)">韧性 w₃</span>
+            <div class="aw-bar-wrap"><div class="aw-bar" id="awBar3" style="width:25%;background:var(--purple)"></div></div>
+            <span class="aw-val" id="awVal3">0.25</span>
+          </div>
+          <div class="aw-row">
+            <span class="aw-label" style="color:var(--green)">碳 w₄</span>
+            <div class="aw-bar-wrap"><div class="aw-bar" id="awBar4" style="width:15%;background:var(--green)"></div></div>
+            <span class="aw-val" id="awVal4">0.15</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 策略推荐 -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi b"><i class="fas fa-lightbulb"></i></div>
+        <span class="pht">策略推荐</span>
+        <span class="phtag">点击激活</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--t2)">已激活 <b style="color:var(--green);font-family:var(--mono)" id="activeCount">0</b> 项</span>
+      </div>
+      <div class="pb" id="strategyList" style="max-height:260px;overflow-y:auto">
+        <div class="strat-card" onclick="toggleStrategy(0,'precool')">
+          <span class="sc-badge high">推荐</span>
+          <div class="sc-row">
+            <div class="sc-icon precool"><i class="fas fa-snowflake"></i></div>
+            <div class="sc-name">预冷控制</div>
+            <div class="sc-score">92分</div>
+          </div>
+          <div class="sc-trigger">触发条件: 凌晨4:00-7:00预冷窗口</div>
+          <div class="sc-save">预估节能量: 324 kW</div>
+        </div>
+        <div class="strat-card" onclick="toggleStrategy(1,'zone')">
+          <span class="sc-badge medium">可选</span>
+          <div class="sc-row">
+            <div class="sc-icon zone"><i class="fas fa-layer-group"></i></div>
+            <div class="sc-name">分区控制</div>
+            <div class="sc-score">72分</div>
+          </div>
+          <div class="sc-trigger">触发条件: 电网负载率偏高</div>
+          <div class="sc-save">预估节能量: 286 kW</div>
+        </div>
+        <div class="strat-card" onclick="toggleStrategy(2,'night_storage')">
+          <span class="sc-badge medium">可选</span>
+          <div class="sc-row">
+            <div class="sc-icon night"><i class="fas fa-battery-full"></i></div>
+            <div class="sc-name">夜间蓄冷</div>
+            <div class="sc-score">85分</div>
+          </div>
+          <div class="sc-trigger">触发条件: 电价低谷时段</div>
+          <div class="sc-save">预估节能量: 412 kW</div>
+        </div>
+        <div class="strat-card" onclick="toggleStrategy(3,'peak_shift')">
+          <span class="sc-badge medium">可选</span>
+          <div class="sc-row">
+            <div class="sc-icon shift"><i class="fas fa-shuffle"></i></div>
+            <div class="sc-name">错峰运行</div>
+            <div class="sc-score">75分</div>
+          </div>
+          <div class="sc-trigger">触发条件: 高峰时段19:00</div>
+          <div class="sc-save">预估节能量: 198 kW</div>
+        </div>
+        <div class="strat-card" onclick="toggleStrategy(4,'demand_response')">
+          <span class="sc-badge standby">待命</span>
+          <div class="sc-row">
+            <div class="sc-icon demand"><i class="fas fa-bolt"></i></div>
+            <div class="sc-name">需求响应</div>
+            <div class="sc-score">65分</div>
+          </div>
+          <div class="sc-trigger">触发条件: 待命响应，三级联动</div>
+          <div class="sc-save">预估节能量: max 260 kW</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 优化前后对比图表 -->
+    <div class="panel" style="flex:1">
+      <div class="ph">
+        <div class="phi c"><i class="fas fa-chart-line"></i></div>
+        <span class="pht">优化前后对比</span>
+        <span class="phtag">24h · kW</span>
+        <button onclick="refreshForecast()" class="btn-action" style="margin-left:auto;padding:4px 12px;font-size:9px">刷新</button>
+      </div>
+      <div class="chart-w"><div id="forecastChart" style="min-height:260px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col">
+    <!-- 实时指标 -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi g"><i class="fas fa-gauge-high"></i></div>
+        <span class="pht">实时指标</span>
+        <span class="phtag" id="dataSource">模拟运行</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-c"><div class="kpi-cl">室外温度</div><div><span class="kpi-cv a" id="kpiTemp">32.9</span><span style="font-size:9px;color:var(--t2)"> °C</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:75%;background:linear-gradient(90deg,var(--amber),var(--red))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">电价</div><div><span class="kpi-cv c" id="kpiPrice">342</span><span style="font-size:9px;color:var(--t2)"> 元/MWh</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:55%;background:linear-gradient(90deg,var(--cyan),var(--blue))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">电网总负荷</div><div><span class="kpi-cv b" id="kpiTotalLoad">2947</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:80%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">制冷负荷</div><div><span class="kpi-cv c" id="kpiCoolLoad">1563</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:70%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">负载率</div><div><span class="kpi-cv a" id="kpiLoadRate">84.2</span><span style="font-size:9px;color:var(--t2)"> %</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiLoadBar" style="width:84%;background:linear-gradient(90deg,var(--cyan),var(--amber))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">策略节能量</div><div><span class="kpi-cv g" id="kpiSaved">0</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiSaveBar" style="width:0%;background:linear-gradient(90deg,var(--green),var(--green))"></div></div></div>
+      </div>
+    </div>
+
+    <!-- 故障恢复方案比选 -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi r"><i class="fas fa-triangle-exclamation"></i></div>
+        <span class="pht">故障恢复方案比选</span>
+        <span class="phtag">J值最小最优</span>
+      </div>
+      <div class="pb">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="planGrid">
+          <div class="plan-card recommended" onclick="execRecoveryPlan('plan_a')">
+            <div class="pl-ribbon">推荐</div>
+            <div class="pl-name">方案A：商业优先</div>
+            <div class="pl-desc">优先恢复商业区全供电，居民区轮流供电</div>
+            <div class="pl-metrics">
+              <div class="pl-m"><div class="pl-mv">850</div><div class="pl-ml">影响负荷 kW</div></div>
+              <div class="pl-m"><div class="pl-mv">45min</div><div class="pl-ml">恢复时长</div></div>
+              <div class="pl-m"><div class="pl-mv">120</div><div class="pl-ml">额外功率 kW</div></div>
+            </div>
+            <div class="pl-j">J=0.4715</div>
+          </div>
+          <div class="plan-card" onclick="execRecoveryPlan('plan_b')">
+            <div class="pl-name">方案B：民生优先</div>
+            <div class="pl-desc">保居民基础供电，商业区降容50%</div>
+            <div class="pl-metrics">
+              <div class="pl-m"><div class="pl-mv">650</div><div class="pl-ml">影响负荷 kW</div></div>
+              <div class="pl-m"><div class="pl-mv">35min</div><div class="pl-ml">恢复时长</div></div>
+              <div class="pl-m"><div class="pl-mv">180</div><div class="pl-ml">额外功率 kW</div></div>
+            </div>
+            <div class="pl-j">J=0.6821</div>
+          </div>
+          <div class="plan-card" onclick="execRecoveryPlan('plan_c')">
+            <div class="pl-name">方案C：储能+柴油机</div>
+            <div class="pl-desc">启动光纤储能+柴油发电机，全区域恢复</div>
+            <div class="pl-metrics">
+              <div class="pl-m"><div class="pl-mv">500</div><div class="pl-ml">影响负荷 kW</div></div>
+              <div class="pl-m"><div class="pl-mv">25min</div><div class="pl-ml">恢复时长</div></div>
+              <div class="pl-m"><div class="pl-mv">350</div><div class="pl-ml">额外功率 kW</div></div>
+            </div>
+            <div class="pl-j">J=0.8937</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;text-align:center">
+          <button onclick="simulateRecovery()" id="btnSimRecovery" class="btn-action">▶ 模拟恢复最优方案</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 策略执行日志 -->
+    <div class="panel" style="flex:1">
+      <div class="ph">
+        <div class="phi g"><i class="fas fa-list-check"></i></div>
+        <span class="pht">策略执行日志</span>
+        <span class="phtag" id="logCount">0条</span>
+      </div>
+      <div class="pb exec-log" id="execLog"></div>
+    </div>
+  </div>
+
+</main>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+
+// ========== CLOCK ==========
+function updClock(){const d=new Date();$('clk').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+updClock();setInterval(updClock,1000);
+
+// ========== AUTO-RENDER WEIGHTS ==========
+function renderAutoWeights(aw){
+  if(!aw){return;}
+  $('#awVal1').textContent=aw.w1.toFixed(2);
+  $('#awVal2').textContent=aw.w2.toFixed(2);
+  $('#awVal3').textContent=aw.w3.toFixed(2);
+  $('#awVal4').textContent=aw.w4.toFixed(2);
+  $('#awBar1').style.width=(aw.w1*100)+'%';
+  $('#awBar2').style.width=(aw.w2*100)+'%';
+  $('#awBar3').style.width=(aw.w3*100)+'%';
+  $('#awBar4').style.width=(aw.w4*100)+'%';
+  $('#awMode').textContent=aw.mode||'均衡优化';
+}
+
+// ========== RENDER OBJECTIVE V2 ==========
+function renderObjectiveV2(obj){
+  if(!obj)return;
+  $('#Jval').textContent=obj.J.toFixed(4);
+  $('#jE').textContent=(obj.E_norm||0).toFixed(3);
+  $('#jD').textContent=(obj.D_norm||0).toFixed(3);
+  $('#jR').textContent=(obj.R_norm||0).toFixed(3);
+  $('#jC').textContent=(obj.C_norm||0).toFixed(3);
+  const r=obj.rating;
+  $('#jRating').textContent=r==='excellent'?'★优秀':r==='good'?'★★良好':'★★★可接受';
+  $('#jRating').style.color=r==='excellent'?'var(--green)':r==='good'?'var(--cyan)':'var(--amber)';
+  $('#jDetail').textContent='碳:'+(obj.carbonEmission||'--')+'kg | 越界:'+(obj.overflowPenalty||0).toFixed(3)+' | 舒适:'+(obj.comfortPenalty||0).toFixed(3);
+}
+
+// ========== STRATEGY CARDS ==========
+const strategyIcons={
+  precool:{icon:'fa-snowflake',cls:'precool'},
+  zone:{icon:'fa-layer-group',cls:'zone'},
+  night_storage:{icon:'fa-battery-full',cls:'night'},
+  peak_shift:{icon:'fa-shuffle',cls:'shift'},
+  demand_response:{icon:'fa-bolt',cls:'demand'},
+};
+
+function renderStrategyCards(recommendations){
+  if(!recommendations||!recommendations.length){
+    $('#strategyList').innerHTML='<div style="text-align:center;color:var(--t2);padding:16px;font-size:11px">等待实时数据...</div>';
+    return;
+  }
+  let h='';
+  recommendations.forEach((r,i)=>{
+    const si=strategyIcons[r.id]||{icon:'fa-gear',cls:'precool'};
+    h+=`<div class="strat-card" id="scard${i}" onclick="toggleStrategy(${i},'${r.id}')">
+      ${r.priority==='high'?'<span class="sc-badge high">推荐</span>':r.priority==='medium'?'<span class="sc-badge medium">可选</span>':'<span class="sc-badge standby">待命</span>'}
+      <div class="sc-row">
+        <div class="sc-icon ${si.cls}"><i class="fas ${si.icon}"></i></div>
+        <div class="sc-name">${r.name}</div>
+        <div class="sc-score">${r.score}分</div>
+      </div>
+      <div class="sc-trigger">触发条件: ${r.trigger}</div>
+      <div class="sc-save">预估节能量: ${r.estimated_savings}</div>
+    </div>`;
+  });
+  $('#strategyList').innerHTML=h;
+}
+
+let activeStrategies=new Set();
+const execLog=[];
+
+function toggleStrategy(index,id){
+  const card=document.querySelectorAll('.strat-card')[index];
+  if(activeStrategies.has(id)){
+    activeStrategies.delete(id);
+    card.classList.remove('active');
+    addLog(id,'已停用','策略停用');
+  }else{
+    activeStrategies.add(id);
+    card.classList.add('active');
+    addLog(id,'已激活','策略生效中');
+  }
+  updateStrategyStats();
+}
+
+function addLog(stratId,action,detail){
+  const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const names={precool:'预冷控制',zone:'分区控制',night_storage:'夜间蓄冷',peak_shift:'错峰运行',demand_response:'需求响应',recovery:'故障恢复'};
+  execLog.unshift({time:now,strategy:names[stratId]||stratId,action,detail});
+  if(execLog.length>20)execLog.length=20;
+  renderExecLog();
+  $('#logCount').textContent=execLog.length+'条';
+}
+
+function renderExecLog(){
+  let h='';
+  execLog.forEach(l=>{
+    const dotCls=l.action.includes('激活')?'active':l.action.includes('停用')?'done':'pending';
+    h+=`<div class="exec-item">
+      <div class="exec-dot ${dotCls}"></div>
+      <div class="exec-body">
+        <div class="exec-time">${l.time}</div>
+        <div class="exec-action">${l.strategy} — ${l.action}</div>
+        <div class="exec-effect">${l.detail}</div>
+      </div>
+    </div>`;
+  });
+  $('#execLog').innerHTML=h||'<div style="text-align:center;color:var(--t2);padding:16px;font-size:11px">暂无执行记录</div>';
+}
+
+function updateStrategyStats(){
+  let saved=0;
+  if(activeStrategies.has('precool'))saved+=324;
+  if(activeStrategies.has('zone'))saved+=286;
+  if(activeStrategies.has('night_storage'))saved+=412;
+  if(activeStrategies.has('peak_shift'))saved+=198;
+  if(activeStrategies.has('demand_response'))saved+=180;
+  $('#kpiSaved').textContent=saved;
+  $('#kpiSaveBar').style.width=Math.min(100,saved/14)+'%';
+  $('#activeCount').textContent=activeStrategies.size;
+}
+
+// ========== RECOVERY PLANS ==========
+let recoveryPlansData=[];
+function loadRecoveryPlans(){
+  fetch('/api/optimization/plans').then(r=>r.json()).then(data=>{
+    if(data.plans){
+      const scored=data.plans.map(p=>{
+        const energy=p.extra_power_kw*p.duration_min/60;
+        const loadGap=p.affected_load_kw*p.duration_min/60;
+        const recCost=p.duration_min*p.affected_load_kw;
+        p.J=+(0.35*energy/3500+0.25*loadGap/15+0.25*recCost/500).toFixed(4);
+        return p;
+      });
+      scored.sort((a,b)=>a.J-b.J);
+      if(scored.length>0)scored[0].recommended=true;
+      recoveryPlansData=scored;
+      renderRecoveryPlans(scored);
+    }
+  }).catch(()=>{
+    const plans=[
+      {id:'plan_a',name:'方案A：商业优先',description:'优先恢复商业区全供电，居民区轮流供电',affected_load_kw:850,extra_power_kw:120,duration_min:45},
+      {id:'plan_b',name:'方案B：民生优先',description:'保居民基础供电，商业区降容50%',affected_load_kw:650,extra_power_kw:180,duration_min:35},
+      {id:'plan_c',name:'方案C：储能+柴油机',description:'启动光纤储能+柴油发电机，全区域恢复',affected_load_kw:500,extra_power_kw:350,duration_min:25},
+    ];
+    plans.forEach(p=>{
+      const energy=p.extra_power_kw*p.duration_min/60;
+      const loadGap=p.affected_load_kw*p.duration_min/60;
+      const recCost=p.duration_min*p.affected_load_kw;
+      p.J=+(0.35*energy/3500+0.25*loadGap/15+0.25*recCost/500).toFixed(4);
+    });
+    plans.sort((a,b)=>a.J-b.J);plans[0].recommended=true;
+    recoveryPlansData=plans;
+    renderRecoveryPlans(plans);
+  });
+}
+
+function renderRecoveryPlans(plans){
+  let h='';
+  plans.forEach(p=>{
+    h+=`<div class="plan-card${p.recommended?' recommended':''}" onclick="execRecoveryPlan('${p.id}')">
+      <div class="pl-ribbon">推荐</div>
+      <div class="pl-name">${p.name}</div>
+      <div class="pl-desc">${p.description}</div>
+      <div class="pl-metrics">
+        <div class="pl-m"><div class="pl-mv">${p.affected_load_kw}</div><div class="pl-ml">影响负荷 kW</div></div>
+        <div class="pl-m"><div class="pl-mv">${p.duration_min}min</div><div class="pl-ml">恢复时长</div></div>
+        <div class="pl-m"><div class="pl-mv">${p.extra_power_kw}</div><div class="pl-ml">额外功率 kW</div></div>
+      </div>
+      <div class="pl-j">J=${p.J}</div>
+    </div>`;
+  });
+  $('#planGrid').innerHTML=h;
+}
+
+function execRecoveryPlan(id){
+  const p=recoveryPlansData.find(x=>x.id===id);
+  if(!p)return;
+  showToast(`启动方案: ${p.name}`, 'info');
+  const btn=$('btnSimRecovery');
+  btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 执行中...';
+  btn.disabled=true;
+
+  const steps=['故障隔离','负荷转供','逐步恢复','供电恢复','总结评估'];
+  let step=0;
+  const timer=setInterval(()=>{
+    if(step>=steps.length){
+      clearInterval(timer);
+      btn.innerHTML='✓ 恢复完成';
+      btn.classList.add('success');
+      btn.disabled=false;
+      setTimeout(()=>{btn.innerHTML='▶ 模拟恢复最优方案';btn.classList.remove('success');},3000);
+      showToast(`${p.name} 执行完成，J=${p.J}`, 'success');
+      return;
+    }
+    addLog('recovery',`步骤${step+1}: ${steps[step]}`, `方案: ${p.name}`);
+    step++;
+  },2000);
+}
+
+function simulateRecovery(){
+  const rec=recoveryPlansData.find(p=>p.recommended);
+  if(rec)execRecoveryPlan(rec.id);
+}
+
+// ========== FORECAST CHART ==========
+let forecastChart;
+function initForecastChart(){
+  forecastChart=echarts.init($('forecastChart'),'dark');
+  window.charts=window.charts||[];window.charts.push(forecastChart);
+  refreshForecast();
+}
+
+function refreshForecast(){
+  fetch('/api/optimization/forecast').then(r=>r.json()).then(data=>{
+    renderForecastData(data);
+  }).catch(()=>{
+    // 内置24h fallback 数据
+    const hours=Array.from({length:24},(_,i)=>i);
+    const base=[2380,2350,2320,2290,2270,2280,2320,2450,2680,2920,3180,3420,3640,3820,3950,4010,3980,3860,3650,3380,3080,2780,2560,2400];
+    const opt=base.map((v,h)=>{
+      let r=v;
+      if(h>=10&&h<=20)r-=180;
+      if(h>=17&&h<=20&&h%2===0)r-=75;
+      return Math.max(r*0.82,1600);
+    });
+    renderForecastData({
+      hours,baseline:{load:base},optimized:{load:opt},
+      savings:{peak_reduction_kw:721,peak_reduction_pct:14}
+    });
+  });
+}
+
+function renderForecastData(data){
+  if(!forecastChart||!data.hours)return;
+  forecastChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(57,128,255,.18)',textStyle:{color:'#d8eaf8',fontSize:10}},
+    legend:{data:['基准负荷','优化后负荷','节能量'],textStyle:{color:'#6a8ba8',fontSize:9},top:2,right:8,itemWidth:10,itemHeight:4},
+    grid:{left:'6%',right:'5%',top:'14%',bottom:'8%'},
+    xAxis:{type:'category',data:data.hours.map(h=>pad(h)+':00'),axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:9}},
+    yAxis:{type:'value',name:'kW',nameTextStyle:{color:'#6a8ba8',fontSize:9},
+      splitLine:{lineStyle:{color:'rgba(0,210,255,.02)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:9}},
+    series:[
+      {name:'基准负荷',type:'line',smooth:true,symbol:'none',data:data.baseline.load,
+        lineStyle:{color:'rgba(255,61,87,.5)',width:1.5,type:'dashed'}},
+      {name:'优化后负荷',type:'line',smooth:true,symbol:'circle',symbolSize:4,data:data.optimized.load,
+        lineStyle:{color:'#00e5a0',width:2.5},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.15)'},{offset:1,color:'rgba(0,229,160,.002)'}])}},
+      {name:'节能量',type:'bar',data:data.baseline.load.map((v,i)=>v-data.optimized.load[i]),
+        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.35)'},{offset:1,color:'rgba(57,128,255,.06)'}])},barWidth:'60%'},
+    ]
+  });
+  if(data.savings){
+    $('#kpiSaved').textContent=data.savings.peak_reduction_kw;
+    $('#kpiSaveBar').style.width=Math.min(100,data.savings.peak_reduction_pct*2)+'%';
+  }
+}
+
+// ========== DEFAULT DATA（页面打开立即显示）==========
+const FALLBACK={
+  objective:{J:0.6842,E_norm:0.380,D_norm:0.217,R_norm:0.087,C_norm:0.024,carbonEmission:35.4,overflowPenalty:0,comfortPenalty:0.01,rating:'good'},
+  weights:{w1:0.40,w2:0.35,w3:0.25,w4:0.15,mode:'均衡优化'},
+  strategies:[
+    {id:'precool',name:'预冷控制',score:92,priority:'high',trigger:'凌晨4:00-7:00预冷窗口',estimated_savings:'324 kW'},
+    {id:'zone',name:'分区控制',score:72,priority:'medium',trigger:'电网负载率偏高',estimated_savings:'286 kW'},
+    {id:'night_storage',name:'夜间蓄冷',score:85,priority:'medium',trigger:'电价低谷时段',estimated_savings:'412 kW'},
+    {id:'peak_shift',name:'错峰运行',score:75,priority:'medium',trigger:'高峰时段19:00',estimated_savings:'198 kW'},
+    {id:'demand_response',name:'需求响应',score:65,priority:'standby',trigger:'待命响应，三级联动',estimated_savings:'max 260 kW'}
+  ],
+  kpi:{temp:32.9,totalLoad:2947,coolLoad:1563,loadRate:84.2,price:342},
+};
+
+/** 同步渲染所有面板默认数据 */
+function renderAllDefaults(){
+  renderObjectiveV2(FALLBACK.objective);
+  renderAutoWeights(FALLBACK.weights);
+  renderStrategyCards(FALLBACK.strategies);
+  const k=FALLBACK.kpi;
+  $('#kpiTemp').textContent=k.temp;
+  $('#kpiTotalLoad').textContent=k.totalLoad;
+  $('#kpiCoolLoad').textContent=k.coolLoad;
+  $('#kpiLoadRate').textContent=k.loadRate.toFixed(1);
+  $('#kpiPrice').textContent=k.price;
+  $('#dataSource').textContent='模拟运行';
+  $('#srcLabel').textContent='实时';
+}
+
+// ========== LOAD API DATA ==========
+function loadOptimizationState(){
+  fetch('/api/optimization/state').then(r=>{
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }).then(data=>{
+    console.log('[优化状态]',data);
+    if(data.recommendation){
+      renderStrategyCards(data.recommendation.recommendations);
+      $('#dataSource').textContent=data.recommendation.mode;
+      const dot=$('hdDot');
+      if(data.recommendation.mode==='emergency')dot.style.background='var(--red)';
+      else if(data.recommendation.mode==='cautious')dot.style.background='var(--amber)';
+      else dot.style.background='var(--green)';
+    }
+    if(data.autoWeights)renderAutoWeights(data.autoWeights);
+    if(data.objectiveV2)renderObjectiveV2(data.objectiveV2);
+    if(data.coolingModel){
+      const cm=data.coolingModel;
+      $('#kpiTemp').textContent=cm.deviation!==undefined?(Math.round((cm.T_target+cm.deviation)*10)/10).toFixed(1):$('#kpiTemp').textContent;
+    }
+  }).catch(e=>{
+    console.warn('[API不可用，使用内置数据]',e.message||e);
+    // 已经在init中渲染了默认数据，这里不需要再处理
+  });
+}
+
+function pollState(){
+  loadOptimizationState();
+  loadRecoveryPlans();
+}
+
+// ========== TOAST ==========
+function showToast(msg,type){
+  const t=document.createElement('div');
+  t.className='tmsg '+(type||'info');
+  t.textContent=msg;
+  $('#toast').appendChild(t);
+  setTimeout(()=>t.remove(),2500);
+}
+
+// ========== INIT ==========
+function init(){
+  updClock();setInterval(updClock,1000);
+  initForecastChart();
+
+  // ★ 先同步渲染所有默认数据（不管API是否可用，立即显示内容）
+  renderAllDefaults();
+  loadRecoveryPlans();
+
+  // 再异步尝试从API更新（静默失败，不弹窗）
+  loadOptimizationState();
+  setInterval(loadOptimizationState,10000);
+}
+window.addEventListener('resize',()=>{
+  if(forecastChart)forecastChart.resize();
+});
+window.addEventListener('beforeunload',()=>{
+  if(window.charts){window.charts.forEach(c=>{if(c&&!c.isDisposed())c.dispose();});window.charts=[];}
+});
+init();
+addLog('system','系统启动','优化引擎就绪');
+</script>
+</body>
+</html>

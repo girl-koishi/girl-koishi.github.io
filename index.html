@@ -1,462 +1,495 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基于温控负荷的能源优化管理系统</title>
-    <script type="importmap">
-    {
-        "imports": {
-            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
-        }
-    }
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#0ea5e9',
-                        accent: '#38bdf8',
-                        dark: '#0f172a',
-                        'dark-blue': '#0f172a',
-                        'grid-color': 'rgba(56, 189, 248, 0.1)'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-10px)' },
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-         .content-auto {
-                content-visibility: auto;
-            }
-        .grid-bg {
-            background-size: 50px 50px;
-            background-image: 
-                linear-gradient(to right, rgba(56, 189, 248, 0.1) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(56, 189, 248, 0.1) 1px, transparent 1px);
-        }
-        .power-line { stroke-dasharray: 10; animation: dash 1s linear infinite; }
-        @keyframes dash { to { stroke-dashoffset: -20; } }
-        .g-city-node text{
-            y: 50;
-            font-size: 16px;
-            font-weight: bold;
-            fill: white;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>阶序智调 — 配电网温控负荷柔性调控与故障恢复管理系统</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ========== RESET & BASE ========== */
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.28);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(0,210,255,.15);border-radius:2px}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,120,200,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,210,255,.03),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.03),transparent 55%);}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ========== HEADER (72px) ========== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98),rgba(6,13,31,.94));border-bottom:1px solid var(--border);flex-shrink:0;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ========== NAV BAR (34px) ========== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative;cursor:pointer}.nl.dd.open .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:128px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ========== MAIN LAYOUT: 3 COLUMNS ========== */
+/* 左200px（KPI+排行） + 中1fr（拓扑大图+趋势） + 右250px（策略/恢复/需求/场景） */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:200px 1fr 250px;grid-template-rows:1fr;gap:5px;padding:5px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+
+/* ========== PANEL ========== */
+.pnl{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:var(--border-h);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.ph{display:flex;align-items:center;gap:5px;padding:5px 8px 3px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1}.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+
+/* ========== LEFT: KPI ========== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px}
+.kc{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kc:hover{background:rgba(0,210,255,.03)}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:16px;font-weight:700;line-height:1.2}
+.kcv.c{color:var(--cyan)}.kcv.g{color:var(--green)}.kcv.a{color:var(--amber)}.kcv.r{color:var(--red)}.kcv.p{color:var(--purple)}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* ========== RANKING ========== */
+.ri{display:flex;align-items:center;gap:5px;padding:3px 9px;border-bottom:1px solid rgba(255,255,255,.01);font-size:7px;transition:.15s}
+.ri:hover{background:rgba(0,210,255,.02)}
+.rpos{width:13px;height:13px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;flex-shrink:0;background:rgba(0,210,255,.04);color:var(--t2)}
+.ri.g1 .rpos{background:rgba(255,179,0,.07);color:var(--amber)}
+.ri.g2 .rpos{background:rgba(192,192,192,.05);color:#c0c0c0}
+.ri.g3 .rpos{background:rgba(205,127,50,.05);color:#cd7f32}
+.rnm{flex:1;color:var(--t1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rval{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:7px;color:var(--cyan)}
+.rbar{width:30px;height:2px;background:rgba(0,210,255,.03);border-radius:1px;overflow:hidden}
+.rbf{height:100%;border-radius:1px}
+.rtr{font-size:7px;width:14px;text-align:center}
+.rtr.up{color:var(--red)}.rtr.down{color:var(--green)}
+
+/* ========== CENTER: TOPOLOGY PANEL (THE MAIN ATTRACTION) ========== */
+#topoPanel{
+  flex:5;
+  min-height:320px;
+  position:relative;
+  display:flex;
+  flex-direction:row;
+}
+#topoArea{
+  flex:1;
+  min-width:0;
+  position:relative;
+  padding:6px;
+  background:var(--bg);
+}
+#topoArea svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* Alerts sidebar (inside topo panel, on the right) */
+#alertSidebar{
+  width:190px;
+  flex:0 0 190px;
+  border-left:1px solid rgba(0,210,255,.08);
+  display:flex;
+  flex-direction:column;
+  background:rgba(6,13,31,.3);
+}
+.aw{flex:1;overflow-y:auto;min-height:0;position:relative}
+.am{padding:4px 0;-webkit-mask-image:linear-gradient(180deg,#000 90%,transparent);mask-image:linear-gradient(180deg,#000 90%,transparent)}
+.al{display:flex;align-items:flex-start;gap:4px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.015);font-size:8px;cursor:default}
+.al:hover{background:rgba(0,210,255,.02)}
+.ad{width:5px;height:5px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.ad.c{background:var(--red);box-shadow:0 0 5px rgba(255,61,87,.4)}
+.ad.w{background:var(--amber);box-shadow:0 0 5px rgba(255,179,0,.4)}
+.ad.i{background:var(--blue)}
+.atm{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:8px;color:var(--t3);flex-shrink:0;margin-top:1px;width:38px}
+.amsg{color:var(--t2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8px}
+.ad.c~.amsg{color:#ff8a9a}.ad.w~.amsg{color:#ffcb57}
+.atag{font-size:7px;padding:1px 4px;border-radius:2px;flex-shrink:0}
+.atag.c{background:rgba(255,61,87,.07);color:var(--red)}.atag.w{background:rgba(255,179,0,.07);color:var(--amber)}.atag.i{background:rgba(57,128,255,.07);color:#7c9fff}
+
+/* ========== SVG Topology — 原始原型样式 ========== */
+.power-line{stroke-dasharray:10;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-20}}
+@keyframes alertPulse2{0%,100%{opacity:.4;r:22}50%{opacity:1;r:28}}
+.city-node{cursor:pointer;transition:all .15s ease;pointer-events:all}
+.city-node:hover{filter:brightness(1.3)}
+.city-label{font-size:14px;font-weight:bold;fill:var(--t1);text-anchor:middle;text-shadow:0 0 6px rgba(0,0,0,.8)}
+.map-contour path{opacity:.8}
+#topoArea svg{width:100%;height:100%;display:block}
+#topoArea{padding:0;background:var(--bg);position:relative}
+
+/* ========== TREND CHART (below topology, now bigger) ========== */
+#trendPanel{flex:2;min-height:130px}
+#tc{width:100%!important;height:100%!important}
+
+/* ========== RIGHT COLUMN ========== */
+.sl{display:flex;flex-direction:column;gap:3px;padding:6px 9px}
+.si{display:flex;flex-direction:column;gap:1px}
+.sh{display:flex;justify-content:space-between;font-size:7px}
+.sn{color:var(--t2)}.sv{font-family:"SF Mono","Fira Code","Consolas",monospace;color:var(--t1);font-size:7px}
+.sk{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden}
+.sf{height:100%;border-radius:1.5px;transition:width 1.2s ease}
+.rl{display:flex;flex-direction:column;gap:4px;padding:6px 9px}
+.ri2{display:flex;flex-direction:column;gap:1px}
+.rh{display:flex;justify-content:space-between;font-size:7px}
+.rb{color:var(--t2)}.rp{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:600;font-size:7px}
+.rt{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden}
+.rf{height:100%;border-radius:1.5px;transition:width 1.2s ease}
+.drw{display:flex;align-items:center;gap:10px;padding:6px 9px}
+.drr{position:relative;width:56px;height:56px;flex-shrink:0}
+.drr svg{width:56px;height:56px}
+.drl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.drpct{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:14px;font-weight:700;color:var(--cyan);line-height:1}
+.drsub{font-size:8px;color:var(--t2)}
+.drs{flex:1;display:flex;flex-direction:column;gap:4px}
+.drr2{display:flex;justify-content:space-between;font-size:8px}
+.drl2{color:var(--t2)}.drvv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:600}.drvv.c{color:var(--cyan)}.drvv.g{color:var(--green)}.drvv.a{color:var(--amber)}
+.dgg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px 9px 5px}
+.dgi{padding:4px 6px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)}
+.dgl{font-size:8px;color:var(--t2)}.dgv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:12px;font-weight:700;color:var(--t1)}.dgv.c{color:var(--cyan)}.dgv.g{color:var(--green)}
+.sgg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:5px 9px 6px}
+.sg{padding:7px 8px;border-radius:4px;cursor:pointer;border:1px solid rgba(0,210,255,.04);background:rgba(0,210,255,.01);transition:.2s}
+.sg:hover{border-color:rgba(0,210,255,.14);background:rgba(0,210,255,.025)}
+.sg.on{border-color:rgba(0,210,255,.2);background:rgba(0,210,255,.035)}
+.sn2{font-size:7px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.sd{font-size:8px;color:var(--t2)}
+.sbd{display:inline-block;margin-top:3px;font-size:6px;padding:1px 4px;border-radius:2px}
+.sbd.hot{background:rgba(255,61,87,.07);color:var(--red)}.sbd.cold{background:rgba(0,210,255,.07);color:var(--cyan)}
+.sbd.peak{background:rgba(255,179,0,.07);color:var(--amber)}.sbd.normal{background:rgba(0,229,160,.07);color:var(--green)}
+
+/* ========== Focus indicator ========== */
+.nl:focus-visible{outline:1px solid rgba(0,210,255,.5);outline-offset:-2px}
+</style>
 </head>
-<body class="bg-dark-blue text-white min-h-screen overflow-hidden">
-    <div id="app">
-    <div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>
-    <div class="fixed inset-0 z-0 grid-bg opacity-50 pointer-events-none"></div>
+<body>
+<div id="app">
 
-    <div class="relative z-10 flex flex-col h-screen">
-        <header class="bg-dark/80 backdrop-blur-md border-b border-accent/30 p-4 flex justify-between items-center">
-            <div class="flex items-center space-x-4">
-                <div class="text-primary text-2xl font-bold text-shadow">
-                    能源优化管理系统
-                </div>
-                <div class="hidden md:flex space-x-6 ml-10">
-                    <a href="https://digrid.cn/" class="text-accent hover:text-white transition-colors">首页</a>
-                    <a href="#" class="text-gray-400 hover:text-white transition-colors">数据监控</a>
-                </div>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="text-sm text-gray-400"> 
-                    <span id="current--time">{{ currentTime }}</span>
-                </div>
-                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                    <i class="fa fa-user"></i>
-                </div>
-            </div>
-        </header>
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st"><span class="hd-dot"></span><span id="wsSt">● 实时</span></div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
 
-       <main class="flex-1 relative overflow-hidden bg-[#0f172a]">
-           <!-- 背景 -->
-            <div class="absolute inset-0 bg-gradient-to-b from-[#0f172a] to-[#1e293b]"></div>
-            <div class="absolute inset-0 flex items-center justify-center">
-                <div class="max-w-[90vw] max-h-[85vh] w-full h-full bg-gradient-to-br from-[#111827] to-[#030712] rounded-lg border border-accent/20 flex items-center justify-center">
-                    <div class="w-full h-full flex items-center justify-center">
-                        <div class="w-full h-full absolute bg-grid opacity-30"></div>
-                        <div class="absolute top-4 text-xl font-bold text-accent text-shadow">
-                            局部电网监控区域
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 圈 -->
-            <div class="absolute inset-0 flex items-center justify-center">
-                <svg width="1200" height="900" viewBox="0 0 1200 900" class="max-w-[95vw] max-h-[90vh] transform translate-x-20 scale-135">
-                    <g class="map-contour">
-                        <!-- 大圈 -->
-                        <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" 
-                              fill="rgba(34, 197, 94, 0.15)" 
-                              stroke="#22c55e" 
-                              stroke-width="2" 
-                              opacity="0.8" />
-                        <!-- 小圈 -->
-                        <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 C280,250 280,250 280,250 Z 
-                                 M350,220 C370,200 400,190 430,200 C460,210 480,230 500,250 C520,270 530,300 520,320 C510,340 490,350 470,340 C450,330 430,310 410,320 C390,330 370,320 350,300 C330,280 320,250 330,230 C340,210 350,220 350,220 Z
-                                 M580,300 C600,280 630,270 660,280 C690,290 710,310 720,340 C730,370 720,400 700,420 C680,440 650,450 620,440 C590,430 570,410 560,380 C550,350 560,320 580,300 Z" 
-                              fill="rgba(34, 197, 94, 0.05)" 
-                              stroke="#22c55e" 
-                              stroke-width="1" 
-                              opacity="0.5" />
-                        <path d="M300,270 C330,250 360,240 390,250 C420,260 450,280 480,300 C510,320 540,350 570,390 C600,430 590,460 570,480 C550,500 520,510 490,500 C460,490 430,480 400,490 C370,500 340,510 310,500 C280,490 260,470 250,440 C240,410 250,380 260,350 C270,320 280,290 300,270 Z" 
-                              fill="none" 
-                              stroke="#0ea5e9" 
-                              stroke-width="1.5" 
-                              opacity="0.5" 
-                              stroke-dasharray="5,3" />
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl on" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
 
-                    </g>
-                    
-                    <!-- 连接线 -->
-                    <g class="power-lines">
-                        <!-- 粗线 -->
-                        <path d="M250,500 L500,300" stroke="#38bdf8" stroke-width="3" class="power-line" />
-                        <path d="M250,500 L650,320" stroke="#38bdf8" stroke-width="3" class="power-line" />
-                        <path d="M500,300 L650,320" stroke="#f97316" stroke-width="3" class="power-line" />
-                        <path d="M500,300 L420,240" stroke="#f97316" stroke-width="3" class="power-line" />
-                        <path d="M500,300 L550,270" stroke="#f97316" stroke-width="3" class="power-line" />
-                        <path d="M650,320 L680,400" stroke="#f97316" stroke-width="3" class="power-line" />
-                        <path d="M650,320 L580,380" stroke="#f97316" stroke-width="3" class="power-line" />
-                        <!-- 细线 -->
-                        <path d="M250,500 L350,450" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M250,500 L300,380" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M500,300 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M500,300 L380,320" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M650,320 L620,420" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M650,320 L600,320" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M500,300 L480,430" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M650,320 L450,350" stroke="#22c55e" stroke-width="2" class="power-line" />
-                        <path d="M250,500 L450,350" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M420,240 L320,280" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M550,270 L600,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M620,420 L520,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M350,450 L480,430" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M300,380 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M450,350 L520,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M580,380 L680,400" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M420,240 L550,270" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M320,280 L380,320" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                        <path d="M480,430 L620,420" stroke="#38bdf8" stroke-width="1" class="power-line" opacity="0.6" />
-                    </g>
-                    <g class="city-node" id="power-plant-node" @click="goTo('power-plant.html')" transform="translate(250, 500)" style="pointer-events: all; cursor: pointer;">
-                        <circle r="18" fill="#8b5cf6" />
-                        <circle r="10" fill="#ffffff" />
-                        <text y="50" class="city-label" font-size="16" font-weight="bold" fill="white">发电厂</text>
-                    </g>
-                    <g class="city-node" id="changchun-node" @click.stop="toggleMenu('changchun-menu', $event)" transform="translate(500, 300)" style="cursor: pointer;">
-                        <circle r="15" fill="#0ea5e9" />
-                        <circle r="8" fill="#ffffff" />
-                        <text y="45" class="city-label" font-size="16" font-weight="bold" fill="white">万达商场</text>
-                    </g>
-                    <g class="city-node" id="jilin-node" @click.stop="toggleMenu('jilin-menu', $event)" transform="translate(650, 320)" style="cursor: pointer;">
-                        <circle r="15" fill="#f97316" />
-                        <circle r="8" fill="#ffffff" />
-                        <text y="45" class="city-label" font-size="16" font-weight="bold" fill="white">幸福小区</text>
-                    </g>
-                    <!-- 其他 -->
-                    <g class="city-node" transform="translate(420, 240)">
-                        <circle r="10" fill="#6366f1" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">市政府</text>
-                    </g>
-                    <g class="city-node" transform="translate(550, 270)">
-                        <circle r="10" fill="#ec4899" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">百货大楼</text>
-                    </g>
-                    <g class="city-node" transform="translate(450, 350)">
-                        <circle r="10" fill="#f59e0b" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">中心广场</text>
-                    </g>
-                    <g class="city-node" transform="translate(580, 380)">
-                        <circle r="10" fill="#8b5cf6" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">金融中心</text>
-                    </g>
-                    <g class="city-node" transform="translate(380, 320)">
-                        <circle r="10" fill="#10b981" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">吉林一中</text>
-                    </g>
-                    <g class="city-node" transform="translate(320, 280)">
-                        <circle r="10" fill="#22c55e" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">北山公园</text>
-                    </g>
-                    <g class="city-node" transform="translate(620, 420)">
-                        <circle r="10" fill="#ef4444" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">人民医院</text>
-                    </g>
-                    <g class="city-node" transform="translate(350, 450)">
-                        <circle r="10" fill="#0ea5e9" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">会展中心</text>
-                    </g>
-                    <g class="city-node" transform="translate(680, 400)">
-                        <circle r="10" fill="#f97316" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">体育馆</text>
-                    </g>
-                    <g class="city-node" transform="translate(480, 430)">
-                        <circle r="10" fill="#8b5cf6" />
-                        <circle r="5" fill="#ffffff" />
-                        <text y="35" class="city-label" font-size="14" fill="white">科技园</text>
-                    </g>
-                    <g class="city-node" transform="translate(300, 380)">
-                        <circle r="8" fill="#22c55e" />
-                        <circle r="4" fill="#ffffff" />
-                        <text y="30" class="city-label" font-size="12" fill="white">调压站</text>
-                    </g>
-                    <g class="city-node" transform="translate(520, 400)">
-                        <circle r="8" fill="#22c55e" />
-                        <circle r="4" fill="#ffffff" />
-                        <text y="30" class="city-label" font-size="12" fill="white">配电站</text>
-                    </g>
-                    <g class="city-node" transform="translate(600, 320)">
-                        <circle r="8" fill="#22c55e" />
-                        <circle r="4" fill="#ffffff" />
-                        <text y="30" class="city-label" font-size="12" fill="white">变电站</text>
-                    </g>
-                </svg>
-            </div>
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
 
-            <!-- 左上 -->
-        <div class="relative w-full h-screen pointer-events-none">
-            <div class="absolute top-[0px] left-[0px] bg-dark/80 backdrop-blur-md border border-accent/30 rounded-none p-2 w-[200px] h-[140px] transform-none pointer-events-auto" id="appL">
-                <h3 class="text-accent font-bold mb-1 text-xs">系统状态</h3>
-                <div class="space-y-0.5 text-[10px]" v-if="baseData">
-                    <div class="flex justify-between">
-                        <span>总负载:</span>
-                        <span class="text-green-400">{{ baseData.grid.totalLoad }}%</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>运行设备:</span>
-                        <span class="text-green-400">12/15</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>系统温度:</span>
-                        <span class="text-yellow-400">{{ baseData.wanda.currentTemp }}°C</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>网络状态:</span>
-                        <span class="text-green-400">正常</span>
-                    </div>
-                </div>
-            </div>
+  <!-- === LEFT COLUMN (220px) === -->
+  <div class="cl">
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-microchip"></i></div><span class="pht">系统运行概况</span><span class="phtag">实时</span></div>
+      <div class="kg">
+        <div class="kc"><div class="kcl">室外温度</div><div><span class="kcv c" data-kpi="weather.current.outdoorTemp" data-unit="°C" data-precision="1">--</span></div><div class="kcb"><div class="kcf" style="width:82%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div></div>
+        <div class="kc"><div class="kcl">当前电价</div><div><span class="kcv a" data-kpi="pricing.current" data-unit="元/MWh">--</span></div><div class="kcb"><div class="kcf" style="width:55%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div></div>
+        <div class="kc"><div class="kcl">总负荷</div><div><span class="kcv g" data-kpi="load.current.total" data-unit="kW">--</span></div><div class="kcb"><div class="kcf" style="width:42%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div></div>
+        <div class="kc"><div class="kcl">温控占比</div><div><span class="kcv p" data-kpi="coolingLoad.total.currentRatio" data-format="percent">--</span></div><div class="kcb"><div class="kcf" style="width:50%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div></div>
+      </div>
+    </div>
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi a"><i class="fas fa-sort-amount-down"></i></div><span class="pht">用能排行</span></div>
+      <div id="rkLst" style="overflow-y:auto;flex:1"></div>
+    </div>
+  </div>
 
-            <!-- 右上 -->
-            <div class="absolute top-[0px] right-[0px] bg-dark/80 backdrop-blur-md border border-accent/30 rounded-none p-2 w-[200px] h-[140px] pointer-events-auto">
-                <h3 class="text-accent font-bold mb-1 text-xs">实时数据</h3>
-                <div class="space-y-2">
-                    <div>
-                        <div class="flex justify-between text-[10px] mb-0.5">
-                            <span>万达商场温度</span>
-                            <span id="a-area-temp" class="text-primary">25°C</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1">
-                            <div id="a-area-temp-bar" class="bg-primary h-1 rounded-full" style="width: 60%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-[10px] mb-0.5">
-                            <span>幸福小区温度</span>
-                            <span id="b-area-temp" class="text-orange-500">38°C</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1">
-                            <div id="b-area-temp-bar" class="bg-orange-500 h-1 rounded-full" style="width: 85%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between text-[10px] mb-0.5">
-                            <span>电网负载</span>
-                            <span id="power-load" class="text-yellow-400">78%</span>
-                        </div>
-                        <div class="w-full bg-gray-700 rounded-full h-1">
-                            <div id="power-load-bar" class="bg-yellow-400 h-1 rounded-full" style="width: 78%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- === CENTER COLUMN: TOPOLOGY (big!) + TREND (small) === -->
+  <div class="cl">
+    <!-- === 配电网络拓扑图（核心，占中心 5/6）=== -->
+    <div class="pnl" id="topoPanel">
+      <!-- 拓扑 SVG 大图 -->
+      <div id="topoArea">
+                <!-- 配电网拓扑图 — 按原始原型：地图轮廓 + 圆形节点 + path连接线 -->
+        <svg viewBox="0 0 1000 750" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="alertGlow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(0,210,255,.18)"/><stop offset="100%" stop-color="transparent"/></radialGradient>
+          </defs>
 
-            <!-- 左下 -->
-            <div class="absolute bottom-[136px] left-[0px] bg-dark/80 backdrop-blur-md border border-accent/30 rounded-none p-3 w-[200px] h-[140px] pointer-events-auto">
-                <h3 class="text-accent font-bold mb-2 text-sm">电网调度</h3>
-                <div class="space-y-2 text-xs">
-                    <div class="flex justify-between">
-                        <span>当前频率:</span>
-                        <span class="text-green-400">50.02 Hz</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>电压水平:</span>
-                        <span class="text-green-400">220 kV</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>有功功率:</span>
-                        <span class="text-blue-400">1250 MW</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>无功功率:</span>
-                        <span class="text-blue-400">320 MVar</span>
-                    </div>
-                </div>
-            </div>
+          <!-- 背景 -->
+          <rect width="1200" height="900" fill="#060d1f"/>
+          <pattern id="grid2" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0 L0 0 0 50" fill="none" stroke="rgba(0,210,255,.03)" stroke-width=".5"/></pattern>
+          <rect width="1200" height="900" fill="url(#grid2)"/>
 
-            <!-- 右下 -->
-            <div class="absolute bottom-[136px] right-[0px] bg-dark/80 backdrop-blur-md border border-accent/30 rounded-none p-3 w-[200px] h-[140px] pointer-events-auto">
-                <h3 class="text-accent font-bold mb-2 text-sm">告警信息</h3>
-                <div class="space-y-1 text-xs">
-                    <div class="flex items-center">
-                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                        <span>万达商场冷却系统正常</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="inline-block w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
-                        <span>幸福小区温度偏高</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                        <span>电网连接稳定</span>
-                    </div>
-                    <div class="flex items-center">
-                        <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                        <span>所有设备运行正常</span>
-                    </div>
-                </div>
-            </div>
+          <!-- 地图轮廓（绿色半透明，按原始原型） -->
+          <g class="map-contour">
+            <path d="M260,230 C310,185 360,165 410,175 C460,185 510,205 560,225 C610,245 650,285 680,335 C710,385 730,445 710,485 C690,525 640,545 590,535 C540,525 490,505 440,515 C390,525 340,545 300,535 C260,525 230,495 210,455 C190,415 200,365 210,325 C220,285 230,255 260,230 Z" fill="rgba(0,229,160,.1)" stroke="#00e5a0" stroke-width="2" opacity=".7"/>
+            <path d="M280,250 C320,220 350,205 390,215 C430,225 460,245 490,265 C520,285 550,315 580,355 C610,395 620,435 600,465 C580,495 540,515 500,505 C460,495 420,485 380,495 C340,505 300,525 270,515 C240,505 220,485 210,455 C200,425 210,395 220,365 C230,335 240,305 260,275 C280,250 280,250 280,250 Z" fill="rgba(0,210,255,.06)" stroke="#00d2ff" stroke-width="1" opacity=".6"/>
+            <path d="M350,220 C370,200 400,190 430,200 C460,210 480,230 500,250 C520,270 530,300 520,320 C510,340 490,350 470,340 C450,330 430,310 410,320 C390,330 370,320 350,300 C330,280 320,250 330,230 C340,210 350,220 350,220 Z" fill="rgba(0,229,160,.04)" stroke="#00e5a0" stroke-width="1" opacity=".4"/>
+            <path d="M580,300 C600,280 630,270 660,280 C690,290 710,310 720,340 C730,370 720,400 700,420 C680,440 650,450 620,440 C590,430 570,410 560,380 C550,350 560,320 580,300 Z" fill="rgba(0,229,160,.04)" stroke="#00e5a0" stroke-width="1" opacity=".4"/>
+          </g>
+
+          <!-- 电网连接线（path，带 power-line 动画） -->
+          <g class="power-lines">
+            <path d="M250,500 L500,300" stroke="#00d2ff" stroke-width="4" class="power-line"/>
+            <path d="M250,500 L650,320" stroke="#00d2ff" stroke-width="4" class="power-line"/>
+            <path d="M500,300 L650,320" stroke="#ffb300" stroke-width="3" class="power-line"/>
+            <path d="M500,300 L420,240" stroke="#ffb300" stroke-width="3" class="power-line"/>
+            <path d="M500,300 L550,270" stroke="#ffb300" stroke-width="3" class="power-line"/>
+            <path d="M650,320 L680,400" stroke="#ffb300" stroke-width="3" class="power-line"/>
+            <path d="M650,320 L580,380" stroke="#ffb300" stroke-width="3" class="power-line"/>
+            <path d="M250,500 L350,450" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M250,500 L300,380" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M500,300 L450,350" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M500,300 L380,320" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M650,320 L620,420" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M650,320 L600,320" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M500,300 L480,430" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M650,320 L450,350" stroke="#00e5a0" stroke-width="2" class="power-line"/>
+            <path d="M250,500 L450,350" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M420,240 L320,280" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M550,270 L600,320" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M620,420 L520,400" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M350,450 L480,430" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M300,380 L380,320" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M450,350 L520,400" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M580,380 L680,400" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M420,240 L550,270" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M320,280 L380,320" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+            <path d="M480,430 L620,420" stroke="#00d2ff" stroke-width="1" class="power-line" opacity=".5"/>
+          </g>
+
+          <!-- 光晕背景 -->
+          <ellipse cx="500" cy="360" rx="180" ry="120" fill="url(#centerGlow)"/>
+
+          <!-- 发电厂（主节点 r=18）-->
+          <g class="city-node" onclick="location.href='power-plant.html'" transform="translate(250,500)">
+            <circle r="18" fill="#00e5a0" filter="url(#glow)"/>
+            <circle r="10" fill="#ffffff"/>
+            <text y="50" class="city-label" font-size="16" fill="#00e5a0">发电厂</text>
+          </g>
+
+          <!-- 万达商场（主节点 r=15）-->
+          <g class="city-node" onclick="location.href='a-area.html'" transform="translate(500,300)">
+            <circle r="15" fill="#00d2ff" filter="url(#glow)"/>
+            <circle r="8" fill="#ffffff"/>
+            <text y="45" class="city-label" font-size="16" fill="#00d2ff">万达商场</text>
+          </g>
+
+          <!-- 幸福小区（主节点 r=15，告警）-->
+          <g class="city-node" onclick="location.href='b-area.html'" transform="translate(650,320)">
+            <circle r="15" fill="#ffb300" filter="url(#alertGlow)"/>
+            <circle r="8" fill="#ffffff"/>
+            <text y="45" class="city-label" font-size="16" fill="#ffb300">幸福小区</text>
+            <circle r="22" fill="none" stroke="#ffb300" stroke-width="1.5" opacity=".7" style="animation:alertPulse2 1.5s ease-in-out infinite"/>
+          </g>
+
+          <!-- 次节点（r=10）-->
+          <g class="city-node" transform="translate(420,240)"><circle r="10" fill="#3980ff"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#7c9fff">市政府</text></g>
+          <g class="city-node" transform="translate(550,270)"><circle r="10" fill="#b388ff"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#d1b3ff">百货大楼</text></g>
+          <g class="city-node" transform="translate(450,350)"><circle r="10" fill="#ffb300"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#ffb300">中心广场</text></g>
+          <g class="city-node" transform="translate(580,380)"><circle r="10" fill="#b388ff"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#d1b3ff">金融中心</text></g>
+          <g class="city-node" transform="translate(380,320)"><circle r="10" fill="#00e5a0"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#00e5a0">吉林一中</text></g>
+          <g class="city-node" transform="translate(320,280)"><circle r="10" fill="#00e5a0"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#00e5a0">北山公园</text></g>
+          <g class="city-node" transform="translate(620,420)"><circle r="10" fill="#ff3d57"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#ff8a9a">人民医院</text></g>
+          <g class="city-node" transform="translate(350,450)"><circle r="10" fill="#00d2ff"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#00d2ff">会展中心</text></g>
+          <g class="city-node" transform="translate(680,400)"><circle r="10" fill="#ffb300"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#ffb300">体育馆</text></g>
+          <g class="city-node" transform="translate(480,430)"><circle r="10" fill="#b388ff"/><circle r="5" fill="#ffffff"/><text y="35" class="city-label" font-size="14" fill="#d1b3ff">科技园</text></g>
+
+          <!-- 基础设施节点（r=8）-->
+          <g class="city-node" transform="translate(300,380)"><circle r="8" fill="#b388ff"/><circle r="4" fill="#ffffff"/><text y="30" class="city-label" font-size="12" fill="#d1b3ff">调压站</text></g>
+          <g class="city-node" transform="translate(520,400)"><circle r="8" fill="#b388ff"/><circle r="4" fill="#ffffff"/><text y="30" class="city-label" font-size="12" fill="#d1b3ff">配电站</text></g>
+          <g class="city-node" transform="translate(600,320)"><circle r="8" fill="#b388ff"/><circle r="4" fill="#ffffff"/><text y="30" class="city-label" font-size="12" fill="#d1b3ff">变电站</text></g>
+
+          <!-- 底部图例 -->
+          <g transform="translate(20,710)" font-family="sans-serif">
+            <circle cx="0" cy="0" r="6" fill="#00e5a0"/><circle cx="0" cy="0" r="3" fill="#fff"/><text x="14" y="4" font-size="12" fill="#8ab4d8">运行正常</text>
+            <circle cx="90" cy="0" r="6" fill="#ffb300"/><circle cx="90" cy="0" r="3" fill="#fff"/><text x="104" y="4" font-size="12" fill="#ffb300">告警</text>
+            <circle cx="170" cy="0" r="6" fill="#ff3d57"/><circle cx="170" cy="0" r="3" fill="#fff"/><text x="184" y="4" font-size="12" fill="#ff8a9a">重点保供</text>
+            <circle cx="254" cy="0" r="5" fill="#b388ff"/><circle cx="254" cy="0" r="2.5" fill="#fff"/><text x="268" y="4" font-size="12" fill="#d1b3ff">配电设施</text>
+            <circle cx="340" cy="0" r="6" fill="#3980ff"/><circle cx="340" cy="0" r="3" fill="#fff"/><text x="354" y="4" font-size="12" fill="#7c9fff">政府机关</text>
+            <line x1="440" y1="0" x2="470" y2="0" stroke="#00d2ff" stroke-width="2" class="power-line"/><text x="478" y="4" font-size="12" fill="#8ab4d8">供电线路</text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- 告警侧边栏 -->
+      <div id="alertSidebar">
+        <div class="ph"><div class="phi r"><i class="fas fa-bell"></i></div><span class="pht">实时告警</span><span class="phtag" id="abg">3条</span></div>
+        <div class="aw"><div class="am" id="alscr"></div></div>
+      </div>
+    </div>
+
+    <!-- 负荷变化趋势 -->
+    <div class="pnl" id="trendPanel">
+      <div class="ph"><div class="phi c"><i class="fas fa-wave-square"></i></div><span class="pht">负荷变化趋势（24h）实时监测</span></div>
+      <div style="flex:1;min-height:0;padding:4px 6px 2px"><div id="tc"></div></div>
+    </div>
+  </div>
+
+  <!-- === RIGHT COLUMN (250px) === -->
+  <div class="cl">
+    <!-- 策略优化 & 恢复评估（合并） -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi g"><i class="fas fa-sliders-h"></i></div><span class="pht">策略优化与恢复</span><span class="phtag" style="color:var(--green)">AI推荐</span></div>
+      <div class="dgg">
+        <div class="dgi"><div class="dgl">节峰降耗</div><div><span class="dgv c">1,856</span><span style="font-size:6px;color:var(--t2)">kW</span></div></div>
+        <div class="dgi"><div class="dgl">调控容量</div><div><span class="dgv g">1,456</span><span style="font-size:6px;color:var(--t2)">kW</span></div></div>
+        <div class="dgi"><div class="dgl">综合能效</div><div><span class="dgv a" id="dsE">92.5%</span></div></div>
+        <div class="dgi"><div class="dgl">预测准确率</div><div><span class="dgv" style="color:var(--purple)">96.8%</span></div></div>
+      </div>
+      <div class="rl" style="padding-top:0">
+        <div class="ri2"><div class="rh"><span class="rb">供电恢复率</span><span class="rp" style="color:var(--cyan)">96.8%</span></div><div class="rt"><div class="rf" style="width:96.8%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div></div>
+        <div class="ri2"><div class="rh"><span class="rb">负荷恢复率</span><span class="rp" style="color:var(--green)">95.8%</span></div><div class="rt"><div class="rf" style="width:95.8%;background:linear-gradient(90deg,#00704a,var(--green))"></div></div></div>
+        <div class="ri2"><div class="rh"><span class="rb">民生保障</span><span class="rp" style="color:var(--purple)">99.2%</span></div><div class="rt"><div class="rf" style="width:99.2%;background:linear-gradient(90deg,#7c3aed,var(--purple))"></div></div></div>
+      </div>
+    </div>
+    <!-- 需求响应 -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-exchange-alt"></i></div><span class="pht">需求响应状态</span><span class="phtag">进行中</span></div>
+      <div class="drw">
+        <div class="drr"><svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="22" fill="none" stroke="rgba(0,210,255,.04)" stroke-width="4"/><circle cx="28" cy="28" r="22" fill="none" stroke="url(#dgG2)" stroke-width="4" stroke-dasharray="138.2" stroke-dashoffset="29.6" stroke-linecap="round" transform="rotate(-90 28 28)"/><defs><linearGradient id="dgG2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#0d47a1"/><stop offset="100%" stop-color="#00d2ff"/></linearGradient></defs></svg><div class="drl"><div class="drpct" id="drP">78.6%</div><div class="drsub">完成率</div></div></div>
+        <div class="drs">
+          <div class="drr2"><span class="drl2">可调容量</span><span class="drvv c" id="drC">1,248 kW</span></div>
+          <div class="drr2"><span class="drl2">已响应</span><span class="drvv g" id="drR">980 kW</span></div>
+          <div class="drr2"><span class="drl2">待响应</span><span class="drvv a" id="drPn">268 kW</span></div>
         </div>
-        </main>
-        <footer class="bg-dark/80 backdrop-blur-md border-t border-accent/30 p-2 text-sm text-gray-400 flex justify-between items-center">
-            <div>© 基于温控负荷的能源优化管理系统</div>
-            <div class="flex space-x-4">
-                <span>状态: <span class="text-green-400">正常</span></span>
-                <span>版本: v1.0.0</span>
-            </div>
-        </footer>
+      </div>
     </div>
-        <!-- 菜单 -->
-    <div id="changchun-menu" class="hidden fixed z-50 bg-dark/95 border border-primary rounded-lg p-4 w-48 shadow-2xl">
-        <h4 class="text-primary font-bold mb-2">万达商场控制</h4>
-        <button @click="goTo('a-area.html')" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 flex items-center text-sm mb-1"><i class="fa fa-area-chart mr-2"></i>温度分析</button>
-        <button @click="goTo('a-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-primary/20 flex items-center text-sm"><i class="fa fa-snowflake-o mr-2"></i>制冷分析</button>
+    <!-- 场景管理 -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi p"><i class="fas fa-th-large"></i></div><span class="pht">场景管理</span></div>
+      <div class="sgg">
+        <div class="sg on"><div class="sn2">夏季高温</div><div class="sd">T≥35°C触发</div><span class="sbd hot">当前激活</span></div>
+        <div class="sg"><div class="sn2">居民社区</div><div class="sd">小区用能管理</div><span class="sbd normal">就绪</span></div>
+        <div class="sg"><div class="sn2">冷负荷分析</div><div class="sd">温-负关联计算</div><span class="sbd peak">运行中</span></div>
+        <div class="sg"><div class="sn2">故障应急</div><div class="sd">自动触发预案</div><span class="sbd normal">就绪</span></div>
+      </div>
     </div>
+  </div>
 
-    <div id="jilin-menu" class="hidden fixed z-50 bg-dark/95 border border-orange-500 rounded-lg p-4 w-48 shadow-2xl">
-        <h4 class="text-orange-500 font-bold mb-2">幸福小区控制</h4>
-        <button @click="goTo('b-area.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 flex items-center text-sm mb-1"><i class="fa fa-area-chart mr-2"></i>温度分析</button>
-        <button @click="goTo('b-cooling-analysis.html')" class="w-full text-left px-3 py-2 rounded hover:bg-orange-500/20 flex items-center text-sm"><i class="fa fa-snowflake-o mr-2"></i>制冷分析</button>
-    </div>
-</div>
-    <!-- vue定义 -->
-    <script type="module">
-        import { createApp, onMounted, ref, onBeforeUnmount } from 'vue';
-        import { baseData } from './systemData.js';
+</main>
 
-        createApp({
-            setup() {
-                const goTo = (url) => { window.location.href = url; };
+<script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+// ===== 下拉菜单点击 =====
+document.addEventListener('DOMContentLoaded',function(){
+  var ds=document.createElement('style');ds.textContent='.nl.dd.open .dd-menu{display:block}';document.head.appendChild(ds);
+  document.querySelectorAll('.nl.dd').forEach(function(dd){
+    var m=dd.querySelector('.dd-menu');if(!m)return;
+    dd.addEventListener('click',function(e){if(m.contains(e.target))return;e.stopPropagation();e.preventDefault();var w=!dd.classList.contains('open');
+      document.querySelectorAll('.nl.dd.open').forEach(function(o){o.classList.remove('open')});
+      if(w)dd.classList.add('open');});
+  });
+  document.addEventListener('click',function(e){document.querySelectorAll('.nl.dd.open').forEach(function(dd){if(!dd.contains(e.target))dd.classList.remove('open')})});
+});
 
-                const toggleMenu = (id, event) => {
-                    document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
-                    const menu = document.getElementById(id);
-                    if (menu && event) {
-                        menu.classList.remove('hidden');
-                        menu.style.left = `${event.clientX}px`;
-                        menu.style.top = `${event.clientY}px`;
-                    }
-                };
-                // 时间
-                    const currentTime = ref(new Date().toLocaleString())
+// ===== UTILITIES =====
+var WS=null,sd=null,tcC=null;
+var fmt=function(n,d){return d?Number(n).toFixed(d):Math.round(n).toLocaleString()};
+var $=function(id){return document.getElementById(id)};
+function setT(id,v,u,d){var e=$(id);if(e)e.innerHTML=fmt(v,d)+(u?'<span style="font-size:8px;color:var(--t2)">'+u+'</span>':'')}
 
-            let timer = null
+// ===== CLOCK =====
+function tick(){var d=new Date();$('clk').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0')}
+tick();setInterval(tick,1000);
 
-              const updateTime = () => {
-                 currentTime.value = new Date().toLocaleString('zh-CN', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-            };
+// ===== ALERTS =====
+function initAlert(a){var s=$('alscr'),c=0;s.innerHTML='';a.forEach(function(x){if(x.l!=='i')c++;
+  s.innerHTML+='<div class="al"><span class="ad '+x.l+'"></span><span class="atm">'+x.time+'</span><span class="amsg">'+x.msg+'</span><span class="atag '+(x.l==='c'?'c':x.l==='w'?'w':'i')+'">'+x.tag+'</span></div>'});$('abg').textContent=c+'条'}
 
-                onMounted(() => {
-                    updateTime()
-                    timer = setInterval(updateTime, 1000)
-                 })
+// ===== RANKING =====
+var md=['g1','g2','g3'];
+function initRK(r){var h='',mx=r[0].kw;r.forEach(function(x,i){var p=x.kw/mx*100,c=x.kw>350?'#ff3d57':x.kw>250?'#ffb300':'#00d2ff';
+  h+='<div class="ri '+(md[i]||'')+'"><div class="rpos">'+(i+1)+'</div><div class="rnm">'+x.name+'</div><div class="rval">'+Math.round(x.kw)+'</div><div class="rbar"><div class="rbf" style="width:'+p+'%;background:'+c+'"></div></div><div class="rtr '+x.trend+'"><i class="fas fa-arrow-'+x.trend+'"></i></div></div>'});$('rkLst').innerHTML=h}
 
-                onBeforeUnmount(() => {
-                    if (timer) clearInterval(timer)
-                 })
+// ===== ECHARTS TREND =====
+function initTC(){
+  tcC=echarts.init($('tc'),'dark');
+  window.charts=window.charts||[];window.charts.push(tcC);
+  var d=Date.now(),T=[],C=[],R=[];
+  for(var i=47;i>=0;i--){var t=d-i*1800000,h=new Date(t).getHours()+new Date(t).getMinutes()/60;
+    T.push([t,(72+20*Math.sin((h-8)/24*2*Math.PI-.3)+(Math.random()-.5)*4).toFixed(1)]);
+    C.push([t,(65+18*Math.sin((h-8)/24*2*Math.PI-.1)+(Math.random()-.5)*3).toFixed(1)]);
+    R.push([t,(55+22*Math.sin((h-8)/24*2*Math.PI+.4)+(Math.random()-.5)*3).toFixed(1)]);}
+  tcC.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:function(p){return new Date(p[0].value[0]).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'<br/>'+p.map(function(i){return i.marker+' '+i.seriesName+': '+i.value[1]+'%'}).join('<br/>')}},
+    legend:{data:['总负荷','商业区','居民区'],textStyle:{color:'#6a8ba8',fontSize:9},top:0,left:'center',itemWidth:12,itemHeight:6},
+    grid:{left:'6%',right:'4%',top:'18%',bottom:'8%'},
+    xAxis:{type:'time',axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:function(v){return new Date(v).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})}},splitLine:{show:false}},
+    yAxis:{type:'value',min:20,max:100,splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:8,formatter:'{value}%'}},
+    series:[
+      {name:'总负荷',type:'line',smooth:true,symbol:'none',data:T,lineStyle:{color:'#00d2ff',width:2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.13)'},{offset:1,color:'rgba(0,210,255,.002)'}])},markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(255,179,0,.2)',type:'dashed',width:1},label:{formatter:'80%',color:'#ffb300',fontSize:8},data:[{yAxis:80}]}},
+      {name:'商业区',type:'line',smooth:true,symbol:'none',data:C,lineStyle:{color:'#3980ff',width:1.2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(57,128,255,.06)'},{offset:1,color:'rgba(57,128,255,.002)'}])}},
+      {name:'居民区',type:'line',smooth:true,symbol:'none',data:R,lineStyle:{color:'#00e5a0',width:1.2},areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.06)'},{offset:1,color:'rgba(0,229,160,.002)'}])}}
+    ]
+  });
+}
 
-                onMounted(() => {
-                    // 粒子
-                    if (window.particlesJS) {
-                        particlesJS("particles-js", {
-                           particles: {
-                              number: { value: 80, density: { enable: true, value_area: 800 } },
-                              color: { value: "#ffffff" },
-                              shape: { type: "circle" },
-                              opacity: { value: 0.5, random: true },
-                              size: { value: 3, random: true },
-                              line_linked: {
-                                enable: true,
-                                distance: 120,
-                                color: "#fff",
-                                opacity: 0.2,
-                                width: 1
-                              },
-                              move: {
-                                enable: true,
-                                speed: 2,
-                                direction: "none",
-                                random: true,
-                                straight: false,
-                                out_mode: "out"
-                              }
-                            },
-                            interactivity: {
-                              detect_on: "canvas",
-                              events: {
-                                onhover: { enable: true, mode: "grab" },
-                                onclick: { enable: true, mode: "push" }
-                              }
-                            },
-                            retina_detect: true
-                          });
-                       }
-                    window.addEventListener('click', () => {
-                        document.querySelectorAll('[id$="-menu"]').forEach(m => m.classList.add('hidden'));
-                    });
-                });
+// ===== WEBSOCKET =====
+function connectWS(){
+  if(WS){try{WS.close()}catch(e){}}
+  WS=new WebSocket('ws://localhost:3080');
+  WS.onopen=function(){console.log('[WS] connected')};
+  WS.onmessage=function(e){try{var m=JSON.parse(e.data);sd=m.data;if(m.type==='init'){initAlert(sd.alerts);initRK(sd.ranking)}updateUI(sd)}catch(ex){}}
+  WS.onclose=function(){setTimeout(connectWS,3000)}
+  WS.onerror=function(){}
+}
 
-                return { baseData, goTo, toggleMenu, currentTime };
-            }
-        }).mount('#app');
-    </script>
+// ===== UPDATE UI =====
+function updateUI(d){
+  setT('km1',d.commercial.dailyKwh,'kWh',0);
+  setT('km2',d.strategies.totalSaved,'kWh',0);
+  setT('km3',d.strategies.adjustable,'kW',0);
+  if($('drP'))$('drP').textContent=fmt(d.grid.responseRate,1)+'%';
+  if($('drC'))$('drC').textContent=fmt(d.strategies.adjustable)+' kW';
+  if($('drR'))$('drR').textContent=fmt(d.strategies.responded)+' kW';
+  if($('drPn'))$('drPn').textContent=fmt(d.strategies.adjustable-d.strategies.responded)+' kW';
+  if($('dsE'))$('dsE').textContent=fmt(92.5+(Math.random()-.5)*2,1)+'%';
+}
+
+// ===== INIT =====
+function init(){
+  initTC();
+  connectWS();
+  if(typeof systemData!=='undefined'){setTimeout(function(){if(!sd){initAlert(systemData.alerts);initRK(systemData.ranking)}},500)}
+}
+window.addEventListener('resize',function(){if(tcC)tcC.resize()});
+window.addEventListener('beforeunload',function(){if(window.charts){window.charts.forEach(function(c){if(c&&!c.isDisposed())c.dispose()});window.charts=[]}});
+document.addEventListener('DOMContentLoaded',init);
+</script>
 </body>
 </html>

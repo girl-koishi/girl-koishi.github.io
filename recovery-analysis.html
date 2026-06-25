@@ -1,845 +1,1129 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>方案对比分析 - 发电厂温度控制系统</title>
-    <!-- Tailwind CSS v3 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- 统一的 Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#93c5fd',
-                        accent: '#10b981',
-                        warning: '#f97316',
-                        danger: '#ef4444',
-                        dark: '#0f172a',
-                        'dark-light': '#1e293b',
-                        'light-text': '#e2e8f0'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 2s linear infinite',
-                        'glow': 'glow 2s ease-in-out infinite alternate',
-                    },
-                    keyframes: {
-                        flow: {
-                            '0%': { strokeDashoffset: '24' },
-                            '100%': { strokeDashoffset: '0' }
-                        },
-                        glow: {
-                            '0%': { boxShadow: '0 0 5px rgba(59, 130, 246, 0.5)' },
-                            '100%': { boxShadow: '0 0 20px rgba(59, 130, 246, 0.8)' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .text-shadow {
-                text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-            }
-            .border-glow {
-                box-shadow: 0 0 5px rgba(59, 130, 246, 0.5);
-            }
-            .bg-grid {
-                background-image: 
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            .conclusion-glow {
-                box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>恢复评估 — 阶序智调</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+/* ========== RESET & BASE (ALL PAGES MUST COPY THIS EXACTLY) ========== */
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.28);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1);font-size:14px}
+::selection{background:rgba(0,210,255,.15)}
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:rgba(0,210,255,.15);border-radius:2px}
+
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,120,200,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,210,255,.03),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.03),transparent 55%);}
+
+#app{width:100vw;height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
+
+/* ========== HEADER (ALL PAGES IDENTICAL) ========== */
+#hd{height:72px;min-height:72px;display:flex;align-items:center;padding:0 20px;background:linear-gradient(180deg,rgba(6,13,31,.98) 0%,rgba(6,13,31,.94) 100%);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:10}
+.hd-l{display:flex;align-items:center;gap:8px;width:140px;flex-shrink:0}
+.hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+.hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+.hd-c{flex:1;display:flex;align-items:center;justify-content:center;gap:0;overflow:hidden}
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+.hd-r{display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0}
+.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap}
+.hd-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.8s ease infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,.5)}50%{box-shadow:0 0 0 4px rgba(0,229,160,0)}}
+
+/* ========== NAV BAR (ALL PAGES IDENTICAL — 9 items) ========== */
+#nb{height:34px;min-height:34px;display:flex;align-items:center;justify-content:flex-start;gap:1px;padding:0 16px;background:rgba(6,13,31,.90);border-bottom:1px solid rgba(0,210,255,.05);flex-shrink:0;z-index:9;overflow-x:auto}
+.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:var(--t2);cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+.nl:hover{color:var(--cyan);background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+.nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+.nl i{font-size:7px}
+.nl.dd{position:relative}
+.nl.dd:hover .dd-menu{display:block}
+.dd-menu{display:none;position:absolute;top:100%;left:0;background:rgba(8,18,42,.95);border:1px solid rgba(0,210,255,.12);border-radius:4px;padding:4px 0;min-width:120px;z-index:100}
+.dd-menu a{display:block;padding:6px 14px;font-size:11px;color:var(--t2);text-decoration:none;transition:.2s;white-space:nowrap}
+.dd-menu a:hover{color:var(--cyan);background:rgba(0,210,255,.05)}
+
+/* ========== MAIN GRID ========== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:250px 1fr 270px;grid-template-rows:1fr;gap:5px;padding:5px;overflow:hidden}
+.cl{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
+.cl.mid{grid-row:1/2}
+
+/* ========== PANEL ========== */
+.pnl{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 8px rgba(0,0,0,.25)}
+.pnl:hover{border-color:var(--border-h);box-shadow:0 1px 8px rgba(0,0,0,.25),0 0 10px rgba(0,210,255,.04)}
+.ph{display:flex;align-items:center;gap:6px;padding:6px 10px 4px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
+.phi{width:15px;height:15px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;flex-shrink:0}
+.phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}.phi.r{background:rgba(255,61,87,.1);color:var(--red)}
+.phi.g{background:rgba(0,229,160,.1);color:var(--green)}.phi.a{background:rgba(255,179,0,.1);color:var(--amber)}
+.phi.p{background:rgba(179,136,255,.1);color:var(--purple)}.phi.b{background:rgba(57,128,255,.1);color:var(--blue)}
+.pht{font-size:10px;font-weight:600;color:var(--t1);flex:1;letter-spacing:.3px}
+.phtag{font-size:8px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:var(--cyan);border:1px solid rgba(0,210,255,.1)}
+
+/* ========== TAB BAR (sub-nav within page, like references) ========== */
+.tab-bar{display:flex;align-items:center;gap:0;padding:0 10px;height:32px;flex-shrink:0;border-bottom:1px solid rgba(0,210,255,.05)}
+.tb{height:24px;padding:0 14px;border-radius:3px 3px 0 0;font-size:10px;color:var(--t2);cursor:pointer;transition:.2s;display:flex;align-items:center;gap:4px;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;background:transparent;white-space:nowrap}
+.tb:hover{color:var(--cyan);background:rgba(0,210,255,.04)}
+.tb.on{color:var(--cyan);background:rgba(0,210,255,.07);border-color:rgba(0,210,255,.12);border-bottom:1px solid var(--panel)}
+.tb i{font-size:8px}
+
+/* ========== LEFT COLUMN KPI ========== */
+.kg{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:7px 9px}
+.kc{padding:7px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.035);border-radius:4px;transition:.2s}
+.kc:hover{background:rgba(0,210,255,.03)}
+.kcl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.kcv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:17px;font-weight:700;line-height:1.2}
+.kcv.c{color:var(--cyan)}.kcv.g{color:var(--green)}.kcv.a{color:var(--amber)}.kcv.r{color:var(--red)}.kcv.p{color:var(--purple)}
+.kcb{height:2px;background:rgba(0,210,255,.03);border-radius:1px;margin-top:4px;overflow:hidden}
+.kcf{height:100%;border-radius:1px;transition:width 1s ease}
+
+/* SL / SI (comfort bars) */
+.sl{display:flex;flex-direction:column;gap:6px;padding:7px 9px}
+.si{display:flex;flex-direction:column;gap:1px}
+.sh{display:flex;justify-content:space-between;font-size:7px}
+.sn{color:var(--t2)}.sv{font-family:"SF Mono","Fira Code","Consolas",monospace;color:var(--t1);font-size:7px}
+.sk{height:3px;background:rgba(0,210,255,.03);border-radius:1.5px;overflow:hidden}
+.sf{height:100%;border-radius:1.5px;transition:width 1.2s ease}
+
+/* DRW — demand response ring (copied exactly) */
+.drw{display:flex;align-items:center;gap:10px;padding:6px 9px}
+.drr{position:relative;width:56px;height:56px;flex-shrink:0}
+.drr svg{width:56px;height:56px}
+.drl{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.drpct{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:15px;font-weight:700;color:var(--cyan);line-height:1}
+.drsub{font-size:8px;color:var(--t2)}
+.drs{flex:1;display:flex;flex-direction:column;gap:4px}
+.drr2{display:flex;justify-content:space-between;font-size:8px}
+.drl2{color:var(--t2)}.drvv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:600}.drvv.c{color:var(--cyan)}.drvv.g{color:var(--green)}.drvv.a{color:var(--amber)}
+
+/* DGG — mini grid */
+.dgg{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px 9px 5px}
+.dgi{padding:4px 6px;border-radius:3px;background:rgba(0,210,255,.01);border:1px solid rgba(0,210,255,.02)}
+.dgl{font-size:8px;color:var(--t2)}.dgv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:12px;font-weight:700;color:var(--t1)}.dgv.c{color:var(--cyan)}.dgv.g{color:var(--green)}
+
+/* CHART WRAPPER */
+.cw{flex:1;min-height:0;position:relative;padding:4px 7px 5px}
+.cw>div{width:100%;height:100%}
+
+/* ========== RECOVERY PAGE — CUSTOM ========== */
+/* Recovery gauge HERO */
+.rg-wrap{flex:1;display:flex;flex-direction:column;align-items:center;padding:6px 8px 4px;min-height:0;gap:4px}
+.rg-svg{width:150px;height:150px;position:relative;flex-shrink:0}
+.rg-svg svg{width:150px;height:150px;filter:drop-shadow(0 0 6px rgba(0,210,255,.1))}
+.rg-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.rg-pct{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:32px;font-weight:700;color:var(--cyan);line-height:1;text-shadow:0 0 14px rgba(0,210,255,.3)}
+.rg-sub{font-size:8px;color:var(--t2);margin-top:3px;letter-spacing:1px}
+.rg-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:3px 8px;width:100%}
+.rg-lg{display:flex;align-items:center;gap:3px;font-size:8px;color:var(--t2)}
+.rg-ld{width:6px;height:6px;border-radius:1px;flex-shrink:0}
+.rg-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;width:100%;margin-top:2px}
+.rg-st{padding:5px 4px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.03);border-radius:4px;text-align:center}
+.rg-sl{font-size:8px;color:var(--t2);margin-bottom:2px}
+.rg-sv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:13px;font-weight:700;line-height:1.1}
+.rg-sv.g{color:var(--green)}.rg-sv.a{color:var(--amber)}.rg-sv.c{color:var(--cyan)}
+.rg-su{font-size:8px;color:var(--t2);font-weight:400}
+
+/* Comfort panel — compact bars */
+.cf-body{flex:1;display:flex;flex-direction:column;gap:5px;padding:7px 9px;min-height:0;overflow:hidden}
+.cf-row{display:flex;flex-direction:column;gap:1px}
+.cf-hd{display:flex;justify-content:space-between;align-items:center;font-size:7px}
+.cf-nm{color:var(--t1)}.cf-vl{font-family:"SF Mono","Fira Code","Consolas",monospace;font-weight:600;font-size:10px}
+.cf-vl.r{color:var(--red)}.cf-vl.a{color:var(--amber)}.cf-vl.c{color:var(--cyan)}.cf-vl.g{color:var(--green)}
+.cf-bar{height:4px;background:rgba(0,210,255,.03);border-radius:2px;overflow:hidden}
+.cf-fill{height:100%;border-radius:2px;transition:width 1.2s ease}
+
+/* Evaluation conclusion */
+.ec-body{flex:1;display:flex;flex-direction:column;gap:5px;padding:7px 9px;min-height:0;overflow:hidden}
+.ec-text{font-size:7px;color:var(--t2);line-height:1.55}
+.ec-text .hl{color:var(--green);font-weight:600}
+.ec-text .hl.c{color:var(--cyan)}
+.ec-stars{display:flex;align-items:center;gap:1px;padding:2px 0}
+.ec-star{font-size:14px;color:var(--amber);line-height:1}
+.ec-star.off{color:rgba(255,179,0,.18)}
+.ec-score{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:11px;color:var(--cyan);margin-left:6px;font-weight:700}
+.ec-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.ec-it{padding:4px 6px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.03);border-radius:3px}
+.ec-il{font-size:8px;color:var(--t2)}.ec-iv{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:12px;font-weight:700;color:var(--t1);line-height:1.2}
+.ec-iv.g{color:var(--green)}.ec-iv.c{color:var(--cyan)}.ec-iv.a{color:var(--amber)}
+
+/* Plan comparison */
+.pc-body{flex:1;display:flex;flex-direction:column;padding:4px 8px 6px;min-height:0;overflow:hidden}
+.pc-row{display:grid;grid-template-columns:1.3fr 1fr 1fr .9fr;gap:3px;padding:4px 4px;font-size:7px;align-items:center}
+.pc-row.hd{color:var(--t2);font-size:7px;border-bottom:1px solid rgba(0,210,255,.05);padding-bottom:3px;margin-bottom:1px}
+.pc-row+.pc-row{border-top:1px solid rgba(0,210,255,.02)}
+.pc-row.rec{background:rgba(0,229,160,.035);border-radius:3px;border-top:none}
+.pc-pn{font-weight:600;color:var(--t1);display:flex;align-items:center;gap:3px}
+.pc-pn.rec{color:var(--green)}
+.pc-pn i{font-size:7px}
+.pc-vl{font-family:"SF Mono","Fira Code","Consolas",monospace;text-align:center;color:var(--t1);font-size:7px}
+.pc-vl.g{color:var(--green)}.pc-vl.a{color:var(--amber)}.pc-vl.c{color:var(--cyan)}
+
+/* Timeline steps */
+.tl-body{display:flex;flex-direction:column;gap:0}
+.tl-step{display:flex;gap:8px;align-items:flex-start;padding:4px 0;position:relative}
+.tl-node{display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:16px}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:background .5s}
+.tl-line{width:1.5px;flex:1;min-height:14px;margin:2px 0;transition:background .5s}
+.tl-title{font-size:7px;font-weight:600;transition:color .5s}
+.tl-desc{transition:color .5s}
+
+/* Recovery assessment bars */
+.re-item{padding:4px 0;border-bottom:1px solid rgba(0,210,255,.02)}
+.re-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.re-nm{font-size:7px;color:var(--t1)}
+.re-vl{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;font-weight:600;color:var(--cyan)}
+.re-vl.g{color:var(--green)}.re-vl.a{color:var(--amber)}.re-vl.r{color:var(--red)}
+.re-bar{height:5px;background:rgba(0,210,255,.03);border-radius:3px;overflow:hidden}
+.re-fill{height:100%;border-radius:3px;transition:width .8s ease}
+
+/* Action buttons */
+.ab-wrap{display:flex;flex-direction:column;gap:4px;padding:6px 8px}
+.ab-btn{display:flex;align-items:center;justify-content:center;gap:5px;height:26px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;transition:.2s;border:1px solid var(--border);background:rgba(0,210,255,.02);color:var(--t2);font-family:inherit}
+.ab-btn:hover{border-color:var(--border-h);color:var(--t1);background:rgba(0,210,255,.04)}
+.ab-btn.primary{background:linear-gradient(135deg,#0d47a1,var(--cyan));border-color:var(--cyan);color:#060d1f}
+.ab-btn.primary:hover{box-shadow:0 0 14px rgba(0,210,255,.25);color:#060d1f}
+.ab-btn i{font-size:7px}
+
+/* Toast */
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(8,18,42,.96);border:1px solid rgba(0,210,255,.2);border-radius:6px;padding:8px 18px;color:var(--t1);font-size:11px;z-index:9999;opacity:0;transition:all .3s ease;display:flex;align-items:center;gap:6px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:rgba(0,229,160,.3)}.toast.success i{color:var(--green)}
+.toast.info i{color:var(--cyan)}
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
 </head>
-<body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部区域 -->
-    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <a href="index.html" class="flex items-center">
-                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
-                </a>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
-                    <i class="fa fa-clock-o text-secondary mr-2"></i>
-                    <span id="current-time" class="text-xl font-mono"></span>
-                </div>
-                <a href="fault-solution.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-arrow-left mr-2"></i>
-                    返回方案选择
-                </a>
-            </div>
+<body>
+<div id="app">
+
+<!-- ===== HEADER ===== -->
+<header id="hd">
+  <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-r"><div class="hd-st" id="hdStatusBar"><span class="hd-dot" id="hdDot"></span><span id="hdStatus">运行正常</span></div><div class="hd-clock" id="clk">--:--:--</div></div>
+</header>
+
+<!-- ===== NAV BAR ===== -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <a class="nl" href="cooling-analysis.html"><i class="fas fa-chart-line"></i>分析</a>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl on" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+  <a class="nl" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="mn">
+
+  <!-- === LEFT COLUMN === -->
+  <div class="cl">
+    <!-- Trend Chart (was in center, now in left) -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph">
+        <div class="phi c"><i class="fas fa-wave-square"></i></div>
+        <span class="pht">负荷恢复趋势</span>
+        <span class="phtag">实时 · kW</span>
+      </div>
+      <div class="cw"><div id="trendChart" style="min-height:280px;height:100%;width:100%"></div></div>
+    </div>
+
+    <!-- 舒适度评估 -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi a"><i class="fas fa-thermometer-half"></i></div><span class="pht">舒适度评估</span><span class="phtag" style="color:var(--amber);border-color:rgba(255,179,0,.12);background:rgba(255,179,0,.04)">影响中</span></div>
+      <div class="cf-body">
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">商业综合体</span><span class="cf-vl r">-8.5%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:57%;background:linear-gradient(90deg,#7a1530,var(--red))"></div></div>
         </div>
-    </header>
-
-    <!-- 主要内容区域 -->
-    <main class="flex-grow container mx-auto p-6 bg-grid">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-secondary mb-2">方案对比分析</h2>
-            <p class="text-light-text/70">对比两种能源分配方案在故障恢复过程中的性能表现和能耗情况</p>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">居民社区</span><span class="cf-vl a">-5.2%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:35%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
         </div>
-
-        <!-- 分析说明 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
-            <h3 class="text-xl font-bold text-secondary mb-4 flex items-center">
-                <i class="fa fa-info-circle mr-3 text-primary"></i>
-                分析说明
-            </h3>
-            <p class="text-light-text/90 mb-4">
-                以下图表展示了两种能源分配方案在三个阶段的功率变化情况：
-            </p>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
-                    <div class="flex items-center mb-2">
-                        <div class="w-4 h-4 rounded-full bg-primary mr-2"></div>
-                        <h4 class="font-bold text-primary">阶段一：正常运行</h4>
-                    </div>
-                    <p class="text-sm text-light-text/70">故障发生前的正常运行状态，A、B地区均获得100%所需电量</p>
-                </div>
-                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
-                    <div class="flex items-center mb-2">
-                        <div class="w-4 h-4 rounded-full bg-warning mr-2"></div>
-                        <h4 class="font-bold text-warning">阶段二：方案实施</h4>
-                    </div>
-                    <p class="text-sm text-light-text/70">故障发生后，按照不同方案进行能源分配的阶段</p>
-                </div>
-                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
-                    <div class="flex items-center mb-2">
-                        <div class="w-4 h-4 rounded-full bg-accent mr-2"></div>
-                        <h4 class="font-bold text-accent">阶段三：系统稳定</h4>
-                    </div>
-                    <p class="text-sm text-light-text/70">系统在新的能源分配方案下达到稳定运行状态</p>
-                </div>
-                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
-                    <div class="flex items-center mb-2">
-                        <div class="w-4 h-4 rounded-full bg-success mr-2"></div>
-                        <h4 class="font-bold text-success">阶段四：恢复正常</h4>
-                    </div>
-                    <p class="text-sm text-light-text/70">电力系统故障修复后，恢复到正常工作功率状态</p>
-                </div>
-            </div>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">公共建筑</span><span class="cf-vl c">-3.8%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:25%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
         </div>
-
-        <!-- 方案一分析 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-secondary flex items-center">
-                    <i class="fa fa-first-order mr-3 text-warning"></i>
-                    方案一：优先保证商圈用电
-                </h3>
-                <span class="px-3 py-1 bg-warning/20 text-warning rounded-full text-sm font-bold">总能耗：14,280 kWh</span>
-            </div>
-            
-            <div class="h-80 mb-6">
-                <canvas id="solution1RecoveryChart"></canvas>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
-                    <h4 class="font-bold text-primary mb-3">阶段一：正常运行</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">800 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">400 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">6 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">7,200 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
-                    <h4 class="font-bold text-warning mb-3">阶段二：方案实施</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">640 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-danger">0 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">4 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">2,560 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
-                    <h4 class="font-bold text-accent mb-3">阶段三：系统稳定</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">680 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-danger">0 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">6 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">4,080 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
-                    <h4 class="font-bold text-success mb-3">阶段四：恢复正常</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">800 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">400 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">2 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">2,400 kWh</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">工业区</span><span class="cf-vl r">-12.3%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:82%;background:linear-gradient(90deg,#7a1530,var(--red))"></div></div>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <!-- 方案二分析 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-secondary flex items-center">
-                    <i class="fa fa-second-order mr-3 text-accent"></i>
-                    方案二：兼顾居民基本需求
-                </h3>
-                <span class="px-3 py-1 bg-accent/20 text-accent rounded-full text-sm font-bold">总能耗：12,420 kWh</span>
-            </div>
-            
-            <div class="h-80 mb-6">
-                <canvas id="solution2RecoveryChart"></canvas>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-dark/50 p-4 rounded-lg border border-primary/30">
-                    <h4 class="font-bold text-primary mb-3">阶段一：正常运行</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">800 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">400 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">6 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">7,200 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
-                    <h4 class="font-bold text-warning mb-3">阶段二：方案实施</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">400 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">120 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">4 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">2,080 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
-                    <h4 class="font-bold text-accent mb-3">阶段三：系统稳定</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">420 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">135 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">6 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">3,330 kWh</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="bg-dark/50 p-4 rounded-lg border border-success/30">
-                    <h4 class="font-bold text-success mb-3">阶段四：恢复正常</h4>
-                    <div class="space-y-2">
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">A地区功率：</span>
-                            <span class="font-bold text-primary">800 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">B地区功率：</span>
-                            <span class="font-bold text-accent">400 kW</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">持续时间：</span>
-                            <span class="font-bold">2 小时</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-light-text/70">阶段能耗：</span>
-                            <span class="font-bold text-warning">2,400 kWh</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- === CENTER COLUMN === -->
+  <div class="cl mid">
+    <!-- Tab bar (5 tabs) -->
+    <div class="tab-bar">
+      <div class="tb on" data-tab="0"><i class="fas fa-circle-notch"></i>恢复进度</div>
+      <div class="tb" data-tab="1"><i class="fas fa-plug"></i>供电恢复评估</div>
+      <div class="tb" data-tab="2"><i class="fas fa-chart-line"></i>负荷恢复详情</div>
+      <div class="tb" data-tab="3"><i class="fas fa-thermometer-half"></i>舒适度评估</div>
+      <div class="tb" data-tab="4"><i class="fas fa-file-alt"></i>总报告</div>
+    </div>
+    <!-- === TAB 0: 恢复进度 === -->
+    <div class="pnl tab-panel" id="panel-tab0" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-circle-notch"></i></div><span class="pht">恢复进度</span><span class="phtag" id="rgTag">T+15min · 进行中</span></div>
+      <div class="rg-wrap">
+        <div class="rg-svg">
+          <svg viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(0,210,255,.04)" stroke-width="14"/>
+            <circle id="rgSeg1" cx="100" cy="100" r="80" fill="none" stroke="#00e5a0" stroke-width="14"
+              stroke-dasharray="100.53 502.65" stroke-dashoffset="0" stroke-linecap="butt"
+              transform="rotate(-90 100 100)" style="opacity:.9;transition:all .6s"/>
+            <circle id="rgSeg2" cx="100" cy="100" r="80" fill="none" stroke="#00d2ff" stroke-width="14"
+              stroke-dasharray="150.80 502.65" stroke-dashoffset="-100.53" stroke-linecap="butt"
+              transform="rotate(-90 100 100)" style="opacity:.9;transition:all .6s"/>
+            <circle id="rgSeg3" cx="100" cy="100" r="80" fill="none" stroke="#ffb300" stroke-width="14"
+              stroke-dasharray="125.66 502.65" stroke-dashoffset="-251.33" stroke-linecap="butt"
+              transform="rotate(-90 100 100)" style="opacity:.85;transition:all .6s"/>
+            <circle id="rgSeg4" cx="100" cy="100" r="80" fill="none" stroke="rgba(0,210,255,.12)" stroke-width="14"
+              stroke-dasharray="125.66 502.65" stroke-dashoffset="-376.99" stroke-linecap="butt"
+              transform="rotate(-90 100 100)" style="transition:all .6s"/>
+            <circle cx="100" cy="100" r="68" fill="none" stroke="rgba(0,210,255,.06)" stroke-width="1" stroke-dasharray="2 4"/>
+          </svg>
+          <div class="rg-center">
+            <div class="rg-pct" id="rgPct">75%</div>
+            <div class="rg-sub">恢复进度</div>
+          </div>
         </div>
-
-        <!-- 能耗对比 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow mb-8">
-            <h3 class="text-xl font-bold text-secondary mb-6 flex items-center">
-                <i class="fa fa-balance-scale mr-3 text-primary"></i>
-                能耗对比
-            </h3>
-            
-            <div class="h-80 mb-6">
-                <canvas id="energyComparisonChart"></canvas>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-dark/50 p-4 rounded-lg border border-warning/30">
-                    <h4 class="font-bold text-warning mb-3">方案一能耗详情</h4>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>正常运行阶段</span>
-                                <span class="font-bold">7,200 kWh (50.4%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-warning h-2 rounded-full" style="width: 50.4%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>方案实施阶段</span>
-                                <span class="font-bold">2,560 kWh (17.9%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-warning h-2 rounded-full" style="width: 17.9%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>系统稳定阶段</span>
-                                <span class="font-bold">4,080 kWh (28.6%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-warning h-2 rounded-full" style="width: 28.6%"></div>
-                            </div>
-                        </div>
-                        <div class="pt-2 border-t border-light-text/20">
-                            <div class="flex justify-between font-bold text-lg">
-                                <span>总计</span>
-                                <span class="text-warning">14,280 kWh</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-4 rounded-lg border border-accent/30">
-                    <h4 class="font-bold text-accent mb-3">方案二能耗详情</h4>
-                    <div class="space-y-3">
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>正常运行阶段</span>
-                                <span class="font-bold">7,200 kWh (58.0%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 58.0%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>方案实施阶段</span>
-                                <span class="font-bold">2,080 kWh (16.8%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 16.8%"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-sm mb-1">
-                                <span>系统稳定阶段</span>
-                                <span class="font-bold">3,330 kWh (26.8%)</span>
-                            </div>
-                            <div class="w-full bg-dark rounded-full h-2">
-                                <div class="bg-accent h-2 rounded-full" style="width: 26.8%"></div>
-                            </div>
-                        </div>
-                        <div class="pt-2 border-t border-light-text/20">
-                            <div class="flex justify-between font-bold text-lg">
-                                <span>总计</span>
-                                <span class="text-accent">12,420 kWh</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="rg-legend">
+          <div class="rg-lg"><div class="rg-ld" style="background:#00e5a0"></div>故障隔离</div>
+          <div class="rg-lg"><div class="rg-ld" style="background:#00d2ff"></div>负荷转供</div>
+          <div class="rg-lg"><div class="rg-ld" id="rgLd3" style="background:#ffb300"></div><span id="rgL3">逐步恢复</span></div>
+          <div class="rg-lg"><div class="rg-ld" id="rgLd4" style="background:rgba(0,210,255,.12)"></div><span id="rgL4">待恢复</span></div>
         </div>
-
-        <!-- 分析结论 -->
-        <div class="bg-gradient-to-br from-dark-light to-dark rounded-lg border-2 border-accent/50 p-8 conclusion-glow mb-8">
-            <h3 class="text-2xl font-bold text-accent mb-6 flex items-center">
-                <i class="fa fa-check-circle mr-3 text-accent"></i>
-                分析结论
-            </h3>
-            
-            <div class="space-y-6">
-                <div class="flex items-center">
-                    <div class="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mr-6">
-                        <i class="fa fa-lightbulb-o text-accent text-3xl"></i>
-                    </div>
-                    <div>
-                        <h4 class="text-xl font-bold text-accent mb-2">方案二能耗更低</h4>
-                        <p class="text-light-text/90">
-                            方案二（兼顾居民基本需求）比方案一（优先保证商圈用电）节约了 
-                            <span class="text-accent font-bold text-xl">1,860 kWh</span> 
-                            的能源，节能率达到 
-                            <span class="text-accent font-bold text-xl">13.0%</span>。
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="bg-dark/50 p-6 rounded-lg border border-accent/30">
-                    <h4 class="text-xl font-bold text-accent mb-4">推荐方案：方案二（兼顾居民基本需求）</h4>
-                    <div class="space-y-4">
-                        <div class="flex items-start">
-                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                            <p class="text-light-text/90">
-                                <strong class="text-accent">能源效率更高：</strong> 
-                                方案二在保证基本用电需求的同时，显著降低了总体能耗，符合可持续发展理念。
-                            </p>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                            <p class="text-light-text/90">
-                                <strong class="text-accent">社会影响更小：</strong> 
-                                方案二兼顾了居民的基本生活需求，避免了居民生活受到严重影响，社会稳定性更好。
-                            </p>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                            <p class="text-light-text/90">
-                                <strong class="text-accent">长期可行性更强：</strong> 
-                                方案二可以长期实施，而方案一由于完全切断居民用电，只适合短期紧急情况。
-                            </p>
-                        </div>
-                        <div class="flex items-start">
-                            <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                            <p class="text-light-text/90">
-                                <strong class="text-accent">恢复成本更低：</strong> 
-                                方案二在系统恢复时的冲击更小，有利于系统平稳过渡到正常状态。
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-warning/10 p-6 rounded-lg border border-warning/30">
-                    <h4 class="text-xl font-bold text-warning mb-4">特殊情况建议</h4>
-                    <p class="text-light-text/90">
-                        虽然方案二在大多数情况下更为优越，但在以下特殊情况下，方案一可能更为适合：
-                    </p>
-                    <ul class="space-y-2 mt-3">
-                        <li class="flex items-start">
-                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
-                            <span class="text-light-text/90">商圈内有重要的医疗设施或数据中心等关键基础设施</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
-                            <span class="text-light-text/90">故障预计在4小时内可以完全修复</span>
-                        </li>
-                        <li class="flex items-start">
-                            <i class="fa fa-exclamation-triangle text-warning mt-1 mr-3"></i>
-                            <span class="text-light-text/90">B地区有完善的备用电源系统可以临时支撑基本需求</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+        <div class="rg-stats">
+          <div class="rg-st"><div class="rg-sl">已恢复负荷</div><div><span class="rg-sv g" id="rgRestored">375</span><span class="rg-su">kW</span></div></div>
+          <div class="rg-st"><div class="rg-sl">未恢复</div><div><span class="rg-sv a" id="rgPending">125</span><span class="rg-su">kW</span></div></div>
+          <div class="rg-st"><div class="rg-sl">预计时间</div><div><span class="rg-sv c" id="rgETA">15</span><span class="rg-su">min</span></div></div>
         </div>
+      </div>
+    </div>
 
-        <!-- 返回按钮 -->
-        <div class="flex justify-center mb-8">
-            <a href="power-plant.html" class="bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-white px-8 py-4 rounded-lg flex items-center transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-                <i class="fa fa-home mr-3 text-xl"></i>
-                <span class="text-lg font-bold">返回监控中心</span>
-            </a>
+    <!-- === TAB 1: 供电恢复评估 === -->
+    <div class="pnl tab-panel" id="panel-tab1" style="flex:1;min-height:0;display:none">
+      <div class="ph"><div class="phi c"><i class="fas fa-plug"></i></div><span class="pht">供电恢复评估 — 详细维度</span></div>
+      <div style="flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column;gap:5px">
+        <div class="re-item">
+          <div class="re-hd"><span class="re-nm">馈线F2恢复</span><span class="re-vl" id="reF2">75%</span></div>
+          <div class="re-bar"><div class="re-fill" id="reF2Fill" style="width:75%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:7px;color:var(--t2);margin-top:2px"><span>已恢复 375kW</span><span>剩余 125kW</span></div>
         </div>
-    </main>
-
-    <!-- 底部区域 -->
-    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
-        <div class="container mx-auto text-center text-sm text-light-text/70">
-            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
+        <div class="re-item">
+          <div class="re-hd"><span class="re-nm">居民B变台</span><span class="re-vl" id="reBB">60%</span></div>
+          <div class="re-bar"><div class="re-fill" id="reBBFill" style="width:60%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
         </div>
-    </footer>
+        <div class="re-item">
+          <div class="re-hd"><span class="re-nm">商业区A段</span><span class="re-vl g" id="reBA">100%</span></div>
+          <div class="re-bar"><div class="re-fill" id="reBAFill" style="width:100%;background:linear-gradient(90deg,#003d2a,var(--green))"></div></div>
+        </div>
+        <div class="re-item">
+          <div class="re-hd"><span class="re-nm">公共服务C</span><span class="re-vl g" id="rePS">100%</span></div>
+          <div class="re-bar"><div class="re-fill" id="rePSFill" style="width:100%;background:linear-gradient(90deg,#003d2a,var(--green))"></div></div>
+        </div>
+        <div class="re-item">
+          <div class="re-hd"><span class="re-nm">工业区D</span><span class="re-vl a" id="reID">45%</span></div>
+          <div class="re-bar"><div class="re-fill" id="reIDFill" style="width:45%;background:linear-gradient(90deg,#7a1530,var(--red))"></div></div>
+        </div>
+      </div>
+    </div>
 
-    <!-- JavaScript -->
-    <script>
-        // 更新当前时间
-        function updateCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const timeString = `${hours}:${minutes}`;
-            document.getElementById('current-time').textContent = timeString;
-            return timeString;
-        }
+    <!-- === TAB 2: 负荷恢复详情 === -->
+    <div class="pnl tab-panel" id="panel-tab2" style="flex:1;min-height:0;display:none">
+      <div class="ph"><div class="phi c"><i class="fas fa-chart-line"></i></div><span class="pht">负荷恢复详情</span></div>
+      <div style="flex:1;overflow-y:auto;padding:6px 8px;font-size:7px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="color:var(--t2);font-size:8px;border-bottom:1px solid rgba(0,210,255,.06)">
+            <th style="text-align:left;padding:3px 6px">时间</th><th style="text-align:right;padding:3px 6px">总负荷</th><th style="text-align:right;padding:3px 6px">已恢复</th><th style="text-align:right;padding:3px 6px">恢复率</th>
+          </tr></thead>
+          <tbody id="loadDetailBody">
+            <tr><td style="padding:2px 6px;color:var(--cyan)">T+0</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono">500kW</td><td style="text-align:right;padding:2px 6px;color:var(--green)">0kW</td><td style="text-align:right;padding:2px 6px;color:var(--red)">0%</td></tr>
+            <tr><td style="padding:2px 6px;color:var(--cyan)">T+5</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono">498kW</td><td style="text-align:right;padding:2px 6px;color:var(--green)">50kW</td><td style="text-align:right;padding:2px 6px;color:var(--amber)">10%</td></tr>
+            <tr><td style="padding:2px 6px;color:var(--cyan)">T+10</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono">495kW</td><td style="text-align:right;padding:2px 6px;color:var(--green)">150kW</td><td style="text-align:right;padding:2px 6px;color:var(--amber)">30%</td></tr>
+            <tr style="background:rgba(0,210,255,.04)"><td style="padding:2px 6px;color:var(--cyan);font-weight:600">T+15 ▶</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono;font-weight:600">492kW</td><td style="text-align:right;padding:2px 6px;color:var(--green);font-weight:600">280kW</td><td style="text-align:right;padding:2px 6px;color:var(--cyan);font-weight:600">57%</td></tr>
+            <tr><td style="padding:2px 6px;color:var(--t2)">T+20</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono;color:var(--t2)">490kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">365kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">74%</td></tr>
+            <tr><td style="padding:2px 6px;color:var(--t2)">T+25</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono;color:var(--t2)">488kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">400kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">82%</td></tr>
+            <tr><td style="padding:2px 6px;color:var(--t2)">T+30</td><td style="text-align:right;padding:2px 6px;font-family:SF Mono;color:var(--t2)">485kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">375kW</td><td style="text-align:right;padding:2px 6px;color:var(--t2)">77%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-        // 初始更新时间
-        updateCurrentTime();
+    <!-- === TAB 3: 舒适度评估 === -->
+    <div class="pnl tab-panel" id="panel-tab3" style="flex:1;min-height:0;display:none">
+      <div class="ph"><div class="phi a"><i class="fas fa-thermometer-half"></i></div><span class="pht">舒适度评估</span><span class="phtag" style="color:var(--amber);border-color:rgba(255,179,0,.12);background:rgba(255,179,0,.04)">影响中</span></div>
+      <div class="cf-body">
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">商业综合体</span><span class="cf-vl r">-8.5%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:57%;background:linear-gradient(90deg,#7a1530,var(--red))"></div></div>
+        </div>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">居民社区B</span><span class="cf-vl a" id="comfBB">-5.2%</span></div>
+          <div class="cf-bar"><div class="cf-fill" id="comfBBFill" style="width:35%;background:linear-gradient(90deg,#b85c00,var(--amber))"></div></div>
+        </div>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">公共建筑</span><span class="cf-vl c">-3.8%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:25%;background:linear-gradient(90deg,#0d47a1,var(--cyan))"></div></div>
+        </div>
+        <div class="cf-row">
+          <div class="cf-hd"><span class="cf-nm">工业区</span><span class="cf-vl r">-12.3%</span></div>
+          <div class="cf-bar"><div class="cf-fill" style="width:82%;background:linear-gradient(90deg,#7a1530,var(--red))"></div></div>
+        </div>
+        <div style="margin-top:8px;padding:6px 8px;background:rgba(0,210,255,.015);border:1px solid rgba(0,210,255,.03);border-radius:4px;font-size:8px;color:var(--t2);line-height:1.6">
+          <div style="color:var(--cyan);font-weight:600;margin-bottom:3px">AI评估摘要</div>
+          居民社区B受故障影响最大，舒适度指数下降5.2%。<br/>
+          随着负荷转供方案执行，预计T+25内恢复至正常水平。
+        </div>
+      </div>
+    </div>
 
-        // 每分钟更新一次时间
-        setInterval(updateCurrentTime, 60000);
+    <!-- === TAB 4: 总报告 === -->
+    <div class="pnl tab-panel" id="panel-tab4" style="flex:1;min-height:0;display:none">
+      <div class="ph"><div class="phi g"><i class="fas fa-file-alt"></i></div><span class="pht">故障恢复总报告</span></div>
+      <div style="flex:1;overflow-y:auto;padding:10px 12px;font-size:7px;color:var(--t2);line-height:1.8">
+        <div style="font-size:11px;color:var(--t1);font-weight:600;margin-bottom:6px">故障恢复评估报告 #FR-2026-0625</div>
+        <div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,210,255,.015);border-radius:4px;border:1px solid rgba(0,210,255,.04)">
+          <div style="color:var(--cyan);font-weight:600;margin-bottom:3px">一、故障概述</div>
+          2026-06-25 14:12，配电网F2馈线发生单相接地故障，导致居民社区B变台及周边区域停电，影响负荷 <span style="color:var(--red);font-weight:600">500kW</span>，涉及用户约 <span style="color:var(--amber)">380户</span>。
+        </div>
+        <div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,210,255,.015);border-radius:4px;border:1px solid rgba(0,210,255,.04)">
+          <div style="color:var(--cyan);font-weight:600;margin-bottom:3px">二、处置过程</div>
+          故障检测(T+1min) → 故障定位(T+3min) → AI方案生成(T+6min) → 负荷转供(T+10min) → <span id="rpStage">逐步恢复中...</span>
+        </div>
+        <div style="margin-bottom:8px;padding:6px 8px;background:rgba(0,210,255,.015);border-radius:4px;border:1px solid rgba(0,210,255,.04)">
+          <div style="color:var(--cyan);font-weight:600;margin-bottom:3px">三、当前状态</div>
+          恢复进度: <span id="rpPct" style="color:var(--cyan);font-weight:600">75%</span><br/>
+          已恢复负荷: <span id="rpRestored" style="color:var(--green);font-weight:600">375kW</span><br/>
+          未恢复: <span id="rpPending" style="color:var(--amber);font-weight:600">125kW</span><br/>
+          预计全面恢复: <span id="rpEta" style="color:var(--cyan);font-weight:600">15min</span>
+        </div>
+        <div style="padding:6px 8px;background:rgba(0,210,255,.015);border-radius:4px;border:1px solid rgba(0,210,255,.04)">
+          <div style="color:var(--cyan);font-weight:600;margin-bottom:3px">四、推荐方案</div>
+          方案B · 负荷转供+分区轮控 — 综合评分 <span style="color:var(--green);font-weight:600">91/100</span>
+        </div>
+      </div>
+    </div>
 
-        // 生成方案一恢复过程数据
-        function generateSolution1RecoveryData() {
-            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常'];
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'A地区功率 (kW)',
-                        data: [800, 640, 680, 800],
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 4,
-                        pointRadius: 6,
-                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'B地区功率 (kW)',
-                        data: [400, 0, 0, 400],
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                        borderWidth: 4,
-                        pointRadius: 6,
-                        pointBackgroundColor: 'rgba(239, 68, 68, 1)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            };
-        }
+    <!-- Recovery timeline steps -->
+    <div class="pnl tab-panel" id="panel-timeline" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi c"><i class="fas fa-route"></i></div><span class="pht">恢复步骤</span><span class="phtag" id="recStepTag">待执行</span></div>
+      <div class="tl-body" style="flex:1;overflow-y:auto;padding:6px 10px">
+        <div class="tl-step" id="rStep0">
+          <div class="tl-node"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-line" style="background:var(--green)"></div></div>
+          <div><div class="tl-title" style="color:var(--green)">故障检测</div><div class="tl-desc" style="font-size:8px;color:var(--t2)">14:12 检测到F2馈线单相接地</div></div>
+        </div>
+        <div class="tl-step" id="rStep1">
+          <div class="tl-node"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-line" style="background:var(--green)"></div></div>
+          <div><div class="tl-title" style="color:var(--green)">故障定位</div><div class="tl-desc" style="font-size:8px;color:var(--t2)">14:15 定位居民B变台 — F2支线3#杆</div></div>
+        </div>
+        <div class="tl-step" id="rStep2">
+          <div class="tl-node"><div class="tl-dot" style="background:var(--green)"></div><div class="tl-line" style="background:#00d2ff"></div></div>
+          <div><div class="tl-title" style="color:var(--cyan)">方案生成</div><div class="tl-desc" style="font-size:8px;color:var(--t2)">14:18 AI生成3套方案，择优B方案</div></div>
+        </div>
+        <div class="tl-step" id="rStep3">
+          <div class="tl-node"><div class="tl-dot" style="background:#ffb300"></div><div class="tl-line" style="background:rgba(0,210,255,.08)"></div></div>
+          <div><div class="tl-title" style="color:var(--amber)">故障隔离+负荷转供</div><div class="tl-desc" style="font-size:8px;color:var(--t2)" id="rDesc3">等待执行...</div></div>
+        </div>
+        <div class="tl-step" id="rStep4">
+          <div class="tl-node"><div class="tl-dot" style="background:rgba(0,210,255,.08)"></div><div class="tl-line" style="background:rgba(0,210,255,.08)"></div></div>
+          <div><div class="tl-title" style="color:var(--t2)">逐步恢复</div><div class="tl-desc" style="font-size:8px;color:var(--t2)" id="rDesc4">等待执行...</div></div>
+        </div>
+        <div class="tl-step" id="rStep5">
+          <div class="tl-node"><div class="tl-dot" style="background:rgba(0,210,255,.08)"></div></div>
+          <div><div class="tl-title" style="color:var(--t2)">恢复完成</div><div class="tl-desc" style="font-size:8px;color:var(--t2)" id="rDesc5">等待执行...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        // 生成方案二恢复过程数据
-        function generateSolution2RecoveryData() {
-            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常'];
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'A地区功率 (kW)',
-                        data: [800, 400, 420, 800],
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 4,
-                        pointRadius: 6,
-                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'B地区功率 (kW)',
-                        data: [400, 120, 135, 400],
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 4,
-                        pointRadius: 6,
-                        pointBackgroundColor: 'rgba(16, 185, 129, 1)',
-                        tension: 0.4,
-                        fill: true
-                    }
-                ]
-            };
-        }
+  <!-- === RIGHT COLUMN === -->
+  <div class="cl">
+    <!-- 评估结论 -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi g"><i class="fas fa-star"></i></div><span class="pht">评估结论</span><span class="phtag" style="color:var(--green);border-color:rgba(0,229,160,.12);background:rgba(0,229,160,.04)">AI推荐</span></div>
+      <div class="ec-body">
+        <div class="ec-text">
+          方案B · 负荷转供+分区轮控 执行顺利，已完成 <span class="hl">75%</span> 负荷恢复。预计 <span class="hl c">T+30min</span> 内全面恢复，失电负荷仅 <span class="hl">65kW</span>，民生影响可控。
+        </div>
+        <div class="ec-stars">
+          <span class="ec-star">&#9733;</span><span class="ec-star">&#9733;</span><span class="ec-star">&#9733;</span><span class="ec-star">&#9733;</span><span class="ec-star off">&#9733;</span>
+          <span class="ec-score">4.2/5.0</span>
+        </div>
+        <div class="ec-grid">
+          <div class="ec-it"><div class="ec-il">恢复时间</div><div><span class="ec-iv g">18</span><span style="font-size:8px;color:var(--t2)">min</span></div></div>
+          <div class="ec-it"><div class="ec-il">综合评分</div><div><span class="ec-iv c">91</span><span style="font-size:8px;color:var(--t2)">/100</span></div></div>
+          <div class="ec-it"><div class="ec-il">失电负荷</div><div><span class="ec-iv a">65</span><span style="font-size:8px;color:var(--t2)">kW</span></div></div>
+          <div class="ec-it"><div class="ec-il">民生影响</div><div><span class="ec-iv">180</span><span style="font-size:8px;color:var(--t2)">户</span></div></div>
+        </div>
+      </div>
+    </div>
 
-        // 生成能耗对比数据
-        function generateEnergyComparisonData() {
-            const labels = ['正常运行', '方案实施', '系统稳定', '恢复正常', '总计'];
-            
-            return {
-                labels: labels,
-                datasets: [
-                    {
-                        label: '方案一能耗 (kWh)',
-                        data: [7200, 2560, 4080, 2400, 16680],
-                        backgroundColor: 'rgba(249, 115, 22, 0.8)',
-                        borderColor: 'rgba(249, 115, 22, 1)',
-                        borderWidth: 2
-                    },
-                    {
-                        label: '方案二能耗 (kWh)',
-                        data: [7200, 2080, 3330, 2400, 15010],
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 2
-                    }
-                ]
-            };
-        }
+    <!-- 方案对比 -->
+    <div class="pnl" style="flex:1;min-height:0">
+      <div class="ph"><div class="phi b"><i class="fas fa-balance-scale"></i></div><span class="pht">方案对比</span><span class="phtag">3方案</span></div>
+      <div class="pc-body">
+        <div class="pc-row hd">
+          <span>方案</span><span style="text-align:center">时间</span><span style="text-align:center">失电</span><span style="text-align:center">评分</span>
+        </div>
+        <div class="pc-row">
+          <span class="pc-pn">方案A · 直供</span>
+          <span class="pc-vl a">25min</span>
+          <span class="pc-vl a">120kW</span>
+          <span class="pc-vl a">78</span>
+        </div>
+        <div class="pc-row rec">
+          <span class="pc-pn rec"><i class="fas fa-check-circle"></i>方案B · 转供</span>
+          <span class="pc-vl g">18min</span>
+          <span class="pc-vl g">65kW</span>
+          <span class="pc-vl g">91</span>
+        </div>
+        <div class="pc-row">
+          <span class="pc-pn">方案C · 轮控</span>
+          <span class="pc-vl c">22min</span>
+          <span class="pc-vl c">85kW</span>
+          <span class="pc-vl c">83</span>
+        </div>
+      </div>
+    </div>
 
-        // 初始化方案一恢复图表
-        const solution1RecoveryCtx = document.getElementById('solution1RecoveryChart').getContext('2d');
-        const solution1RecoveryData = generateSolution1RecoveryData();
-        const solution1RecoveryChart = new Chart(solution1RecoveryCtx, {
-            type: 'line',
-            data: solution1RecoveryData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' kW';
-                            }
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 900
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 14
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y + ' kW';
-                            }
-                        }
-                    }
-                },
-                elements: {
-                    line: {
-                        tension: 0.4
-                    }
-                }
-            }
+    <!-- 操作按钮 -->
+    <div class="pnl" style="flex:0 0 auto">
+      <div class="ph"><div class="phi c"><i class="fas fa-cogs"></i></div><span class="pht">操作</span></div>
+      <div class="ab-wrap">
+        <button class="ab-btn primary" onclick="execRecovery()"><i class="fas fa-play"></i> 执行恢复方案</button>
+        <button class="ab-btn" onclick="exportReport()"><i class="fas fa-file-export"></i> 导出评估报告</button>
+        <button class="ab-btn" onclick="savePlan()"><i class="fas fa-save"></i> 保存方案</button>
+      </div>
+    </div>
+  </div>
+
+
+</main><!-- /main -->
+
+<!-- Toast -->
+<div id="toast" class="toast" style="display:none"></div>
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
         });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
 
-        // 初始化方案二恢复图表
-        const solution2RecoveryCtx = document.getElementById('solution2RecoveryChart').getContext('2d');
-        const solution2RecoveryData = generateSolution2RecoveryData();
-        const solution2RecoveryChart = new Chart(solution2RecoveryCtx, {
-            type: 'line',
-            data: solution2RecoveryData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' kW';
-                            }
-                        },
-                        suggestedMin: 0,
-                        suggestedMax: 900
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 14
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y + ' kW';
-                            }
-                        }
-                    }
-                },
-                elements: {
-                    line: {
-                        tension: 0.4
-                    }
-                }
-            }
-        });
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+'use strict';
 
-        // 初始化能耗对比图表
-        const energyComparisonCtx = document.getElementById('energyComparisonChart').getContext('2d');
-        const energyComparisonData = generateEnergyComparisonData();
-        const energyComparisonChart = new Chart(energyComparisonCtx, {
-            type: 'bar',
-            data: energyComparisonData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 12,
-                                weight: 'bold'
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(59, 130, 246, 0.1)'
-                        },
-                        ticks: {
-                            color: 'rgba(226, 232, 240, 0.7)',
-                            callback: function(value) {
-                                return value + ' kWh';
-                            }
-                        },
-                        suggestedMin: 0
-                    }
-                },
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'rgba(226, 232, 240, 0.9)',
-                            font: {
-                                size: 14
-                            }
-                        }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        titleColor: 'rgba(226, 232, 240, 0.9)',
-                        bodyColor: 'rgba(226, 232, 240, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y + ' kWh';
-                            }
-                        }
-                    }
-                }
+/* ========== UTILS ========== */
+var $=function(id){return document.getElementById(id);};
+var fmt=function(n,d){d=d||0;return d?Number(n).toFixed(d):Math.round(n).toLocaleString();};
+var clamp=function(v,min,max){return Math.max(min,Math.min(max,v));};
+
+/* ========== CLOCK ========== */
+function tick(){var d=new Date();$('clk').textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');}
+tick();setInterval(tick,1000);
+
+/* ========== TOAST ========== */
+function showToast(msg,type){
+  var t=$('toast');
+  t.className='toast '+(type||'info');
+  t.innerHTML='<i class="fas fa-'+(type==='success'?'check-circle':'info-circle')+'"></i> '+msg;
+  t.style.display='flex';
+  setTimeout(function(){t.classList.add('show');},10);
+  setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.style.display='none';},300);},3000);
+}
+
+/* ========== TAB SWITCHING ========== */
+var currentTab = 0;
+document.querySelectorAll('.tb').forEach(function(tb){
+  tb.addEventListener('click',function(){
+    document.querySelectorAll('.tb').forEach(function(t){t.classList.remove('on');});
+    tb.classList.add('on');
+    currentTab = parseInt(tb.getAttribute('data-tab'));
+    // Hide all panels, show selected
+    document.querySelectorAll('.tab-panel').forEach(function(p){p.style.display='none';});
+    var target = $('panel-tab'+currentTab);
+    if(target) target.style.display = 'flex';
+    // Always show timeline
+    var tl = $('panel-timeline');
+    if(tl) tl.style.display = 'flex';
+    showToast('切换到: '+tb.textContent.trim(),'info');
+  });
+});
+
+/* ========== RECOVERY DATA & STATE ========== */
+var recData={
+  pct:75,
+  restored:375,
+  pending:125,
+  eta:15,
+  times:['T+0','T+5','T+10','T+15','T+20','T+25','T+30'],
+  totalLoad:[500,498,495,492,490,488,485],
+  restoredLoad:[0,50,150,280,365,400,375],
+  pendingLoad:[500,448,345,212,125,88,110],
+  currentTimeIdx:3
+};
+var isRecovering = false;
+var recoveryPhase = -1; // -1=未开始, 0-4=各阶段
+var recoveryTimer = null;
+var recoveryInterval = null;
+
+/* ========== ECHARTS TREND ========== */
+var trendChart;
+function initTrend(){
+  trendChart=echarts.init($('trendChart'),'dark');
+  window.charts = window.charts || []; window.charts.push(trendChart);
+  refreshTrend();
+}
+function refreshTrend(){
+  if(!trendChart) return;
+  var d=recData;
+  trendChart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(0,210,255,.12)',textStyle:{color:'#d8eaf8',fontSize:9},
+      formatter:function(p){var s=p[0].axisValue+'<br/>';p.forEach(function(i){s+=i.marker+' '+i.seriesName+': <b>'+i.value+'</b> kW<br/>';});return s;}},
+    legend:{data:['总负荷','已恢复','未恢复'],textStyle:{color:'#6a8ba8',fontSize:8},top:3,right:8,itemWidth:10,itemHeight:5,itemGap:10},
+    grid:{left:'6%',right:'4%',top:'16%',bottom:'8%'},
+    xAxis:{type:'category',data:d.times,axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:8},axisTick:{show:false},boundaryGap:false},
+    yAxis:{type:'value',name:'kW',nameTextStyle:{color:'#6a8ba8',fontSize:8},min:0,max:550,
+      splitLine:{lineStyle:{color:'rgba(0,210,255,.025)',type:'dashed'}},
+      axisLabel:{color:'#6a8ba8',fontSize:8}},
+    series:[
+      {name:'总负荷',type:'line',smooth:true,symbol:'none',data:d.totalLoad,
+        lineStyle:{color:'#3980ff',width:2,type:'dashed'},
+        itemStyle:{color:'#3980ff'}},
+      {name:'已恢复',type:'line',smooth:true,symbol:'circle',symbolSize:4,data:d.restoredLoad,
+        lineStyle:{color:'#00e5a0',width:2.5},
+        itemStyle:{color:'#00e5a0'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.14)'},{offset:1,color:'rgba(0,229,160,.002)'}])},
+        markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(0,210,255,.3)',type:'solid',width:1.5},label:{formatter:'当前 T+'+((d.currentTimeIdx)*5),color:'#00d2ff',fontSize:8,position:'insideEndTop'},
+          data:[{xAxis:d.currentTimeIdx}]}},
+      {name:'未恢复',type:'line',smooth:true,symbol:'none',data:d.pendingLoad,
+        lineStyle:{color:'#ffb300',width:1.8},
+        itemStyle:{color:'#ffb300'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,179,0,.08)'},{offset:1,color:'rgba(255,179,0,.002)'}])}}
+    ]
+  });
+}
+
+/* ========== GAUGE RING UPDATE ========== */
+var RING_CIRCUM = 502.65; // 2*PI*80
+function updateGaugeRing(pct){
+  // pct: 0-100. Segments: 0-20=green(故障隔离), 20-50=cyan(负荷转供), 50-75=amber(逐步恢复), 75-100=gray→green(待恢复→完成)
+  var seg1 = $('rgSeg1'), seg2 = $('rgSeg2'), seg3 = $('rgSeg3'), seg4 = $('rgSeg4');
+  if(!seg1) return;
+
+  var g20 = RING_CIRCUM * 0.20;
+  var g30 = RING_CIRCUM * 0.30;
+  var g25 = RING_CIRCUM * 0.25;
+  var g25b = RING_CIRCUM * 0.25;
+
+  if(pct >= 20){
+    seg1.setAttribute('stroke','#00e5a0'); seg1.style.opacity = '1';
+  }
+  if(pct >= 50){
+    seg2.setAttribute('stroke','#00e5a0'); seg2.style.opacity = '1';
+  } else if(pct >= 20){
+    seg2.setAttribute('stroke','#00d2ff'); seg2.style.opacity = '0.9';
+  }
+  if(pct >= 75){
+    seg3.setAttribute('stroke','#00e5a0'); seg3.style.opacity = '1';
+  } else if(pct >= 50){
+    seg3.setAttribute('stroke','#ffb300'); seg3.style.opacity = '0.85';
+  }
+  if(pct >= 100){
+    seg4.setAttribute('stroke','#00e5a0'); seg4.style.opacity = '1';
+  } else {
+    seg4.setAttribute('stroke','rgba(0,210,255,.12)'); seg4.style.opacity = '1';
+  }
+
+  // Update legend labels
+  var ld3 = $('rgLd3'), l3 = $('rgL3'), ld4 = $('rgLd4'), l4 = $('rgL4');
+  if(pct >= 75 && ld3){ ld3.style.background = '#00e5a0'; if(l3) l3.textContent = '逐步恢复 ✓'; }
+  if(pct >= 100 && ld4){ ld4.style.background = '#00e5a0'; if(l4) l4.textContent = '全部恢复 ✓'; }
+}
+
+function updateAllStats(pct, restored, pending, eta){
+  $('rgPct').textContent = Math.round(pct)+'%';
+  $('rgRestored').textContent = Math.round(restored);
+  $('rgPending').textContent = Math.round(pending);
+  $('rgETA').textContent = Math.round(eta);
+  // Update report tab
+  var rp = $('rpPct'); if(rp) rp.textContent = Math.round(pct)+'%';
+  var rr = $('rpRestored'); if(rr) rr.textContent = Math.round(restored)+'kW';
+  var rp2 = $('rpPending'); if(rp2) rp2.textContent = Math.round(pending)+'kW';
+  var re = $('rpEta'); if(re) re.textContent = Math.round(eta)+'min';
+}
+
+/* ========== TIMELINE UPDATE ========== */
+function updateTimelineStep(idx, status, desc, timeStr){
+  var step = $('rStep'+idx);
+  if(!step) return;
+  var dot = step.querySelector('.tl-dot');
+  var line = step.querySelector('.tl-line');
+  var title = step.querySelector('.tl-title');
+  var descEl = step.querySelector('.tl-desc');
+
+  if(status === 'done'){
+    if(dot) dot.style.background = 'var(--green)';
+    if(line) line.style.background = 'var(--green)';
+    if(title){ title.style.color = 'var(--green)'; title.textContent = title.textContent.replace(' ✓','')+' ✓'; }
+  } else if(status === 'active'){
+    if(dot) dot.style.background = 'var(--amber)';
+    if(line) line.style.background = 'var(--amber)';
+    if(title) title.style.color = 'var(--amber)';
+    // Pulsing dot
+    if(dot) dot.style.animation = 'pulse 1.2s ease infinite';
+  } else {
+    if(dot) dot.style.background = 'rgba(0,210,255,.08)';
+    if(line && idx < 5) line.style.background = 'rgba(0,210,255,.08)';
+    if(title) title.style.color = 'var(--t2)';
+  }
+  if(descEl && desc) descEl.textContent = desc;
+
+  // Update tag
+  var tag = $('recStepTag');
+  if(tag){
+    if(status === 'active'){ tag.textContent = '执行中'; tag.style.color = 'var(--amber)'; tag.style.borderColor = 'rgba(255,179,0,.12)'; tag.style.background = 'rgba(255,179,0,.04)'; }
+    else if(idx >= 5 && status === 'done'){ tag.textContent = '已完成'; tag.style.color = 'var(--green)'; tag.style.borderColor = 'rgba(0,229,160,.12)'; tag.style.background = 'rgba(0,229,160,.04)'; }
+  }
+}
+
+/* ========== RECOVERY EXECUTION ========== */
+function execRecovery(){
+  if(isRecovering) return;
+  isRecovering = true;
+  recoveryPhase = 0;
+
+  // Disable button
+  var btn = document.querySelector('.ab-btn.primary');
+  if(btn){ btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 执行中...'; btn.style.opacity = '0.7'; btn.disabled = true; }
+
+  // Stop normal sim
+  if(simTimer){ clearInterval(simTimer); simTimer = null; }
+
+  showToast('恢复方案B启动！开始执行5阶段恢复流程...', 'info');
+
+  var now = new Date();
+  var baseH = now.getHours(), baseM = now.getMinutes();
+  function fm(m){ return String(baseH).padStart(2,'0')+':'+String((baseM+m)%60).padStart(2,'0'); }
+
+  // Phase definitions: [pctTarget, restoredTarget, etaTarget, timelineIdx, desc, timeOffset]
+  var phases = [
+    {pct:20, restored:100, eta:20, idx:3, desc:'故障已隔离，F2馈线跳闸确认', time:3, tag:'故障隔离完成'},
+    {pct:55, restored:275, eta:12, idx:3, desc:'负荷已转供至联络线L3，居民B供电恢复中', time:6, tag:'负荷转供完成'},
+    {pct:82, restored:410, eta:6,  idx:4, desc:'逐步恢复居民B剩余负荷，已完成80%', time:9, tag:'逐步恢复中'},
+    {pct:95, restored:475, eta:2,  idx:4, desc:'居民B变台负荷接近全面恢复', time:12, tag:'接近完成'},
+    {pct:100, restored:500, eta:0, idx:5, desc:'全部负荷恢复完成！系统运行正常', time:15, tag:'恢复完成'}
+  ];
+
+  // Mark steps 0-2 as done
+  updateTimelineStep(0, 'done', '14:12 检测到F2馈线单相接地', '');
+  updateTimelineStep(1, 'done', '14:15 定位居民B变台 — F2支线3#杆', '');
+  updateTimelineStep(2, 'done', '14:18 AI生成3套方案，择优方案B(91分)', '');
+
+  phases.forEach(function(phase, pi){
+    recoveryTimer = setTimeout(function(){
+      recoveryPhase = pi;
+      var p = phase;
+
+      // Update gauge
+      updateGaugeRing(p.pct);
+
+      // Update stats
+      recData.pct = p.pct; recData.restored = p.restored; recData.pending = 500 - p.restored; recData.eta = p.eta;
+      updateAllStats(p.pct, p.restored, 500 - p.restored, p.eta);
+
+      // Update timeline
+      if(pi === 1){
+        updateTimelineStep(3, 'done', p.desc+' · '+fm(p.time), '');
+      }
+      updateTimelineStep(p.idx, 'active', p.desc+' · '+fm(p.time), '');
+      if(pi > 0 && phases[pi-1].idx !== p.idx){
+        updateTimelineStep(phases[pi-1].idx, 'done', phases[pi-1].desc+' · '+fm(phases[pi-1].time), '');
+      }
+      if(pi === phases.length-1){
+        updateTimelineStep(5, 'done', p.desc+' · '+fm(p.time), '');
+      }
+
+      // Update tag
+      var tag = $('rgTag');
+      if(tag){
+        tag.textContent = 'T+'+p.time+'min · '+p.tag;
+        if(p.pct >= 100){ tag.style.color = 'var(--green)'; tag.style.borderColor = 'rgba(0,229,160,.12)'; tag.style.background = 'rgba(0,229,160,.04)'; }
+      }
+
+      // Update recovery assessment bars
+      updateRecoveryBars(p.pct);
+
+      // Update evaluation conclusion in right column
+      updateEvalConclusion(p.pct, p.eta);
+
+      // Update report tab
+      var rps = $('rpStage');
+      if(rps){ rps.textContent = p.pct >= 100 ? '全部恢复完成 ✓' : p.tag+'...'; rps.style.color = p.pct >= 100 ? 'var(--green)' : 'var(--cyan)'; }
+
+      // Update trend chart
+      updateTrendWithRecovery(p.pct, p.restored);
+
+      // Update comfort
+      updateComfortDuringRecovery(p.pct);
+
+      // Show toast
+      var ttype = p.pct >= 100 ? 'success' : 'info';
+      var tmsg = p.pct >= 100 ? '全部恢复完成！系统运行正常' : p.tag+' — 进度 '+Math.round(p.pct)+'%';
+      showToast(tmsg, ttype);
+
+      // Final state
+      if(pi === phases.length-1){
+        isRecovering = false; recoveryPhase = -1;
+        if(btn){ btn.innerHTML = '<i class="fas fa-check-circle"></i> 恢复完成'; btn.style.background = 'linear-gradient(135deg,#003d2a,var(--green))'; btn.style.borderColor = 'var(--green)'; btn.style.opacity = '1'; }
+        // Update header status
+        $('hdDot').style.background = 'var(--green)';
+        $('hdStatus').textContent = '系统正常';
+        showToast('故障恢复全部完成！系统已恢复正常运行。', 'success');
+      }
+    }, phase.time * 1000);
+  });
+}
+
+/* ========== SUPPORT FUNCTIONS ========== */
+function updateRecoveryBars(pct){
+  // F2 feeder
+  var f2 = $('reF2'), f2f = $('reF2Fill');
+  if(f2) f2.textContent = Math.round(pct)+'%';
+  if(f2f){ f2f.style.width = Math.round(pct)+'%';
+    if(pct >= 80) f2f.style.background = 'linear-gradient(90deg,#003d2a,var(--green))';
+    else if(pct >= 50) f2f.style.background = 'linear-gradient(90deg,#0d47a1,var(--cyan))';
+  }
+  // 居民B
+  var bb = $('reBB'), bbf = $('reBBFill');
+  var bbPct = Math.min(100, pct * 0.85);
+  if(bb) bb.textContent = Math.round(bbPct)+'%';
+  if(bbf){ bbf.style.width = Math.round(bbPct)+'%';
+    if(bbPct >= 80) bbf.style.background = 'linear-gradient(90deg,#003d2a,var(--green))';
+    else if(bbPct >= 50){ bbf.style.background = 'linear-gradient(90deg,#0d47a1,var(--cyan))'; if(bb) bb.className = 're-vl'; }
+  }
+  // 工业区D
+  var id = $('reID'), idf = $('reIDFill');
+  var idPct = Math.min(100, 45 + pct * 0.55);
+  if(id) id.textContent = Math.round(idPct)+'%';
+  if(idf){ idf.style.width = Math.round(idPct)+'%';
+    if(idPct >= 80){ idf.style.background = 'linear-gradient(90deg,#003d2a,var(--green))'; if(id) id.className = 're-vl g'; }
+  }
+}
+
+function updateEvalConclusion(pct, eta){
+  var ecText = document.querySelector('.ec-text');
+  if(ecText){
+    var hl1 = '<span class="hl">'+Math.round(pct)+'%</span>';
+    var hl2 = '<span class="hl c">T+'+Math.round(eta)+'min</span>';
+    var hl3 = '<span class="hl">'+Math.round(500-recData.restored)+'kW</span>';
+    ecText.innerHTML = '方案B · 负荷转供+分区轮控 执行顺利，已完成 '+hl1+' 负荷恢复。预计 '+hl2+' 内全面恢复，失电负荷仅 '+hl3+'，民生影响可控。';
+  }
+}
+
+function updateTrendWithRecovery(pct, restored){
+  if(!trendChart) return;
+  // Extend data for future time points if needed
+  var d = recData;
+  var extendTimes = d.times.slice(0, d.currentTimeIdx+1);
+  var extendRestored = d.restoredLoad.slice(0, d.currentTimeIdx+1);
+  var extendTotal = d.totalLoad.slice(0, d.currentTimeIdx+1);
+  var extendPending = d.pendingLoad.slice(0, d.currentTimeIdx+1);
+
+  // Add projected recovery
+  var steps = []; for(var i=1;i<=3;i++) steps.push(d.currentTimeIdx + i);
+  steps.forEach(function(si){
+    var t = 'T+'+ (si*5);
+    extendTimes.push(t);
+    var interp = Math.min(1, (si - d.currentTimeIdx) / 4);
+    var tr = d.totalLoad[d.currentTimeIdx] + (485 - d.totalLoad[d.currentTimeIdx]) * interp;
+    var rr = Math.min(500, restored + (500-restored)*interp);
+    extendTotal.push(Math.round(tr));
+    extendRestored.push(Math.round(rr));
+    extendPending.push(Math.round(Math.max(0, tr - rr)));
+  });
+
+  trendChart.setOption({
+    xAxis: {data: extendTimes},
+    series:[{data:extendTotal},{data:extendRestored},{data:extendPending}]
+  });
+}
+
+function updateComfortDuringRecovery(pct){
+  var bb = $('comfBB'), bbf = $('comfBBFill');
+  if(bb){
+    var v = -5.2 + (pct/100)*5.2;
+    bb.textContent = v.toFixed(1)+'%';
+    bb.className = 'cf-vl';
+    if(v > -2) { bb.classList.add('g'); } else if(v > -4) { bb.classList.add('c'); } else { bb.classList.add('a'); }
+  }
+  if(bbf){ bbf.style.width = Math.round(Math.max(5, 35-(pct/100)*30))+'%'; }
+}
+
+/* ========== LOCAL SIMULATION (pre-recovery jitter) ========== */
+var simTimer=null;
+function startSim(){
+  if(isRecovering) return;
+  if(simTimer)return;
+  simTimer=setInterval(function(){
+    recData.totalLoad=recData.totalLoad.map(function(v,i){return i===0?v:clamp(v+(Math.random()-0.5)*3,480,505);});
+    recData.restoredLoad=recData.restoredLoad.map(function(v,i){return i===0?v:clamp(v+(Math.random()-0.5)*4,0,410);});
+    recData.pendingLoad=recData.pendingLoad.map(function(v,i){return i===0?v:clamp(recData.totalLoad[i]-recData.restoredLoad[i],0,510);});
+    if(trendChart && !isRecovering){
+      trendChart.setOption({series:[{data:recData.totalLoad},{data:recData.restoredLoad},{data:recData.pendingLoad}]});
+    }
+    var r=clamp(recData.restored+(Math.random()-0.5)*4,360,390);
+    var p=500-r;
+    if($('rgRestored')) $('rgRestored').textContent=Math.round(r);
+    if($('rgPending')) $('rgPending').textContent=Math.round(p);
+    recData.restored=r;recData.pending=p;
+    if($('rgPct')) $('rgPct').textContent=Math.round(r/500*100)+'%';
+  },4000);
+}
+
+/* ========== ACTION HANDLERS ========== */
+function exportReport(){
+  showToast('正在生成报告...','info');
+
+  // Collect current data from DOM / recData
+  var now = new Date();
+  var ds = now.toISOString().slice(0,10);
+  var ts = now.toTimeString().slice(0,8);
+  var pct = recData.pct;
+  var restored = recData.restored;
+  var pending = recData.pending;
+  var eta = recData.eta;
+  var phaseLabel = recoveryPhase >= 4 ? '全部恢复完成' : recoveryPhase >= 0 ? '恢复中 ('+(recoveryPhase+1)+'/5)' : '待执行';
+  var phaseColor = recoveryPhase >= 4 ? '#00e5a0' : recoveryPhase >= 0 ? '#ffb300' : '#ff5252';
+
+  // Collect assessment data from DOM
+  function t(el){ return el ? el.textContent.trim() : '--'; }
+  var assessItems = [];
+  document.querySelectorAll('.ac-row').forEach(function(r){
+    var cells = r.querySelectorAll('span');
+    if(cells.length >= 2) assessItems.push({label: t(cells[0]), value: t(cells[1])});
+  });
+
+  // Collect comfort data
+  var comfortItems = [];
+  document.querySelectorAll('.cf-row').forEach(function(r){
+    var cells = r.querySelectorAll('span');
+    if(cells.length >= 2) comfortItems.push({label: t(cells[0]), value: t(cells[1])});
+  });
+
+  // Collect timeline steps
+  var steps = [];
+  document.querySelectorAll('.tl-step').forEach(function(s){
+    var title = s.querySelector('.tl-title');
+    var desc = s.querySelector('.tl-desc');
+    var tm = s.querySelector('.tl-tm');
+    var cls = s.classList.contains('done') ? '完成' : s.classList.contains('active') ? '进行中' : '待执行';
+    if(title) steps.push({title: title.textContent, desc: desc ? desc.textContent : '', time: tm ? tm.textContent : '', status: cls});
+  });
+
+  // Collect evaluation conclusion
+  var evalItems = [];
+  document.querySelectorAll('.').forEach(function(r){}); // skip, use manual
+
+  // Build print report HTML
+  var reportHTML = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>故障恢复评估报告 — ${ds}</title>
+<style>
+  @page { size: A4; margin: 18mm 15mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei","PingFang SC",sans-serif; font-size: 13px; color: #1a2332; line-height: 1.6; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .hdr { border-bottom: 3px solid #00d2ff; padding-bottom: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .hdr h1 { font-size: 22px; color: #0a1628; letter-spacing: 1px; }
+  .hdr .meta { text-align: right; font-size: 11px; color: #6a8ba8; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; background: ${phaseColor}; }
+  .section { margin-bottom: 20px; }
+  .section h2 { font-size: 15px; color: #0a1628; border-left: 4px solid #00d2ff; padding-left: 10px; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #dde8f0; padding: 6px 10px; text-align: left; }
+  th { background: #f0f5fa; color: #3a5068; font-weight: 600; }
+  .kv { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+  .kv-i { display: flex; gap: 6px; }
+  .kv-k { color: #6a8ba8; min-width: 80px; }
+  .kv-v { font-weight: 600; color: #0a1628; }
+  .step-list { list-style: none; }
+  .step-list li { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f4f8; }
+  .step-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .step-done { background: #00e5a0; }
+  .step-active { background: #ffb300; }
+  .step-pending { background: #c0cdd8; }
+  .step-body { flex: 1; }
+  .step-title { font-weight: 600; font-size: 12px; }
+  .step-desc { color: #6a8ba8; font-size: 11px; }
+  .step-time { color: #9ab0c4; font-size: 10px; }
+  .footer { margin-top: 30px; padding-top: 12px; border-top: 1px solid #dde8f0; font-size: 10px; color: #9ab0c4; text-align: center; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div><h1>故障恢复评估报告</h1><div style="margin-top:6px"><span class="badge">${phaseLabel}</span></div></div>
+  <div class="meta">报告编号: RPT-${ds.replace(/-/g,'')}-${ts.replace(/:/g,'')}<br>生成时间: ${ds} ${ts}</div>
+</div>
+
+<div class="section"><h2>恢复概况</h2>
+  <div class="kv">
+    <div class="kv-i"><span class="kv-k">恢复进度</span><span class="kv-v" style="color:${phaseColor}">${pct}%</span></div>
+    <div class="kv-i"><span class="kv-k">已恢复负荷</span><span class="kv-v">${restored} kW</span></div>
+    <div class="kv-i"><span class="kv-k">未恢复</span><span class="kv-v">${pending} kW</span></div>
+    <div class="kv-i"><span class="kv-k">预计剩余</span><span class="kv-v">${eta} 分钟</span></div>
+    <div class="kv-i"><span class="kv-k">总负荷损失</span><span class="kv-v">500 kW</span></div>
+    <div class="kv-i"><span class="kv-k">受影响区域</span><span class="kv-v">居民B、工业区D</span></div>
+  </div>
+</div>
+
+<div class="section"><h2>恢复步骤时间线</h2>
+  <ol class="step-list">
+    ${steps.map(function(s){ return '<li><div class="step-dot step-'+(s.status==='完成'?'done':s.status==='进行中'?'active':'pending')+'"></div><div class="step-body"><div class="step-title">'+s.title+'</div><div class="step-desc">'+s.desc+'</div><div class="step-time">'+s.time+'</div></div></li>'; }).join('')}
+  </ol>
+</div>
+
+<div class="section"><h2>供电恢复评估</h2>
+  <table>
+    <tr><th>设备/区域</th><th>状态</th><th>进度</th><th>备注</th></tr>
+    ${assessItems.map(function(a){ return '<tr><td>'+a.label+'</td><td>'+(a.value.indexOf('100')>=0||a.value.indexOf('完成')>=0?'已恢复':'恢复中')+'</td><td>'+a.value+'</td><td>—</td></tr>'; }).join('')}
+    ${assessItems.length===0?'<tr><td>F2馈线</td><td>已恢复</td><td>100%</td><td>—</td></tr><tr><td>居民B变台</td><td>已恢复</td><td>100%</td><td>—</td></tr><tr><td>工业区D</td><td>已恢复</td><td>100%</td><td>—</td></tr>':''}
+  </table>
+</div>
+
+<div class="section"><h2>舒适度评估</h2>
+  <table>
+    <tr><th>区域</th><th>影响程度</th><th>状态</th></tr>
+    ${comfortItems.map(function(c){ return '<tr><td>'+c.label+'</td><td>'+c.value+'</td><td>'+(c.value==='0%'||c.value.indexOf('恢复')>=0?'已恢复':'受影响')+'</td></tr>'; }).join('')}
+    ${comfortItems.length===0?'<tr><td>居民B</td><td>0%</td><td>已恢复</td></tr><tr><td>工业区D</td><td>0%</td><td>已恢复</td></tr><tr><td>商业区C</td><td>0%</td><td>正常</td></tr>':''}
+  </table>
+</div>
+
+<div class="section"><h2>评估结论</h2>
+  <p style="color:#3a5068;font-size:12px">
+    本次故障为F2馈线单相接地，故障点定位至居民B变台F2支线3#杆。采用AI推荐的方案B（隔离故障段+联络线L3负荷转供），
+    ${pct >= 100 ? '已全部完成恢复，所有受影响负荷已正常供电。恢复耗时约15分钟，无二次故障发生。' : '当前恢复进度'+pct+'%，预计剩余'+eta+'分钟完成全部恢复。'}
+  </p>
+</div>
+
+<div class="footer">阶序智调 · 配电网智能调度系统 · 自动生成报告</div>
+
+<\x73cript>
+  window.onload = function(){ window.print(); };
+<\/\x73cript>
+</body></html>`;
+
+  var w = window.open('', '_blank', 'width=900,height=700');
+  if(!w){ showToast('请允许弹出窗口以导出报告', 'warning'); return; }
+  w.document.write(reportHTML);
+  w.document.close();
+}
+function savePlan(){
+  showToast('当前方案已保存','success');
+}
+
+/* ========== WEBSOCKET ========== */
+var WS=null;
+function connectWS(){
+  if(WS){try{WS.close();}catch(e){}}
+  try{
+    WS=new WebSocket('ws://localhost:3080');
+    WS.onopen=function(){console.log('[WS] Connected');};
+    WS.onmessage=function(e){
+      try{
+        var msg=JSON.parse(e.data);
+        if(msg.type==='init'||msg.type==='update'){
+          var d=msg.data;
+          if(d&&d.recovery){
+            if(d.recovery.rate!==undefined){
+              recData.pct=d.recovery.rate;
+              if($('rgPct')) $('rgPct').textContent=Math.round(d.recovery.rate)+'%';
             }
-        });
-    </script>
+            if(d.recovery.restored!==undefined && $('rgRestored')) $('rgRestored').textContent=Math.round(d.recovery.restored);
+            if(d.recovery.pending!==undefined && $('rgPending')) $('rgPending').textContent=Math.round(d.recovery.pending);
+            if(d.recovery.eta!==undefined && $('rgETA')) $('rgETA').textContent=Math.round(d.recovery.eta);
+          }
+        }
+      }catch(ex){}
+    };
+    WS.onclose=function(){console.log('[WS] Disconnected, retrying in 3s...');setTimeout(connectWS,3000);};
+    WS.onerror=function(){};
+  }catch(ex){
+    console.log('[WS] Connection failed, using local sim');
+    setTimeout(connectWS,3000);
+  }
+}
+
+/* ========== INIT ========== */
+function init(){
+  initTrend();
+  // Show default tab panel
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.style.display='none';});
+  var t0 = $('panel-tab0'); if(t0) t0.style.display = 'flex';
+  var tl = $('panel-timeline'); if(tl) tl.style.display = 'flex';
+  connectWS();
+  startSim();
+}
+window.addEventListener('resize',function(){if(trendChart)trendChart.resize();});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+document.addEventListener('DOMContentLoaded',init);
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
 </body>
 </html>

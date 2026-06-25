@@ -1,0 +1,85 @@
+========== P1-4 硬编码颜色搜索报告 ==========
+
+=== index.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+  Line: 99:.ad.c~.amsg{color:#ff8a9a}.ad.w~.amsg{color:#ffcb57}
+  Line: 108:.ri.g2 .rpos{background:rgba(192,192,192,.05);color:#c0c0c0}
+  Line: 109:.ri.g3 .rpos{background:rgba(205,127,50,.05);color:#cd7f32}
+  Line: 363:function setT(id,v,u,d){const e=$(id);if(e)e.innerHTML=fmt(v,d)+(u?'<span style="font-size:7px;color:#6a8ba8">'+u+'</span>':'');}
+
+=== a-area.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+
+=== b-area.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+
+=== cooling-analysis.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+
+=== fault-solution.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#4a0d1f,#ff3d57);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(255,61,87,.22)}
+  Line: 105:.ad.c~.amsg{color:#ff8a9a}.ad.w~.amsg{color:#ffcb57}
+  Line: 125:.rec-nm{font-size:10px;font-weight:700;color:#fff;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  Line: 129:.rec-act{height:26px;border:none;border-radius:4px;background:linear-gradient(135deg,#4a0d1f,#ff3d57);color:#fff;font-size:10px;font-weight:600;cursor:pointer;letter-spacing:1px;transition:.2s;display:flex;align-items:center;justify-content:center;gap:5px}
+
+=== recovery-analysis.html ===
+  Line: 34:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+  Line: 182:.ab-btn.primary:hover{box-shadow:0 0 14px rgba(0,210,255,.25);color:#060d1f}
+
+=== power-plant.html ===
+  Line: 35:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#004d2a,#00e5a0);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,229,160,.18)}
+
+=== power-market.html ===
+  Line: 34:.hd-brace{color:#00d2ff;opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+  Line: 38:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+  Line: 40:.hd-sub{font-size:8px;color:#6a8ba8;letter-spacing:1px;margin-top:1px;text-transform:uppercase}
+  Line: 42:.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:#00d2ff;background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+  Line: 43:.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:#00e5a0;white-space:nowrap}
+  Line: 49:.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:#6a8ba8;cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+  Line: 50:.nl:hover{color:#00d2ff;background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+  Line: 51:.nl.on{color:#00d2ff;background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+  Line: 74:.phi.c{background:rgba(0,210,255,.1);color:#00d2ff}.phi.r{background:rgba(255,61,87,.1);color:#ff3d57}.phi.g{background:rgba(0,229,160,.1);color:#00e5a0}.phi.a{background:rgba(255,179,0,.1);color:#ffb300}.phi.p{background:rgba(179,136,255,.1);color:#b388ff}.phi.b{background:rgba(57,128,255,.1);color:#3980ff}
+  Line: 75:.pht{font-size:10px;font-weight:600;color:#d8eaf8;flex:1}
+  Line: 76:.phtag{font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:#00d2ff;border:1px solid rgba(0,210,255,.1)}
+  Line: 82:.tb{height:24px;padding:0 14px;border-radius:3px 3px 0 0;font-size:10px;color:#6a8ba8;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:4px;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;background:transparent}
+  Line: 83:.tb:hover{color:#00d2ff;background:rgba(0,210,255,.04)}
+  Line: 84:.tb.on{color:#00d2ff;background:rgba(0,210,255,.07);border-color:rgba(0,210,255,.12);border-bottom:1px solid rgba(8,18,42,.92)}
+  Line: 110:.rk-item.g2 .rk-pos{background:rgba(192,192,192,.05);color:#c0c0c0}
+  Line: 111:.rk-item.g3 .rk-pos{background:rgba(205,127,50,.05);color:#cd7f32}
+  Line: 171:.fb:hover .fbi{color:#00d2ff}
+  Line: 172:.fbl{font-size:9px;font-weight:600;color:#d8eaf8}.fbs{font-size:7px;color:#6a8ba8}
+  Line: 183:.kcl{font-size:8px;color:#6a8ba8;margin-bottom:2px}
+
+=== dispatch-log.html ===
+  Line: 34:.hd-brace{color:#00d2ff;opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+  Line: 38:.hd-icon{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#0d47a1,#00d2ff);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 0 12px rgba(0,210,255,.18)}
+  Line: 40:.hd-sub{font-size:8px;color:#6a8ba8;letter-spacing:1px;margin-top:1px;text-transform:uppercase}
+  Line: 42:.hd-clock{font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:10px;color:#00d2ff;background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)}
+  Line: 43:.hd-st{display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:#00e5a0;white-space:nowrap}
+  Line: 49:.nl{display:flex;align-items:center;gap:4px;height:28px;padding:0 13px;border-radius:3px;font-size:11px;color:#6a8ba8;cursor:pointer;transition:.2s;text-decoration:none;border:1px solid transparent;white-space:nowrap;letter-spacing:.3px}
+  Line: 50:.nl:hover{color:#00d2ff;background:rgba(0,210,255,.05);border-color:rgba(0,210,255,.08)}
+  Line: 51:.nl.on{color:#00d2ff;background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
+  Line: 74:.phi.c{background:rgba(0,210,255,.1);color:#00d2ff}
+  Line: 75:.phi.r{background:rgba(255,61,87,.1);color:#ff3d57}
+  Line: 76:.phi.g{background:rgba(0,229,160,.1);color:#00e5a0}
+  Line: 77:.phi.a{background:rgba(255,179,0,.1);color:#ffb300}
+  Line: 78:.phi.p{background:rgba(179,136,255,.1);color:#b388ff}
+  Line: 79:.phi.b{background:rgba(57,128,255,.1);color:#3980ff}
+  Line: 80:.pht{font-size:10px;font-weight:600;color:#d8eaf8;flex:1}
+  Line: 81:.phtag{font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(0,210,255,.05);color:#00d2ff;border:1px solid rgba(0,210,255,.1)}
+  Line: 85:.tb{height:24px;padding:0 14px;border-radius:3px 3px 0 0;font-size:10px;color:#6a8ba8;cursor:pointer;transition:.2s;display:flex;align-items:center;gap:4px;border:1px solid transparent;border-bottom:none;margin-bottom:-1px;background:transparent}
+  Line: 86:.tb:hover{color:#00d2ff;background:rgba(0,210,255,.04)}
+  Line: 87:.tb.on{color:#00d2ff;background:rgba(0,210,255,.07);border-color:rgba(0,210,255,.12);border-bottom:1px solid rgba(8,18,42,.92)}
+  Line: 111:.rk-item.g2 .rk-pos{background:rgba(192,192,192,.05);color:#c0c0c0}
+  Line: 112:.rk-item.g3 .rk-pos{background:rgba(205,127,50,.05);color:#cd7f32}
+  Line: 139:.tl-badge.zoning{background:rgba(57,128,255,.08);color:#7c9fff;border-color:rgba(57,128,255,.18)}
+  Line: 198:.fb:hover .fbi{color:#00d2ff}
+  Line: 199:.fbl{font-size:9px;font-weight:600;color:#d8eaf8}.fbs{font-size:7px;color:#6a8ba8}
+  Line: 212:.kcl{font-size:8px;color:#6a8ba8;margin-bottom:2px}
+
+=== analysis.html ===
+
+=== a-cooling-analysis.html ===
+
+=== b-cooling-analysis.html ===
+

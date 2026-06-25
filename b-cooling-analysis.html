@@ -1,688 +1,538 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幸福小区制冷分析 - 发电厂温度控制系统</title>
-    <!-- Tailwind CSS v3 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <!-- Tailwind 配置 -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#3b82f6',
-                        secondary: '#93c5fd',
-                        accent: '#10b981',
-                        warning: '#f97316',
-                        dark: '#0f172a',
-                        'dark-light': '#1e293b',
-                        'light-text': '#e2e8f0'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'flow': 'flow 2s linear infinite',
-                    },
-                    keyframes: {
-                        flow: {
-                            '0%': { strokeDashoffset: '24' },
-                            '100%': { strokeDashoffset: '0' }
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .text-shadow { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
-            .border-glow { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
-            .bg-grid {
-                background-image: 
-                    linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-                    linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
-                background-size: 20px 20px;
-            }
-            .card-hover { transition: all 0.3s ease; }
-            .card-hover:hover {
-                transform: translateY(-5px);
-                box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
-            }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>居民区制冷分析 - 阶序智调</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root { --bg:#060d1f; --panel:rgba(8,18,42,.92); --border:rgba(0,210,255,.12); --cyan:#00d2ff; --green:#00e5a0; --amber:#ffb300; --red:#ff3d57; --t2:#8ab4d8; --t1:#d8eaf8; --t3:#2e4a66; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:#e0e8ff; font-family:'Segoe UI','Microsoft YaHei',sans-serif; height:100vh; overflow:hidden; display:flex; flex-direction:column; }
+  #hd { height:96px; min-height:96px; background:linear-gradient(90deg,#060d1f 0%,#0a1a3f 50%,#060d1f 100%); border-bottom:1px solid var(--border); display:flex; align-items:center; padding:0 18px; flex-shrink:0; }
+.hd-title{cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:2px 8px;border:1px solid rgba(0,210,255,.15);border-radius:6px;background:linear-gradient(135deg,rgba(0,210,255,.03) 0%,rgba(57,128,255,.03) 100%);transition:.25s;user-select:none}
+.hd-title:hover{background:linear-gradient(135deg,rgba(0,210,255,.06) 0%,rgba(57,128,255,.06) 100%);border-color:rgba(0,210,255,.28);box-shadow:0 0 20px rgba(0,210,255,.08)}
+.hd-t1{font-size:20px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;text-shadow:none}
+.hd-t2{font-size:7px;font-weight:300;letter-spacing:1px;color:rgba(138,180,216,.55);text-transform:uppercase}
+  .hd-brace{color:var(--cyan);opacity:.25;font-size:18px;font-weight:200;letter-spacing:-2px}
+  .hd-line{height:20px;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),transparent)}
+  #nb { height:34px; background:rgba(0,210,255,.04); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:flex-start; padding:0 16px; gap:1px; overflow-x:auto; }
+  .nl { display:flex; align-items:center; gap:4px; height:28px; padding:0 13px; border-radius:3px; font-size:11px; color:rgba(180,210,255,.6); cursor:pointer; transition:.2s; white-space:nowrap; text-decoration:none; border:1px solid transparent; letter-spacing:.3px; }
+  .nl:hover { color:var(--cyan); background:rgba(0,210,255,.05); border-color:rgba(0,210,255,.08); }
+  .nl.on { color:var(--cyan); background:rgba(0,210,255,.08); border-color:rgba(0,210,255,.16); box-shadow:0 0 8px rgba(0,210,255,.06); }
+  .nl i { font-size:7px; }
+  .nl.dd { position:relative; }
+  .nl.dd:hover .dd-menu { display:block; }
+  .dd-menu { display:none; position:absolute; top:100%; left:0; background:rgba(8,18,42,.95); border:1px solid rgba(0,210,255,.12); border-radius:4px; padding:4px 0; min-width:120px; z-index:100; }
+  .dd-menu a { display:block; padding:6px 14px; font-size:11px; color:rgba(180,210,255,.6); text-decoration:none; transition:.2s; white-space:nowrap; }
+  .dd-menu a:hover { color:var(--cyan); background:rgba(0,210,255,.05); }
+  #main { flex:1; display:grid; grid-template-columns:250px 1fr 270px; gap:5px; padding:5px; min-height:0; }
+  .pn { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; overflow:auto; }
+  .kp { background:rgba(0,210,255,.04); border:1px solid var(--border); border-radius:5px; padding:7px 10px; margin-bottom:5px; }
+  .kp .lbl { font-size:10px; color:rgba(160,200,255,.5); margin-bottom:2px; }
+  .kp .val { font-size:18px; font-weight:700; }
+  .kp .unit { font-size:10px; color:rgba(160,200,255,.5); }
+  .chart-box { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:8px; }
+  .chart-box .tt { font-size:12px; color:rgba(180,210,255,.7); margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+  ::-webkit-scrollbar { width:3px; }
+  ::-webkit-scrollbar-thumb { background:rgba(0,210,255,.2); border-radius:3px; }
+  .tab-bar { display:flex; gap:4px; margin-bottom:8px; }
+  .tab-btn { padding:4px 12px; border-radius:4px; font-size:11px; cursor:pointer; border:1px solid var(--border); color:rgba(180,210,255,.6); background:transparent; transition:.2s; }
+  .tab-btn.active { background:rgba(0,210,255,.12); color:var(--cyan); border-color:rgba(0,210,255,.3); }
+  .slider-group { margin-bottom:8px; }
+  .slider-group label { font-size:10px; color:rgba(160,200,255,.6); display:block; margin-bottom:2px; }
+  .slider-group input[type=range] { width:100%; accent-color:var(--amber); height:4px; }
+  .slider-val { font-size:11px; color:var(--amber); float:right; }
+  .param-card { background:rgba(255,179,0,.04); border:1px solid rgba(255,179,0,.15); border-radius:5px; padding:6px 8px; margin-bottom:4px; }
+  .param-card .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:2px; }
+  .param-card .row label { font-size:10px; color:rgba(160,200,255,.5); }
+  .param-card .row .v { font-size:13px; font-weight:600; color:var(--amber); }
+  .opt-summary { background:rgba(0,229,160,.04); border:1px solid rgba(0,229,160,.15); border-radius:5px; padding:6px 8px; font-size:10px; line-height:1.6; color:rgba(160,200,255,.6); }
+
+/* ========== Focus Indicator (Accessibility) ========== */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 210, 255, 0.15);
+}
+</style>
 </head>
-<body class="bg-dark text-light-text min-h-screen flex flex-col">
-    <!-- 顶部区域 -->
-    <header class="bg-dark-light border-b border-primary/30 py-4 px-6">
-        <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center mb-4 md:mb-0">
-                <a href="index.html" class="flex items-center">
-                    <i class="fa fa-bolt text-warning text-3xl mr-3"></i>
-                    <h1 class="text-3xl font-bold text-primary text-shadow">发电厂温度控制系统</h1>
-                </a>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center bg-dark-light/50 px-4 py-2 rounded-lg border border-primary/30 border-glow">
-                    <i class="fa fa-clock-o text-secondary mr-2"></i>
-                    <span id="current-time" class="text-xl font-mono"></span>
-                </div>
-                <a href="b-area.html" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-300">
-                    <i class="fa fa-arrow-left mr-2"></i>
-                    返回幸福小区
-                </a>
-            </div>
-        </div>
-    </header>
+<body>
 
-    <!-- 主要内容区域 -->
-    <main class="flex-grow container mx-auto p-6 bg-grid">
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold text-secondary mb-2">幸福小区制冷分析</h2>
-            <p class="text-light-text/70">冷负荷启动与避免冷负荷启动功率对比分析</p>
-        </div>
+<!-- Header -->
+<div id="hd">
+  <div style="display:flex;align-items:center;gap:8px;width:80px;flex-shrink:0"><span class="hd-brace">[</span><div class="hd-line"></div><span class="hd-brace">]</span></div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div style="display:flex;align-items:center;gap:8px;width:140px;justify-content:flex-end;flex-shrink:0"><span id="clk" style="font-family:'SF Mono','Fira Code',monospace;font-size:10px;color:var(--cyan);background:rgba(0,210,255,.04);padding:3px 9px;border-radius:3px;border:1px solid rgba(0,210,255,.08)">--:--:--</span><span id="wsSt" style="display:flex;align-items:center;gap:4px;font-size:8px;padding:2px 7px;border-radius:8px;background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.1);color:var(--green);white-space:nowrap">● 实时</span></div>
+</div>
 
-        <!-- 手动输入参数区域 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-6">
-            <h3 class="text-xl font-bold text-secondary mb-4 flex items-center">
-                <i class="fa fa-sliders text-warning mr-3"></i>
-                手动调整参数
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-                <div>
-                    <label class="block text-sm font-medium text-light-text/80 mb-2">恢复斜率 (k)</label>
-                    <div class="flex">
-                        <input type="number" id="recoverySlope" class="flex-grow bg-dark border border-primary/30 rounded-l-lg px-4 py-2 text-light-text focus:outline-none focus:ring-2 focus:ring-primary" value="0.5" step="0.1" min="0.1" max="2.0">
-                        <span class="bg-primary/20 border border-primary/30 border-l-0 rounded-r-lg px-3 py-2 text-sm text-light-text">单位</span>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-light-text/80 mb-2">PID参数 (b)</label>
-                    <div class="flex">
-                        <input type="number" id="pidParameter" class="flex-grow bg-dark border border-primary/30 rounded-l-lg px-4 py-2 text-light-text focus:outline-none focus:ring-2 focus:ring-primary" value="1.2" step="0.1" min="0.5" max="3.0">
-                        <span class="bg-primary/20 border border-primary/30 border-l-0 rounded-r-lg px-3 py-2 text-sm text-light-text">比例</span>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-light-text/80 mb-2">故障前温度</label>
-                    <div class="flex">
-                        <input type="number" id="preFaultTemp" class="flex-grow bg-dark border border-primary/30 rounded-l-lg px-4 py-2 text-light-text focus:outline-none focus:ring-2 focus:ring-primary" value="22" step="0.5" min="18" max="30">
-                        <span class="bg-primary/20 border border-primary/30 border-l-0 rounded-r-lg px-3 py-2 text-sm text-light-text">°C</span>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-light-text/80 mb-2">开始恢复供电时温度</label>
-                    <div class="flex">
-                        <input type="number" id="recoveryStartTemp" class="flex-grow bg-dark border border-primary/30 rounded-l-lg px-4 py-2 text-light-text focus:outline-none focus:ring-2 focus:ring-primary" value="26" step="0.5" min="20" max="35">
-                        <span class="bg-primary/20 border border-primary/30 border-l-0 rounded-r-lg px-3 py-2 text-sm text-light-text">°C</span>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-light-text/80 mb-2">温度差 (c)</label>
-                    <div class="flex">
-                        <input type="number" id="tempDifference" class="flex-grow bg-dark border border-accent/30 rounded-l-lg px-4 py-2 text-accent font-bold" value="4" readonly>
-                        <span class="bg-accent/20 border border-accent/30 border-l-0 rounded-r-lg px-3 py-2 text-sm text-accent">°C</span>
-                    </div>
-                </div>
-            </div>
-            <!-- 新增应用更改按钮 -->
-            <div class="flex justify-end">
-                <button id="applyChangesBtn" class="bg-primary hover:bg-primary/80 text-white px-6 py-2 rounded-lg flex items-center transition-colors duration-300 font-semibold">
-                    <i class="fa fa-refresh mr-2"></i>
-                    应用更改
-                </button>
-            </div>
-        </div>
+<!-- Nav -->
+<nav id="nb">
+  <a class="nl" href="index.html"><i class="fas fa-home"></i>总览</a>
+  <a class="nl" href="power-plant.html"><i class="fas fa-industry"></i>发电侧</a>
+  <a class="nl" href="a-area.html"><i class="fas fa-store"></i>商业区</a>
+  <a class="nl" href="b-area.html"><i class="fas fa-home"></i>居民区</a>
+  <div class="nl dd on" style="cursor:default">
+    <span><i class="fas fa-chart-line"></i>分析</span>
+    <div class="dd-menu">
+      <a href="analysis.html">🌡 温度变化</a>
+      <a href="cooling-analysis.html">📊 负荷分析</a>
+      <a href="a-cooling-analysis.html">❄ 商业制冷</a>
+      <a href="b-cooling-analysis.html">🏠 居民制冷</a>
+    </div>
+  </div>
+  <a class="nl" href="fault-solution.html"><i class="fas fa-exclamation-triangle"></i>故障处置</a>
+  <a class="nl" href="recovery-analysis.html"><i class="fas fa-heartbeat"></i>恢复评估</a>
+  <a class="nl" href="power-market.html"><i class="fas fa-coins"></i>电力市场</a>
+  <a class="nl" href="dispatch-log.html"><i class="fas fa-clipboard-list"></i>调度日志</a>
+</nav>
 
-        <!-- 分析按钮 -->
-        <div class="flex justify-center mb-6">
-            <button id="analyzePowerBtn" class="bg-accent hover:bg-accent/80 text-white px-8 py-3 rounded-lg flex items-center transition-colors duration-300 text-lg font-semibold">
-                <i class="fa fa-bar-chart mr-3"></i>
-                分析功率需求
-            </button>
-        </div>
+<!-- Main -->
+<div id="main">
 
-        <!-- 功率需求分析结果 (V47版本样式) -->
-        <div id="powerAnalysisResult" class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-6">
-            <h3 class="text-xl font-bold text-secondary mb-4 flex items-center">
-                <i class="fa fa-lightbulb-o text-warning mr-3"></i>
-                功率需求分析结果
-            </h3>
+  <!-- Left: 参数面板 -->
+  <div class="pn" style="display:flex;flex-direction:column;gap:5px;">
 
-            <!-- 冷负荷特性分析 -->
-            <div class="mb-6">
-                <h4 class="text-lg font-semibold text-primary mb-3">冷负荷特性分析</h4>
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>当前冷负荷启动功率为 <strong class="text-accent">1.18 万kW</strong>，处于正常运行范围</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>冷负荷启动功率与环境温度呈 <strong class="text-accent">强正相关</strong>，相关系数 <strong class="text-accent">0.65</strong></span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>工作日 <strong class="text-accent">18:00-21:00</strong> 为冷负荷高峰期，平均功率 <strong class="text-accent">1.08 万kW</strong></span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span>夜间 <strong class="text-accent">23:00-07:00</strong> 为冷负荷低峰期，平均功率 <strong class="text-accent">0.95 万kW</strong></span>
-                    </div>
-                </div>
-            </div>
+    <div style="font-size:12px;color:var(--amber);margin-bottom:4px;">▶ 可调参数设置</div>
 
-            <!-- 避免冷负荷启动策略 -->
-            <div>
-                <h4 class="text-lg font-semibold text-primary mb-3">避免冷负荷启动策略</h4>
-                <div class="space-y-3">
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">居民预冷：</strong>在居民回家前1小时（17:00-18:00）提前降温，减少晚间高峰制冷负荷</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">分层控制：</strong>根据居民楼不同楼层和朝向的用冷需求，动态调整制冷功率分配</span>
-                    </div>
-                    <div class="flex items-start">
-                        <i class="fa fa-check-circle text-accent mt-1 mr-3"></i>
-                        <span><strong class="text-accent">夜间蓄冷：</strong>凌晨00:00-06:00启动降低制冷功率至最低需求水平</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- 恢复斜率 k -->
+    <div class="slider-group">
+      <label>恢复斜率 k <span class="slider-val" id="vK">2.0</span></label>
+      <input type="range" id="sK" min="0.5" max="5.0" step="0.1" value="2.0" oninput="onParamChange()">
+    </div>
+    <div class="param-card">
+      <div class="row"><label>物理意义</label><span class="v" id="kDesc">中速恢复</span></div>
+      <div class="row"><label>对电网冲击</label><span class="v" id="kImpact">中等</span></div>
+    </div>
 
-        <!-- 功率-时间图像 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover mb-6">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-secondary">功率-时间图像分析</h3>
-                <div class="flex items-center">
-                    <span class="text-sm text-light-text/70 mr-2">基准功率:</span>
-                    <span class="text-lg font-bold text-primary">1.0 万kW</span>
-                </div>
-            </div>
-            <div class="h-80">
-                <canvas id="powerTimeChart"></canvas>
-            </div>
-        </div>
+    <!-- PID 参数 b -->
+    <div class="slider-group">
+      <label>PID 参数 b <span class="slider-val" id="vB">1.0</span></label>
+      <input type="range" id="sB" min="0.2" max="2.0" step="0.1" value="1.0" oninput="onParamChange()">
+    </div>
+    <div class="param-card">
+      <div class="row"><label>控制稳定性</label><span class="v" id="bBstable">稳定</span></div>
+      <div class="row"><label>超调量</label><span class="v" id="bOvershoot">8%</span></div>
+    </div>
 
-        <!-- 对比分析图表 -->
-        <div class="bg-dark-light rounded-lg border border-secondary/30 p-6 border-glow card-hover">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-xl font-bold text-secondary">冷负荷启动与避免冷负荷启动对比</h3>
-                <div class="flex items-center space-x-4">
-                    <button id="showColdStartBtn" class="bg-warning hover:bg-warning/80 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                        冷负荷启动
-                    </button>
-                    <button id="showAvoidColdStartBtn" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                        避免冷负荷启动
-                    </button>
-                </div>
-            </div>
-            <div class="h-80">
-                <canvas id="comparisonChart"></canvas>
-            </div>
-            <!-- 图例说明 -->
-            <div class="mt-4 flex items-center justify-center space-x-8">
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-orange-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">方案一</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-green-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">方案二</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-blue-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">基准功率</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="w-4 h-4 bg-red-500 rounded-sm mr-2"></div>
-                    <span class="text-sm text-gray-700">功率上限阈值</span>
-                </div>
-            </div>
-        </div>
-    </main>
+    <!-- 故障前温度 -->
+    <div class="slider-group">
+      <label>故障前温度 (°C) <span class="slider-val" id="vTpre">26.0</span></label>
+      <input type="range" id="sTpre" min="22" max="30" step="0.5" value="26.0" oninput="onParamChange()">
+    </div>
 
-    <!-- 底部区域 -->
-    <footer class="bg-dark-light border-t border-primary/30 py-4 px-6">
-        <div class="container mx-auto text-center text-sm text-light-text/70">
-            <p>&copy; 2025 发电厂温度控制系统 | 版权所有</p>
-        </div>
-    </footer>
+    <!-- 温度差 c -->
+    <div class="slider-group">
+      <label>温度差 c (°C) <span class="slider-val" id="vC">4.0</span></label>
+      <input type="range" id="sC" min="1" max="10" step="0.5" value="4.0" oninput="onParamChange()">
+    </div>
 
-    <!-- JavaScript -->
-    <script>
-        // 更新当前时间
-        function updateCurrentTime() {
-            const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('current-time').textContent = `${hours}:${minutes}`;
-        }
-        updateCurrentTime();
-        setInterval(updateCurrentTime, 60000);
+    <div style="flex:1;"></div>
 
-        // 温度差自动计算功能
-        function updateTemperatureDifference() {
-            const preFaultTemp = parseFloat(document.getElementById('preFaultTemp').value) || 0;
-            const recoveryStartTemp = parseFloat(document.getElementById('recoveryStartTemp').value) || 0;
-            const difference = recoveryStartTemp - preFaultTemp;
-            document.getElementById('tempDifference').value = difference.toFixed(1);
-        }
+    <!-- 优化目标 -->
+    <div style="font-size:12px;color:var(--green);margin-bottom:4px;">▶ 优化目标</div>
+    <div class="opt-summary">
+      <div>数学模型：<br>P<sub>recovery</sub> = k·b·c / t</div>
+      <div style="margin-top:4px;">目标：min( P × t )</div>
+      <div style="margin-top:4px;">最优 t = <span id="optT" style="color:var(--green);font-weight:700;">--</span></div>
+      <div style="margin-top:4px;">对应功率 = <span id="optP" style="color:var(--cyan);font-weight:700;">--</span> kW</div>
+    </div>
+  </div>
 
-        // 监听温度输入变化
-        document.getElementById('preFaultTemp').addEventListener('input', updateTemperatureDifference);
-        document.getElementById('recoveryStartTemp').addEventListener('input', updateTemperatureDifference);
+  <!-- Center: 主图表区 -->
+  <div style="display:flex;flex-direction:column;gap:5px;min-height:0;">
 
-        // 页面加载时初始化温度差
-        updateTemperatureDifference();
+    <!-- Tab 栏 -->
+    <div class="tab-bar" style="padding:0 8px;">
+      <button class="tab-btn active" onclick="switchTab('compare')">启动对比</button>
+      <button class="tab-btn" onclick="switchTab('optimize')">参数优化</button>
+      <button class="tab-btn" onclick="switchTab('recovery')">恢复曲线</button>
+    </div>
 
-        // 生成时间标签（更详细的时间刻度）
-        const timeLabels = [];
-        for (let i = 0; i < 24; i++) {
-            timeLabels.push(`${String(i).padStart(2, '0')}:00`);
-        }
+    <!-- 冷负荷启动对比图 -->
+    <div class="chart-box" id="pCompare" style="flex:1;min-height:0;">
+      <div class="tt"><span style="color:var(--amber);">▶</span> 冷负荷启动 vs 避免冷负荷启动</div>
+      <div id="cCompare" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
 
-        // 生成符合客观规律的功率数据
-        // 正常运行时功率应当是很平稳的，不是一直锯齿状
-        function generateNormalOperationPower() {
-            const base = 1.0; // 基准功率1.0万kW
-            return timeLabels.map((time, i) => {
-                const hour = parseInt(time.split(':')[0]);
-                let power = base;
-                
-                // 根据时间段调整功率
-                if (hour >= 18 && hour <= 21) { // 高峰期 18:00-21:00
-                    power = base + 0.08; // 略高于基准功率
-                } else if (hour >= 23 || hour <= 7) { // 低峰期 23:00-07:00
-                    power = base - 0.05; // 略低于基准功率
-                }
-                
-                // 正常运行时波动很小，保持平稳
-                const smallFluctuation = (Math.random() - 0.5) * 0.01; // ±0.005万kW的微小波动
-                return (power + smallFluctuation).toFixed(3);
-            });
-        }
+    <!-- 参数优化图（隐藏） -->
+    <div class="chart-box" id="pOptimize" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--amber);">▶</span> 可调参数对恢复过程的影响</div>
+      <div id="cOptimize" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
 
-        // 生成冷负荷启动功率数据（根据用户修改要求）
-        function generateColdStartPower() {
-            const base = 1.1; // 初始和最终功率1.1万kW
-            const minPower = 0; // 方案一最低功率0万kW
-            const peakPower = 1.25; // 方案一尖峰功率1.25万kW
-            return timeLabels.map((time, i) => {
-                let power = base;
-                
-                // 根据参考图的曲线形状设计
-                if (i >= 0 && i <= 4) { // 起点平台期
-                    power = base;
-                } else if (i === 5) { // 开始下降
-                    power = base * 0.5;
-                } else if (i >= 6 && i <= 8) { // 降到最低功率
-                    power = minPower;
-                } else if (i === 9) { // 开始上升
-                    power = base * 0.3;
-                } else if (i === 10) { // 尖峰
-                    power = peakPower;
-                } else if (i === 11) { // 下降回基准
-                    power = base * 0.8;
-                } else if (i >= 12 && i <= 23) { // 回到基准功率
-                    power = base;
-                }
-                
-                // 添加小波动使曲线更自然
-                const fluctuation = (Math.random() - 0.5) * 0.005;
-                return (power + fluctuation).toFixed(3);
-            });
-        }
+    <!-- 恢复曲线图（隐藏） -->
+    <div class="chart-box" id="pRecovery" style="flex:1;min-height:0;display:none;">
+      <div class="tt"><span style="color:var(--amber);">▶</span> 不同参数下的温度恢复曲线</div>
+      <div id="cRecovery" style="min-height:280px;width:100%;height:100%;"></div>
+    </div>
 
-        // 计算使xy乘积最小的x值和y值
-        function calculateOptimalValues() {
-            const recoverySlope = parseFloat(document.getElementById('recoverySlope').value) || 0.5; // k值
-            const pidParameter = parseFloat(document.getElementById('pidParameter').value) || 1.2; // b值
-            const tempDifference = parseFloat(document.getElementById('tempDifference').value) || 4; // c值
-            
-            // 使用函数: y = kbc/x
-            // 目标: 最小化 f(x) = x * y = x * (kbc/x) = kbc
-            // 由于k、b、c都是常数，所以xy的乘积恒等于kbc，与x无关
-            // 因此，我们需要在x的可行范围内选择合适的值
-            
-            // 设定x的可行范围（0.1万kW到0.5万kW）
-            const minX = 0.1;
-            const maxX = 0.5;
-            
-            // 为了系统稳定性和实际运行需求，我们选择中间值作为最优x值
-            const optimalX = (minX + maxX) / 2;
-            
-            // 计算对应的y值
-            const optimalY = (recoverySlope * pidParameter * tempDifference) / optimalX;
-            
-            // 确保y值在合理范围内
-            const adjustedY = Math.max(1.0, Math.min(1.5, optimalY));
-            
-            // 如果y值超出范围，调整x值以适应
-            let adjustedX = optimalX;
-            if (adjustedY !== optimalY) {
-                adjustedX = (recoverySlope * pidParameter * tempDifference) / adjustedY;
-                // 确保x值也在合理范围内
-                adjustedX = Math.max(minX, Math.min(maxX, adjustedX));
-            }
-            
-            const xyProduct = recoverySlope * pidParameter * tempDifference;
-            
-            console.log(`计算最优值: k=${recoverySlope}, b=${pidParameter}, c=${tempDifference}`);
-            console.log(`函数: y = kbc/x = ${recoverySlope}*${pidParameter}*${tempDifference}/x`);
-            console.log(`最优x值: ${adjustedX.toFixed(3)}万kW`);
-            console.log(`对应的y值: ${adjustedY.toFixed(3)}万kW`);
-            console.log(`xy乘积: ${xyProduct.toFixed(3)} (理论值，恒等于kbc)`);
-            
-            return {
-                optimalX: adjustedX,
-                optimalY: adjustedY
-            };
-        }
+    <!-- 分析结论 -->
+    <div class="pn" style="padding:8px 12px;">
+      <div style="font-size:12px;color:rgba(180,210,255,.7);margin-bottom:4px;">分析结论</div>
+      <div id="conclusion" style="font-size:11px;color:rgba(160,200,255,.6);line-height:1.6;">
+        调整左侧恢复斜率 k、PID 参数 b、温度差 c，观察冷负荷启动与避免冷负荷启动的功率差异...
+      </div>
+    </div>
+  </div>
 
-        // 生成避免冷负荷启动功率数据（根据用户输入的参数动态调整）
-        function generateAvoidColdStartPower() {
-            const base = 1.1; // 初始和最终功率1.1万kW
-            
-            // 计算最优的x值和y值
-            const optimalValues = calculateOptimalValues();
-            const minPower = optimalValues.optimalX; // 使用最优的x值作为最低功率
-            const peakPower = optimalValues.optimalY; // 使用计算得到的y值作为峰值功率
-            
-            return timeLabels.map((time, i) => {
-                let power = base;
-                
-                // 根据参考图的曲线形状设计
-                if (i >= 0 && i <= 4) { // 起点平台期
-                    power = base;
-                } else if (i === 5) { // 开始下降
-                    power = base * 0.7;
-                } else if (i >= 6 && i <= 8) { // 降到最低功率 - 使用最优的x值
-                    power = minPower;
-                } else if (i === 9) { // 开始上升
-                    power = base * 0.6;
-                } else if (i === 10) { // 尖峰 - 使用计算得到的峰值功率
-                    power = peakPower;
-                } else if (i === 11) { // 下降回基准
-                    power = base * 0.9;
-                } else if (i >= 12 && i <= 23) { // 回到基准功率
-                    power = base;
-                }
-                
-                // 添加小波动
-                const fluctuation = (Math.random() - 0.5) * 0.005;
-                return (power + fluctuation).toFixed(3);
-            });
-        }
+  <!-- Right: 右侧信息面板 -->
+  <div class="pn" style="display:flex;flex-direction:column;gap:5px;">
 
-        // 初始化功率-时间图像图表
-        const powerTimeCtx = document.getElementById('powerTimeChart').getContext('2d');
-        const powerTimeChart = new Chart(powerTimeCtx, {
-            type: 'line',
-            data: {
-                labels: timeLabels,
-                datasets: [
-                    {
-                        label: '正常运行功率',
-                        data: generateNormalOperationPower(),
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: '高峰期',
-                        data: timeLabels.map((time, i) => {
-                            const hour = parseInt(time.split(':')[0]);
-                            return (hour >= 18 && hour <= 21) ? generateNormalOperationPower()[i] : null;
-                        }),
-                        borderColor: 'rgba(249, 115, 22, 0.8)',
-                        backgroundColor: 'rgba(249, 115, 22, 0.2)',
-                        borderWidth: 0,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: 'origin'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            maxRotation: 45, 
-                            autoSkip: true,
-                            maxTicksLimit: 12
-                        } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            callback: v => v + ' 万kW',
-                            stepSize: 0.05 // 分度值0.1万kW
-                        },
-                        suggestedMin: 0.90,
-                        suggestedMax: 1.15
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: 'rgba(226, 232, 240, 0.9)' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.raw} 万kW`;
-                            }
-                        }
-                    }
-                }
-            }
+    <div style="font-size:12px;color:var(--amber);">冷负荷启动分析</div>
+
+    <div class="kp">
+      <div class="lbl">启动峰值功率</div>
+      <div class="val" id="kPeakPw" style="color:var(--red);">--</div>
+      <div class="unit">kW</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">稳态功率</div>
+      <div class="val" id="kSteadyPw" style="color:var(--green);">--</div>
+      <div class="unit">kW</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">峰值持续时间</div>
+      <div class="val" id="kPeakDur" style="color:var(--amber);">--</div>
+      <div class="unit">分钟</div>
+    </div>
+    <div class="kp">
+      <div class="lbl">避免启动节能</div>
+      <div class="val" id="kSavePw" style="color:var(--green);">--</div>
+      <div class="unit">kW·h</div>
+    </div>
+
+    <div style="font-size:12px;color:var(--amber);margin-top:6px;">温度变化</div>
+    <div id="tempChart" style="min-height:280px;width:100%;height:100%;"></div>
+
+    <div style="font-size:12px;color:var(--amber);margin-top:6px;">功率概率分布</div>
+    <div id="distChart" style="min-height:280px;width:100%;height:100%;"></div>
+
+    <div style="flex:1;"></div>
+
+    <div class="pn" style="padding:6px 8px;">
+      <div style="font-size:10px;color:rgba(160,200,255,.4);line-height:1.5;">
+        <span style="color:var(--red);">▶</span> 冷负荷启动：空调停机后重启，功率骤增至 2~3 倍<br>
+        <span style="color:var(--green);">▶</span> 避免启动：分步重启+预冷，峰值降低 15~25%<br>
+        <span style="color:var(--amber);">▶</span> 最优 k∈[1.5, 3.0]，兼顾速度与冲击
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<script>
+  // ===== 分析下拉菜单点击切换 =====
+  document.addEventListener('DOMContentLoaded', function () {
+    var ddStyle = document.createElement('style');
+    ddStyle.textContent = '.nl.dd.open .dd-menu{display:block}';
+    document.head.appendChild(ddStyle);
+
+    document.querySelectorAll('.nl.dd').forEach(function (dd) {
+      var menu = dd.querySelector('.dd-menu');
+      if (!menu) return;
+      dd.addEventListener('click', function (e) {
+        if (menu.contains(e.target)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        var willOpen = !dd.classList.contains('open');
+        document.querySelectorAll('.nl.dd.open').forEach(function (other) {
+          other.classList.remove('open');
         });
+        if (willOpen) dd.classList.add('open');
+      });
+    });
 
-        // 初始化对比图表
-        const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
-        const powerLimit = 1.25; // 功率上限阈值（红色虚线）
-        const comparisonChart = new Chart(comparisonCtx, {
-            type: 'line',
-            data: {
-                labels: timeLabels,
-                datasets: [
-                    {
-                        label: '冷负荷启动',
-                        data: generateColdStartPower(),
-                        borderColor: 'rgba(249, 115, 22, 1)',
-                        backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: false,
-                        hidden: false
-                    },
-                    {
-                        label: '避免冷负荷启动',
-                        data: generateAvoidColdStartPower(),
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.4,
-                        fill: false,
-                        hidden: false
-                    },
-                    {
-                        label: '基准功率',
-                        data: timeLabels.map(() => 1.1),
-                        borderColor: 'rgba(59, 130, 246, 1)',
-                        borderDash: [5, 5],
-                        borderWidth: 1,
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    },
-                    {
-                        label: '功率上限阈值',
-                        data: timeLabels.map(() => powerLimit),
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderDash: [5, 3],
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            maxRotation: 45, 
-                            autoSkip: true,
-                            maxTicksLimit: 12
-                        } 
-                    },
-                    y: { 
-                        grid: { color: 'rgba(59, 130, 246, 0.1)' }, 
-                        ticks: { 
-                            color: 'rgba(226, 232, 240, 0.7)', 
-                            callback: v => v + ' 万kW',
-                            stepSize: 0.05 // 分度值0.1万kW
-                        },
-                        suggestedMin: 0.85,
-                        suggestedMax: 1.15
-                    }
-                },
-                plugins: {
-                    legend: { labels: { color: 'rgba(226, 232, 240, 0.9)' } },
-                    tooltip: {
-                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                        borderColor: 'rgba(59, 130, 246, 0.5)',
-                        borderWidth: 1,
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.dataset.label}: ${context.raw} 万kW`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('.nl.dd.open').forEach(function (dd) {
+        if (!dd.contains(e.target)) dd.classList.remove('open');
+      });
+    });
+  });
+</script>
+<script>
+// ========= 工具 =========
+function $(id){ return document.getElementById(id); }
 
-        // 按钮事件处理
-        document.getElementById('analyzePowerBtn').addEventListener('click', function() {
-            // 模拟分析过程
-            this.disabled = true;
-            this.innerHTML = '<i class="fa fa-spinner fa-spin mr-3"></i> 分析中...';
-            
-            setTimeout(() => {
-                // 显示分析结果
-                document.getElementById('powerAnalysisResult').style.display = 'block';
-                
-                // 更新图表数据
-                powerTimeChart.data.datasets[0].data = generateNormalOperationPower();
-                powerTimeChart.update();
-                
-                comparisonChart.data.datasets[0].data = generateColdStartPower();
-                comparisonChart.data.datasets[1].data = generateAvoidColdStartPower();
-                comparisonChart.update();
-                
-                // 恢复按钮状态
-                this.disabled = false;
-                this.innerHTML = '<i class="fa fa-bar-chart mr-3"></i> 重新分析';
-            }, 1500);
-        });
+function tick(){
+  const n=new Date();
+  $('clk').textContent=n.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick,1000); tick();
 
-        // 显示/隐藏冷负荷启动曲线
-        document.getElementById('showColdStartBtn').addEventListener('click', function() {
-            const isHidden = comparisonChart.isDatasetVisible(0);
-            comparisonChart.setDatasetVisibility(0, !isHidden);
-            comparisonChart.update();
-            this.textContent = isHidden ? '隐藏冷负荷启动' : '显示冷负荷启动';
-        });
+// ========= Tab 切换 =========
+function switchTab(tab){
+  ['compare','optimize','recovery'].forEach(t=>{
+    $(`p${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display='none';
+    document.querySelectorAll('.tab-btn')[['compare','optimize','recovery'].indexOf(t)].classList.remove('active');
+  });
+  const idx={'compare':0,'optimize':1,'recovery':2}[tab];
+  $(`p${tab.charAt(0).toUpperCase()+tab.slice(1)}`).style.display='flex';
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  setTimeout(()=>{
+    if(tab==='compare'&&chartCompare) chartCompare.resize();
+    if(tab==='optimize'&&chartOptimize) chartOptimize.resize();
+    if(tab==='recovery'&&chartRecovery) chartRecovery.resize();
+  },50);
+}
 
-        // 显示/隐藏避免冷负荷启动曲线
-        document.getElementById('showAvoidColdStartBtn').addEventListener('click', function() {
-            const isHidden = comparisonChart.isDatasetVisible(1);
-            comparisonChart.setDatasetVisibility(1, !isHidden);
-            comparisonChart.update();
-            this.textContent = isHidden ? '隐藏避免冷负荷启动' : '显示避免冷负荷启动';
-        });
+// ========= 参数变更 =========
+function onParamChange(){
+  const k = +$('sK').value;
+  const b = +$('sB').value;
+  const tPre = +$('sTpre').value;
+  const c = +$('sC').value;
 
-        // 初始化时隐藏分析结果
-        document.getElementById('powerAnalysisResult').style.display = 'none';
+  $('vK').textContent = k.toFixed(1);
+  $('vB').textContent = b.toFixed(1);
+  $('vTpre').textContent = tPre.toFixed(1);
+  $('vC').textContent = c.toFixed(1);
 
-        // 为"应用更改"按钮添加点击事件
-        document.getElementById('applyChangesBtn').addEventListener('click', function() {
-            // 显示加载状态
-            this.disabled = true;
-            this.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i> 应用中...';
-            
-            // 模拟应用过程
-            setTimeout(() => {
-                // 重新计算最优值并更新图表
-                const optimalValues = calculateOptimalValues();
-                console.log('应用更改后重新计算的最优值:', optimalValues);
-                
-                // 更新图表数据
-                comparisonChart.data.datasets[1].data = generateAvoidColdStartPower();
-                comparisonChart.update();
-                
-                // 如果分析结果已经显示，也更新功率-时间图像
-                if (document.getElementById('powerAnalysisResult').style.display !== 'none') {
-                    powerTimeChart.data.datasets[0].data = generateNormalOperationPower();
-                    powerTimeChart.update();
-                    comparisonChart.data.datasets[0].data = generateColdStartPower();
-                    comparisonChart.update();
-                }
-                
-                // 恢复按钮状态
-                this.disabled = false;
-                this.innerHTML = '<i class="fa fa-refresh mr-2"></i> 应用更改';
-                
-                // 显示成功提示
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 bg-accent text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center';
-                toast.innerHTML = '<i class="fa fa-check-circle mr-2"></i> 参数已成功应用，图表已更新';
-                document.body.appendChild(toast);
-                
-                // 3秒后移除提示
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
-            }, 800);
-        });
+  // 恢复斜率描述
+  let kDesc = k<1?'慢速恢复':k<3?'中速恢复':'快速恢复';
+  let kImpact = k<1?'小':k<3?'中等':'大';
+  $('kDesc').textContent = kDesc;
+  $('kImpact').textContent = kImpact;
 
-        // 每10秒更新一次图表数据，保持数据的实时性
-        setInterval(() => {
-            if (document.getElementById('powerAnalysisResult').style.display !== 'none') {
-                powerTimeChart.data.datasets[0].data = generateNormalOperationPower();
-                powerTimeChart.update();
-                
-                comparisonChart.data.datasets[0].data = generateColdStartPower();
-                comparisonChart.data.datasets[1].data = generateAvoidColdStartPower();
-                comparisonChart.update();
-            }
-        }, 10000);
-    </script>
+  // PID 描述
+  let bStable = b<0.8?'振荡风险':b<1.5?'稳定':'响应慢';
+  let bOvershoot = b<0.8?'15%':b<1.5?'8%':'3%';
+  $('bBstable').textContent = bStable;
+  $('bOvershoot').textContent = bOvershoot;
+
+  // 优化目标
+  const optT = (k*b*c) > 0 ? Math.sqrt(k*b*c) : 1;
+  const optP = optT > 0 ? (k*b*c)/optT : 0;
+  $('optT').textContent = optT.toFixed(1) + ' h';
+  $('optP').textContent = Math.round(optP);
+
+  // 更新右侧指标
+  const peakPw = Math.round(1200 + k*80);
+  const steadyPw = Math.round(400 + c*15);
+  const peakDur = Math.round(8 + k*2);
+  const savePw = Math.round((peakPw - steadyPw*1.2) * peakDur * 0.01);
+
+  $('kPeakPw').textContent = peakPw;
+  $('kSteadyPw').textContent = steadyPw;
+  $('kPeakDur').textContent = peakDur;
+  $('kSavePw').textContent = Math.max(0,savePw);
+
+  updateCompareChart();
+  updateRightCharts(tPre, steadyPw);
+  updateConclusion(k, b, c, peakPw, savePw);
+}
+
+// ========= 图表：冷负荷启动对比 =========
+let chartCompare;
+function initCompareChart(){
+  chartCompare = echarts.init($('cCompare'));
+  window.charts = window.charts || []; window.charts.push(chartCompare);
+  updateCompareChart();
+}
+function updateCompareChart(){
+  const k = +$('sK').value;
+  const b = +$('sB').value;
+  const c = +$('sC').value;
+  const steps = 30;
+
+  // 冷负荷启动：功率骤增 → 缓慢回落
+  const coldStart = [];
+  for(let i=0;i<steps;i++){
+    if(i<3) coldStart.push(Math.round(300 + i*350 + (Math.random()-0.5)*50)); // 骤增
+    else if(i<10) coldStart.push(Math.round(1350 - (i-3)*120 + (Math.random()-0.5)*30)); // 下降
+    else coldStart.push(Math.round(500 + Math.sin(i/5)*40 + (Math.random()-0.5)*20)); // 稳态
+  }
+
+  // 避免冷负荷启动：分步启动
+  const avoidStart = [];
+  for(let i=0;i<steps;i++){
+    if(i<8) avoidStart.push(Math.round(300 + i*40 + (Math.random()-0.5)*20)); // 逐步
+    else if(i<15) avoidStart.push(Math.round(620 + (i-8)*10 + (Math.random()-0.5)*15)); // 缓升
+    else avoidStart.push(Math.round(500 + Math.sin(i/5)*30 + (Math.random()-0.5)*15)); // 稳态
+  }
+
+  const labels = Array.from({length:steps},(_,i)=>i+'min');
+
+  chartCompare.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['冷负荷启动','避免冷负荷启动'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    yAxis:{ type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    series:[
+      { name:'冷负荷启动', type:'line', data:coldStart, lineStyle:{color:'#ff3d57',width:2}, itemStyle:{color:'#ff3d57'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(255,61,87,.2)'},{offset:1,color:'rgba(255,61,87,.02)'}])}, smooth:true, symbol:'circle', symbolSize:4 },
+      { name:'避免冷负荷启动', type:'line', data:avoidStart, lineStyle:{color:'#00e5a0',width:2}, itemStyle:{color:'#00e5a0'}, areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.2)'},{offset:1,color:'rgba(0,229,160,.02)'}])}, smooth:true, symbol:'circle', symbolSize:4 },
+    ],
+  });
+}
+
+// ========= 图表：参数优化 =========
+let chartOptimize;
+function initOptimizeChart(){
+  chartOptimize = echarts.init($('cOptimize'));
+  window.charts = window.charts || []; window.charts.push(chartOptimize);
+  updateOptimizeChart();
+}
+function updateOptimizeChart(){
+  const b = +$('sB').value;
+  const c = +$('sC').value;
+
+  // 不同 k 值下的恢复曲线
+  const kValues = [1.0, 2.0, 3.0, 4.0];
+  const series = kValues.map(k => {
+    const data = [];
+    for(let i=0;i<40;i++){
+      const t = i/4; // 时间（小时）
+      const p = (k*b*c)/Math.max(t,0.5);
+      data.push(Math.round(p));
+    }
+    return {
+      name:`k=${k}`,
+      type:'line',
+      data,
+      lineStyle:{width:1.5},
+      symbol:'none',
+      smooth:true,
+    };
+  });
+
+  const labels = Array.from({length:40},(_,i)=>(i/4).toFixed(1));
+
+  chartOptimize.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:kValues.map(v=>`k=${v}`), top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9, formatter:v=>v+'h'} },
+    yAxis:{ type:'value', name:'功率(kW)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    color:['#ff3d57','#ffb300','#00d2ff','#00e5a0'],
+    series,
+  });
+}
+
+// ========= 图表：恢复曲线 =========
+let chartRecovery;
+function initRecoveryChart(){
+  chartRecovery = echarts.init($('cRecovery'));
+  window.charts = window.charts || []; window.charts.push(chartRecovery);
+  updateRecoveryChart();
+}
+function updateRecoveryChart(){
+  const k = +$('sK').value;
+  const tPre = +$('sTpre').value;
+  const target = 26;
+
+  // 温度恢复曲线（不同 k 值）
+  const steps = 60;
+  const curves = [0.5, 1.0, 2.0, 3.0].map(kVal => {
+    let temp = tPre + 3; // 故障后温度上升
+    return Array.from({length:steps},(_,i)=>{
+      const approach = target + (temp - target) * Math.exp(-kVal * i / 20);
+      return +approach.toFixed(2);
+    });
+  });
+
+  const labels = Array.from({length:steps},(_,i)=>Math.round(i*5)+'min');
+
+  chartRecovery.setOption({
+    tooltip:{ trigger:'axis', backgroundColor:'rgba(6,13,31,.95)', borderColor:'rgba(0,210,255,.3)', textStyle:{color:'#e0e8ff',fontSize:11} },
+    legend:{ data:['k=0.5(慢)','k=1.0','k=2.0','k=3.0(快)'], top:4, textStyle:{color:'rgba(180,210,255,.7)',fontSize:10}, itemWidth:12 },
+    grid:{ left:42, right:16, top:36, bottom:28 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    yAxis:{ type:'value', name:'温度(°C)', nameTextStyle:{color:'rgba(160,200,255,.5)',fontSize:9}, axisLine:{lineStyle:{color:'rgba(0,210,255,.2)'}}, splitLine:{lineStyle:{color:'rgba(0,210,255,.08)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:9} },
+    color:['#00e5a0','#00d2ff','#ffb300','#ff3d57'],
+    series:curves.map((data,i)=>({
+      name:['k=0.5(慢)','k=1.0','k=2.0','k=3.0(快)'][i],
+      type:'line',
+      data,
+      lineStyle:{width:1.5},
+      symbol:'none',
+      smooth:true,
+    })),
+  });
+}
+
+// ========= 右侧小图 =========
+let chartTemp, chartDist;
+function initRightCharts(){
+  chartTemp = echarts.init($('tempChart'));
+  window.charts = window.charts || []; window.charts.push(chartTemp);
+  chartDist = echarts.init($('distChart'));
+  window.charts = window.charts || []; window.charts.push(chartDist);
+  updateRightCharts(26, 400);
+}
+function updateRightCharts(tPre, steadyPw){
+  const labels = Array.from({length:12},(_,i)=>i*2+'h');
+  const tempData = labels.map((_,i)=> +(tPre + Math.sin(i/3)*2 + (Math.random()-0.5)*0.5).toFixed(1));
+  const powerData = labels.map((_,i)=> Math.round(steadyPw + Math.sin(i/2)*steadyPw*0.3 + (Math.random()-0.5)*30));
+
+  chartTemp.setOption({
+    grid:{ left:28, right:8, top:6, bottom:14 },
+    xAxis:{ type:'category', data:labels, axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8}, axisTick:{show:false} },
+    yAxis:{ type:'value', show:false },
+    series:[{ type:'line', data:tempData, lineStyle:{color:'#ffb300',width:1.2}, itemStyle:{color:'#ffb300'}, areaStyle:{color:'rgba(255,179,0,.1)'}, smooth:true, symbol:'none' }],
+  });
+
+  // 功率概率分布（直方图）
+  const bins = [200,300,400,500,600,700,800];
+  const counts = bins.map(()=> Math.round(10 + Math.random()*20));
+  chartDist.setOption({
+    grid:{ left:28, right:8, top:6, bottom:14 },
+    xAxis:{ type:'category', data:bins.map(v=>v+'kW'), axisLine:{lineStyle:{color:'rgba(0,210,255,.15)'}}, axisLabel:{color:'rgba(160,200,255,.5)',fontSize:8, formatter:v=>''} },
+    yAxis:{ type:'value', show:false },
+    series:[{ type:'bar', data:counts, barWidth:14, itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#00d2ff'},{offset:1,color:'rgba(0,210,255,.15)'}]), borderRadius:[2,2,0,0]} }],
+  });
+}
+
+// ========= 分析结论 =========
+function updateConclusion(k, b, c, peakPw, savePw){
+  let html = '';
+  html += `<span style="color:var(--red);">▶ 冷负荷启动峰值</span>：${peakPw} kW，是稳态功率的 ${(peakPw/400).toFixed(1)} 倍，对电网冲击${k>=3?'大':'中等'}。<br>`;
+  html += `<span style="color:var(--green);">▶ 避免启动节能</span>：约 ${savePw} kW·h，相当于减少峰值负荷 ${Math.round(savePw*0.8)} kW。<br>`;
+  html += `<span style="color:var(--amber);">▶ 最优参数</span>：k=${k.toFixed(1)}、b=${b.toFixed(1)}、c=${c.toFixed(1)}，数学模型 xy 最优解 t=${$('optT').textContent}。<br>`;
+  html += `<span style="color:var(--cyan);">▶ 建议</span>：居民区空调系统采用分步重启策略，优先恢复医疗、电梯等关键负荷。`;
+  $('conclusion').innerHTML = html;
+}
+
+// ========= WebSocket =========
+let ws;
+function connectWS(){
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = ()=>{ $('wsSt').textContent='● 实时'; $('wsSt').style.color='var(--green)'; };
+  ws.onclose = ()=>{ $('wsSt').textContent='● 断开'; $('wsSt').style.color='var(--red)'; setTimeout(connectWS,3000); };
+}
+connectWS();
+
+// ========= 初始化 =========
+window.addEventListener('DOMContentLoaded', ()=>{
+  initCompareChart();
+  initOptimizeChart();
+  initRecoveryChart();
+  initRightCharts();
+  onParamChange();
+});
+window.addEventListener('resize', ()=>{
+  if(chartCompare) chartCompare.resize();
+  if(chartOptimize) chartOptimize.resize();
+  if(chartRecovery) chartRecovery.resize();
+  if(chartTemp) chartTemp.resize();
+  if(chartDist) chartDist.resize();
+});
+window.addEventListener('beforeunload', () => {
+  if (window.charts) {
+    window.charts.forEach(c => {
+      if (c && !c.isDisposed()) {
+        c.dispose();
+      }
+    });
+    window.charts = [];
+  }
+});
+</script>
+
+  <script src="./assets/systemData.js"></script>
+  <script src="./assets/live-refresh.js"></script>
 </body>
 </html>
