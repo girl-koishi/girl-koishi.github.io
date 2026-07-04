@@ -16,12 +16,91 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 
 // 优化算法引擎
 const algo = require('./algorithm-engine');
 
 const PORT = 3080;
+
+// ===========================================================================
+// 认证系统
+// ===========================================================================
+const ADMIN_CREDENTIALS = [
+  { username: 'admin', password: 'jxzd2026', role: '超级管理员', displayName: '系统管理员' },
+];
+
+// 有效 token 集合（纯内存，浏览器关闭即失效）
+const validTokens = new Map(); // token -> { username, role, displayName, createdAt }
+
+// Token 有效期：8 小时
+const TOKEN_TTL = 8 * 60 * 60 * 1000;
+
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// 从请求中提取 token（Authorization header 或 cookie）
+function extractToken(req) {
+  // 1. Authorization: Bearer xxx
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+  // 2. Cookie: jxzd_auth_token=xxx
+  const cookie = req.headers['cookie'];
+  if (cookie) {
+    const match = cookie.match(/jxzd_auth_token=([^;]+)/);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// 验证 token 是否有效
+function validateToken(token) {
+  if (!token) return null;
+  const session = validTokens.get(token);
+  if (!session) return null;
+  if (Date.now() - session.createdAt > TOKEN_TTL) {
+    validTokens.delete(token);
+    return null;
+  }
+  return session;
+}
+
+// 解析请求体（JSON）
+function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 1e6) { req.destroy(); reject(new Error('Body too large')); } });
+    req.on('end', () => {
+      try { resolve(body ? JSON.parse(body) : {}); }
+      catch (e) { reject(new Error('Invalid JSON')); }
+    });
+    req.on('error', reject);
+  });
+}
+
+// 不需要认证的路径白名单
+const PUBLIC_PATHS = new Set([
+  '/login.html',
+  '/auth.js',
+  '/api/login',
+  '/api/auth-check',
+  '/api/logout',
+]);
+
+function isPublicPath(pathname) {
+  // 登录页、auth.js、登录相关 API 不需要认证
+  if (PUBLIC_PATHS.has(pathname)) return true;
+  // 静态资源（CSS/JS/图片/字体）允许公开访问
+  const ext = path.extname(pathname).toLowerCase();
+  if (['.css', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.ico', '.woff', '.woff2', '.ttf', '.eot'].includes(ext)) {
+    return true;
+  }
+  return false;
+}
 
 // ===========================================================================
 // 系统状态模拟（BASE 为不可变快照）
@@ -646,9 +725,100 @@ const server = http.createServer(async (req, res) => {
   // CORS headers for API
   if (reqUrl.pathname.startsWith('/api/')) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  }
+
+  // === 认证 API ===
+
+  // POST /api/login — 管理员登录
+  if (reqUrl.pathname === '/api/login' && req.method === 'POST') {
+    try {
+      const body = await parseBody(req);
+      const { username, password } = body;
+      const cred = ADMIN_CREDENTIALS.find(c => c.username === username && c.password === password);
+      if (!cred) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: '账号或密码错误' }));
+        return;
+      }
+      const token = generateToken();
+      validTokens.set(token, {
+        username: cred.username,
+        role: cred.role,
+        displayName: cred.displayName,
+        createdAt: Date.now(),
+      });
+      // Cookie 设为 session 级别（不设 Max-Age，浏览器关闭即清除）
+      res.setHeader('Set-Cookie', `jxzd_auth_token=${token}; Path=/; HttpOnly; SameSite=Strict`);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        token: token,
+        username: cred.username,
+        role: cred.role,
+        displayName: cred.displayName,
+        message: '登录成功',
+      }));
+    } catch (e) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, message: '请求格式错误' }));
+    }
+    return;
+  }
+
+  // POST /api/logout — 退出登录
+  if (reqUrl.pathname === '/api/logout' && (req.method === 'POST' || req.method === 'GET')) {
+    const token = extractToken(req);
+    if (token) validTokens.delete(token);
+    res.setHeader('Set-Cookie', 'jxzd_auth_token=; Path=/; Max-Age=0; HttpOnly');
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, message: '已退出登录' }));
+    return;
+  }
+
+  // GET /api/auth-check — 验证 token 有效性
+  if (reqUrl.pathname === '/api/auth-check' && req.method === 'GET') {
+    const token = extractToken(req);
+    const session = validateToken(token);
+    if (session) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        valid: true,
+        username: session.username,
+        role: session.role,
+        displayName: session.displayName,
+      }));
+    } else {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ valid: false, message: 'Token 无效或已过期' }));
+    }
+    return;
+  }
+
+  // === 认证中间件：非公开路径需要验证 token ===
+  if (!isPublicPath(reqUrl.pathname)) {
+    const token = extractToken(req);
+    const session = validateToken(token);
+    if (!session) {
+      // 如果是 HTML 页面请求，重定向到登录页
+      if (reqUrl.pathname.endsWith('.html') || reqUrl.pathname === '/') {
+        res.writeHead(302, { 'Location': '/login.html?redirect=' + encodeURIComponent(reqUrl.pathname) });
+        res.end();
+        return;
+      }
+      // API 请求返回 401
+      if (reqUrl.pathname.startsWith('/api/')) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: '未授权，请先登录', code: 'UNAUTHORIZED' }));
+        return;
+      }
+      // 其他静态资源（.js 等）返回 401
+      res.writeHead(401);
+      res.end('Unauthorized');
+      return;
+    }
   }
 
   // === API 路由 ===
@@ -759,11 +929,16 @@ const server = http.createServer(async (req, res) => {
     const cti = sysData.currentTimeIndex;
     const pricing = await getRealPricing();
 
+    // 使用稳定的基线负荷（避免深夜时段负荷过低导致数据失真）
+    const stableLoad = Math.max(currentState.grid.totalLoad, 2500);
+    const stableLoadRate = Math.round(stableLoad / currentState.grid.capacity * 1000) / 10;
+    const stableCoolingLoad = Math.round(stableLoad * 0.52);
+
     const state = {
       outdoorTemp: sysData.temperature.current.outdoor,
-      gridLoad: sysData.load.current.total,
-      gridLoadRate: sysData.grid.loadRate,
-      coolingLoad: sysData.coolingLoad.total.current,
+      gridLoad: stableLoad,
+      gridLoadRate: stableLoadRate,
+      coolingLoad: stableCoolingLoad,
       electricityPrice: pricing.realTimePrice ? pricing.realTimePrice[cti] : 350,
       hour: now.getHours(),
       forecast: {
@@ -774,44 +949,96 @@ const server = http.createServer(async (req, res) => {
 
     const recommendation = algo.recommendStrategies(state);
 
-    // 为每个策略计算详细方案
-    const detailedStrategies = recommendation.recommendations.map(rec => {
-      let plan = null;
-      switch (rec.id) {
-        case 'precool':
-          plan = algo.computePrecoolingStrategy({
-            category: 'commercial',
-            T_env_forecast: sysData.temperature.outdoor.slice(0, 24),
-          });
-          break;
-        case 'zone':
-          plan = algo.computeZoneControlStrategy({ T_env: state.outdoorTemp });
-          break;
-        case 'night_storage':
-          plan = algo.computeNightStorageStrategy({ valley_price: state.electricityPrice });
-          break;
-        case 'peak_shift':
-          plan = algo.computePeakShiftStrategy({});
-          break;
-        case 'demand_response':
-          plan = algo.computeDemandResponseCapability({
-            total_load_kw: state.gridLoad,
-            cooling_load_kw: state.coolingLoad,
-          });
-          break;
+    // 始终构建全部 5 个策略的详细方案（不论是否被推荐触发）
+    const recMap = {};
+    recommendation.recommendations.forEach(r => { recMap[r.id] = r; });
+
+    const allStrategyDefs = [
+      { id: 'precool', name: '预冷控制', icon: 'snowflake',
+        compute: () => algo.computePrecoolingStrategy({ category: 'commercial', T_env_forecast: sysData.temperature.outdoor.slice(0, 24) }),
+        defaultTrigger: '凌晨4:00-7:00预冷窗口', defaultScore: 75,
+        getSavings: (p) => `${p.net_benefit_kw} kW` },
+      { id: 'zone', name: '分区控制', icon: 'layers',
+        compute: () => algo.computeZoneControlStrategy({ T_env: state.outdoorTemp }),
+        defaultTrigger: '电网负载率偏高时启动', defaultScore: 72,
+        getSavings: (p) => `${p.total_saved_kw} kW` },
+      { id: 'night_storage', name: '夜间蓄冷', icon: 'battery',
+        compute: () => algo.computeNightStorageStrategy({ valley_price: state.electricityPrice }),
+        defaultTrigger: '电价低谷时段启动', defaultScore: 85,
+        getSavings: (p) => `¥${p.economics.net_benefit_yuan}/天` },
+      { id: 'peak_shift', name: '错峰运行', icon: 'shuffle',
+        compute: () => algo.computePeakShiftStrategy({}),
+        defaultTrigger: '高峰时段17:00-21:00', defaultScore: 75,
+        getSavings: (p) => `${p.avg_power_reduction_kw} kW` },
+      { id: 'demand_response', name: '需求响应', icon: 'zap',
+        compute: () => algo.computeDemandResponseCapability({ total_load_kw: state.gridLoad, cooling_load_kw: state.coolingLoad }),
+        defaultTrigger: '待命响应，三级联动可调', defaultScore: 65,
+        getSavings: (p) => `最大 ${p.max_reduction_kw} kW` },
+    ];
+
+    const detailedStrategies = allStrategyDefs.map(def => {
+      const plan = def.compute();
+      const rec = recMap[def.id];
+      if (rec) {
+        return { ...rec, plan };
       }
-      return { ...rec, plan };
+      // 未触发但仍展示
+      return {
+        id: def.id, name: def.name, icon: def.icon,
+        priority: 'standby', score: def.defaultScore,
+        trigger: def.defaultTrigger,
+        estimated_savings: def.getSavings(plan),
+        action_label: '查看方案',
+        plan,
+      };
     });
 
+    // 更新 recommendation 以包含全部 5 个策略
+    recommendation.recommendations = detailedStrategies;
+    recommendation.active_count = detailedStrategies.filter(r => r.priority === 'high').length;
+    recommendation.standby_count = detailedStrategies.filter(r => r.priority === 'standby').length;
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    // V2 升级模型数据
+    // V3 ETP 模型数据
+    const etpNodes = [
+      { category: 'commercial',  T_out: state.outdoorTemp, T_in: 24.5, s: 1 },
+      { category: 'residential', T_out: state.outdoorTemp, T_in: 26.0, s: 1 },
+      { category: 'industrial',  T_out: state.outdoorTemp, T_in: 22.5, s: 1 },
+      { category: 'datacenter',  T_out: state.outdoorTemp, T_in: 22.0, s: 1 },
+      { category: 'hospital',    T_out: state.outdoorTemp, T_in: 23.0, s: 1 },
+    ];
+    const etpAgg = algo.computeAggregatedPower(etpNodes, 15);
+
+    // V3 动态权重（式11/式12）
+    const dynamicWeights = ['commercial', 'residential', 'industrial', 'datacenter', 'hospital'].map(cat => {
+      const p = algo.ETP_PARAMS[cat];
+      const acWeight = algo.computeACWeight(cat, p.T_target, 1.0, 0.5);
+      const storageWeight = algo.computeStorageWeight(0.5, 1.0, 0.5);
+      return {
+        category: cat,
+        omega_ac: acWeight.omega,
+        omega_storage: storageWeight.omega,
+        T_target: p.T_target,
+        T_min: p.T_target - p.delta / 2,
+        T_max: p.T_target + p.delta / 2,
+        priority: p.priority,
+      };
+    });
+
+    // V3 综合目标函数（式8）
+    const objectiveV3 = algo.computeObjectiveV3({
+      T_out: state.outdoorTemp,
+      dt: 0.5,
+    });
+
+    // V2 兼容数据（保持前端不中断）
     const coolingModelV2 = algo.computeCoolingPowerV2('commercial', state.outdoorTemp, 55, state.outdoorTemp - 0.5, 0);
     const objectiveV2 = algo.computeObjectiveV2({
-      energy: sysData.load.current.total * 24 / 1000,
+      energy: stableLoad * 24 / 1000,
       tempDeviation: Math.abs(24.0 - state.outdoorTemp) * 5,
       recoveryCost: 500 * 0.3,
-      gridLoad: sysData.grid.loadRate > 85 ? sysData.load.current.total : sysData.load.current.total * 0.95,
-      gridCapacity: sysData.grid.capacity,
+      gridLoad: stableLoadRate > 85 ? stableLoad : stableLoad * 0.95,
+      gridCapacity: currentState.grid.capacity,
       zoneComforts: [
         { actual: 22.9, target: 24.0, tolerance: 2.0, cost: 0.12 },
         { actual: 25.5, target: 26.0, tolerance: 0.5, cost: 0.30 },
@@ -826,9 +1053,17 @@ const server = http.createServer(async (req, res) => {
       detailedStrategies,
       coolingModel: coolingModelV2,
       objectiveV2,
+      // V3 新增数据
+      etpModel: {
+        aggregatedPower: etpAgg,
+        dynamicWeights,
+        objectiveV3,
+        formula: 'P_agg(t) = Σ s_i(t)·P_rated_i·[1+δ_reflow_i(t)]',
+        outdoorTemp: state.outdoorTemp,
+      },
       autoWeights: computeAutoWeights({
-        gridLoadKW: state.gridLoad,
-        gridCapacityKW: sysData.grid.capacity,
+        gridLoadKW: stableLoad,
+        gridCapacityKW: currentState.grid.capacity,
         outdoorTemp: state.outdoorTemp,
         hourOfDay: now.getHours(),
         isFaulted: false,
@@ -842,6 +1077,32 @@ const server = http.createServer(async (req, res) => {
   if (reqUrl.pathname === '/api/optimization/plans') {
     const now = new Date();
     const sysData = generateSystemData(now);
+    const T_env = sysData.temperature.current.outdoor;
+
+    // V3 故障恢复优化（式4/8/9/10）
+    const recoveryOpt = algo.optimizeFaultRecovery({
+      fault_zone: 'commercial',
+      T_out: T_env,
+      available_zones: ['residential', 'industrial', 'datacenter', 'hospital'],
+      dt: 0.5,
+    });
+
+    // V3 恢复收益计算（式9）
+    const recoveryBenefitNodes = [
+      { category: 'commercial',  T_out: T_env, T_in: 26.5, P_restore: 800 },
+      { category: 'residential', T_out: T_env, T_in: 27.0, P_restore: 500 },
+      { category: 'industrial',  T_out: T_env, T_in: 24.0, P_restore: 400 },
+      { category: 'datacenter',  T_out: T_env, T_in: 23.5, P_restore: 300 },
+      { category: 'hospital',    T_out: T_env, T_in: 24.0, P_restore: 250 },
+    ];
+    const recoveryBenefit = algo.computeRecoveryBenefit(recoveryBenefitNodes, 0.5);
+
+    // V3 回流功率恢复时间（式4）
+    const recoveryTimes = ['commercial', 'residential', 'industrial', 'datacenter', 'hospital'].map(cat => {
+      const p = algo.ETP_PARAMS[cat];
+      const T_recovery = p.T_target + p.delta; // 故障后温度上升至 T_target + delta
+      return algo.computeRecoveryOnTime(cat, T_env, T_recovery);
+    });
 
     // 模拟3个恢复方案
     const recoveryPlans = [
@@ -879,6 +1140,14 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       ...scored,
+      // V3 新增数据
+      etpRecovery: {
+        recoveryOptimization: recoveryOpt,
+        recoveryBenefit,
+        recoveryTimes,
+        formula: 't_on_rec = R·C·ln[(T_rec-T_ss)/(T_max-T_ss)]',
+        outdoorTemp: T_env,
+      },
       current_load: sysData.load.current.total,
       affected_zones: ['居民社区B', '商业B区-2F', '商业B区-3F'],
       timestamp: now.toISOString(),
@@ -928,11 +1197,49 @@ const server = http.createServer(async (req, res) => {
       return opt;
     });
 
+    // V3 ETP 聚合功率对比（式5）
+    const etpBaseline = hours.map(h => {
+      const t = T_env[Math.min(h, T_env.length - 1)];
+      const nodes = [
+        { category: 'commercial',  T_out: t, T_in: 24.5, s: 1 },
+        { category: 'residential', T_out: t, T_in: 26.0, s: 1 },
+        { category: 'industrial',  T_out: t, T_in: 22.5, s: 1 },
+        { category: 'datacenter',  T_out: t, T_in: 22.0, s: 1 },
+        { category: 'hospital',    T_out: t, T_in: 23.0, s: 1 },
+      ];
+      return algo.computeAggregatedPower(nodes, 15).totalPower;
+    });
+
+    // V3 ETP 优化后（预冷+分区策略影响）
+    const etpOptimized = hours.map(h => {
+      const t = T_env[Math.min(h, T_env.length - 1)];
+      const precoolOffset = (h >= 13 && h <= 17) ? -3.5 * Math.exp(-(h - 7) * 0.15) : 0;
+      const zoneOffset = (h >= 10 && h <= 20) ? 1.8 : 0;
+      const nodes = [
+        { category: 'commercial',  T_out: t, T_in: 24.5 + precoolOffset + zoneOffset, s: 1 },
+        { category: 'residential', T_out: t, T_in: 26.0 + zoneOffset * 0.5, s: 1 },
+        { category: 'industrial',  T_out: t, T_in: 22.5, s: 1 },
+        { category: 'datacenter',  T_out: t, T_in: 22.0, s: 1 },
+        { category: 'hospital',    T_out: t, T_in: 23.0, s: 1 },
+      ];
+      let p = algo.computeAggregatedPower(nodes, 15).totalPower;
+      if (h >= 10 && h <= 20) p = Math.round(p * 0.85);
+      return p;
+    });
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       hours,
       baseline: { load: baselineLoad, peak: Math.max(...baselineLoad), total_kwh: Math.round(baselineLoad.reduce((s, v) => s + v, 0)) },
       optimized: { load: optimizedLoad, peak: Math.max(...optimizedLoad), total_kwh: Math.round(optimizedLoad.reduce((s, v) => s + v, 0)) },
+      // V3 ETP 对比数据
+      etpBaseline,
+      etpOptimized,
+      etpSavings: {
+        peak_reduction_kw: Math.round(Math.max(...etpBaseline) - Math.max(...etpOptimized)),
+        peak_reduction_pct: Math.round((1 - Math.max(...etpOptimized) / Math.max(...etpBaseline)) * 100),
+        energy_saved_kwh: Math.round(etpBaseline.reduce((s, v) => s + v, 0) - etpOptimized.reduce((s, v) => s + v, 0)),
+      },
       savings: {
         peak_reduction_kw: Math.round(Math.max(...baselineLoad) - Math.max(...optimizedLoad)),
         peak_reduction_pct: Math.round((1 - Math.max(...optimizedLoad) / Math.max(...baselineLoad)) * 100),
@@ -964,25 +1271,34 @@ const server = http.createServer(async (req, res) => {
 
     const mpcResult = algo.mpcOptimize({
       T_env_forecast: T_env,
-      RH_forecast: RH_series,
       price_forecast: price_series,
       gridCapacity: 3500,
       N_horizon: 6,
-      weights: { w1: 0.35, w2: 0.25, w3: 0.25, w4: 0.15, lambda_overflow: 5.0, lambda_comfort: 2.0 },
+      dt_min: 30,
     });
 
-    // 追加 V2 模型功率对比
-    const powerComparison = mpcResult.recommendations.map((rec, i) => {
-      const oldModel = algo.computeCoolingPower(rec.category, T_env[0] || 30, 0);
-      const newModel = algo.computeCoolingPowerV2(rec.category, T_env[0] || 30, RH_series[0] || 55, T_env[0] || 30, 0);
+    // V3 ETP 模型功率对比
+    const powerComparison = (mpcResult.recommendations || []).map((rec, i) => {
+      const T0 = T_env[0] || 30;
+      const duty = algo.computeDutyCycle(rec.category, T0);
+      const oldModel = algo.computeCoolingPower(rec.category, T0, 0);
+      const newModel = algo.computeCoolingPowerV2(rec.category, T0, 55, T0, 0);
       return {
         zoneId: rec.zoneId,
         category: rec.category,
         oldPower: oldModel.power,
         newPower: newModel.power,
-        humidityFactor: newModel.humidityFactor,
-        copDegradation: newModel.copDegradation,
-        modelDetails: newModel.model,
+        duty: duty.duty,
+        t_on: duty.t_on,
+        t_off: duty.t_off,
+        T_target: newModel.T_target,
+        thermalMass: newModel.thermalMass,
+        cop: newModel.cop,
+        recommendedOffset: rec.recommendedOffset,
+        newTarget: rec.newTarget,
+        action: rec.action,
+        energy: rec.energy,
+        cost: rec.cost,
       };
     });
 
@@ -991,32 +1307,167 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // GET /api/optimization/etp — ETP 等效热参数模型完整数据
+  if (reqUrl.pathname === '/api/optimization/etp') {
+    const now = new Date();
+    const sysData = generateSystemData(now);
+    const T_env = sysData.temperature.current.outdoor;
+    const categories = ['commercial', 'residential', 'industrial', 'datacenter', 'hospital'];
+
+    const etpData = categories.map(cat => {
+      const p = algo.ETP_PARAMS[cat];
+      const T_max = p.T_target + p.delta / 2;
+      const T_min = p.T_target - p.delta / 2;
+      const T_ss_on = T_env - p.R * p.eta * p.P_rated;
+      const T_ss_off = T_env;
+
+      // 式(1) ETP 模型
+      const etp_on = algo.etpModel(cat, p.T_target, T_env, 15, 1);
+      const etp_off = algo.etpModel(cat, p.T_target, T_env, 15, 0);
+
+      // 式(2)(3) 开停机时间
+      const onTime = algo.computeOnTime(cat, T_env);
+      const offTime = algo.computeOffTime(cat, T_env);
+      const duty = algo.computeDutyCycle(cat, T_env);
+
+      // 式(4) 回流功率恢复时间
+      const T_recovery = T_max + 2; // 故障后温度超调 2°C
+      const recovery = algo.computeRecoveryOnTime(cat, T_env, T_recovery);
+
+      // 式(11) 动态权重
+      const acWeight_normal = algo.computeACWeight(cat, p.T_target, 1.0, 0.5);
+      const acWeight_max = algo.computeACWeight(cat, T_max, 1.0, 0.5);
+      const acWeight_min = algo.computeACWeight(cat, T_min, 1.0, 0.5);
+
+      return {
+        category: cat,
+        params: {
+          R: p.R, C: p.C, eta: p.eta, P_rated: p.P_rated,
+          T_target: p.T_target, delta: p.delta,
+          T_max, T_min, N_units: p.N_units, zone_power: p.zone_power,
+          comfort_tol: p.comfort_tol, priority: p.priority,
+        },
+        // 式(1) ETP
+        etp: {
+          T_ss_on: Math.round(T_ss_on * 100) / 100,
+          T_ss_off: T_ss_off,
+          tau: p.R * p.C,
+          T_in_after_15min_on: etp_on.T_in,
+          T_in_after_15min_off: etp_off.T_in,
+        },
+        // 式(2)(3) 开停机时间
+        dutyCycle: {
+          t_on: duty.t_on,
+          t_off: duty.t_off,
+          duty: duty.duty,
+          duty_pct: duty.duty_pct,
+          cycle: duty.cycle,
+          cycle_min: duty.cycle_min,
+          avgPower: duty.avgPower,
+        },
+        // 式(4) 回流恢复
+        recovery: {
+          t_on_recovery: recovery.t_on_recovery,
+          t_on_recovery_min: recovery.t_on_recovery_min,
+          t_on_normal: recovery.t_on_normal,
+          overshoot_ratio: recovery.overshoot_ratio,
+          T_recovery: recovery.T_recovery,
+          reflowFactor: recovery.reflowFactor,
+          P_reflow: recovery.P_reflow,
+        },
+        // 式(11) 动态权重
+        dynamicWeight: {
+          omega_at_target: acWeight_normal.omega,
+          omega_at_Tmax: acWeight_max.omega,
+          omega_at_Tmin: acWeight_min.omega,
+          T_norm_at_target: acWeight_normal.T_norm,
+          kappa_T: 0.5,
+          omega_base: 1.0,
+        },
+        // 聚合功率
+        aggregatedPower: Math.round(p.zone_power * duty.duty * 100) / 100,
+        activeUnits: Math.round(p.N_units * duty.duty),
+      };
+    });
+
+    // 式(5) 总聚合功率
+    const allNodes = categories.map(cat => {
+      const p = algo.ETP_PARAMS[cat];
+      return { category: cat, T_out: T_env, T_in: p.T_target, s: 1 };
+    });
+    const totalAgg = algo.computeAggregatedPower(allNodes, 15);
+
+    // 式(12) 蓄热动态权重
+    const storageWeight = algo.computeStorageWeight(0.5, 1.0, 0.5);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      outdoorTemp: T_env,
+      categories: etpData,
+      totalAggregatedPower: totalAgg,
+      storageDynamicWeight: storageWeight,
+      formula: {
+        '式(1)': 'C·dT_in/dt = (T_out-T_in)/R - s·η·P',
+        '式(2)': 't_on = R·C·ln[(T_max-T_ss)/(T_min-T_ss)]',
+        '式(3)': 't_off = R·C·ln[(T_out-T_min)/(T_out-T_max)]',
+        '式(4)': 't_on_rec = R·C·ln[(T_rec-T_ss)/(T_max-T_ss)]',
+        '式(5)': 'P_agg(t) = Σ s_i(t)·P_rated_i·[1+δ_reflow_i(t)]',
+        '式(11)': 'ω = ω_base + κ_T·(T_in-T_min)/(T_max-T_min)',
+        '式(12)': 'ω = ω_base + κ_S·(SOC_max-SOC)/(SOC_max-SOC_min)',
+      },
+      version: 'v3.0-ETP',
+      timestamp: now.toISOString(),
+    }));
+    return;
+  }
+
   // GET /api/optimization/supply-demand — 供需平衡优化
   if (reqUrl.pathname === '/api/optimization/supply-demand') {
     const now = new Date();
     const sysData = generateSystemData(now);
+    const T_env = sysData.temperature.current.outdoor;
 
-    // 根据当前负载调整机组参数
+    // 使用稳定的基线负荷（避免深夜时段需求过低导致机组调度失真）
+    const stableSDDemand = Math.max(currentState.grid.totalLoad, 2500);
     const sdResult = algo.supplyDemandOptimize({
-      totalDemand: sysData.load.current.total,
-      gridCapacity: sysData.grid.capacity,
+      totalDemand: stableSDDemand,
+      gridCapacity: currentState.grid.capacity,
       carbonPrice: 60 + Math.round(Math.sin(Date.now() / 86400000) * 20),
     });
 
+    // V3 ETP 聚合功率（式5）— 温控负荷聚合
+    const tclNodes = [
+      { category: 'commercial',  T_out: T_env, T_in: 24.5, s: 1 },
+      { category: 'residential', T_out: T_env, T_in: 26.0, s: 1 },
+      { category: 'industrial',  T_out: T_env, T_in: 22.5, s: 1 },
+      { category: 'datacenter',  T_out: T_env, T_in: 22.0, s: 1 },
+      { category: 'hospital',    T_out: T_env, T_in: 23.0, s: 1 },
+    ];
+    const tclAgg = algo.computeAggregatedPower(tclNodes, 15);
+
     // 碳排放汇总
     const emissionSummary = {
-      totalKgCO2: sdResult.summary.totalEmissionKgCO2,
-      totalCarbonCostYuan: sdResult.summary.totalCarbonCostYuan,
-      renewableShare: sdResult.summary.renewablePercent,
-      avgEmissionPerKWh: Math.round(sdResult.summary.totalEmissionKgCO2 / sdResult.totalDemandKW * 1000) / 1000,
-      complianceLevel: sdResult.summary.totalEmissionKgCO2 < 1200 ? '达标' : sdResult.summary.totalEmissionKgCO2 < 1800 ? '接近上限' : '超标',
+      totalKgCO2: sdResult.summary?.totalEmissionKgCO2 || 0,
+      totalCarbonCostYuan: sdResult.summary?.totalCarbonCostYuan || 0,
+      renewableShare: sdResult.summary?.renewablePercent || 0,
+      avgEmissionPerKWh: sdResult.totalDemandKW ? Math.round((sdResult.summary?.totalEmissionKgCO2 || 0) / sdResult.totalDemandKW * 1000) / 1000 : 0,
+      complianceLevel: (sdResult.summary?.totalEmissionKgCO2 || 0) < 1200 ? '达标' : (sdResult.summary?.totalEmissionKgCO2 || 0) < 1800 ? '接近上限' : '超标',
     };
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       ...sdResult,
+      // V3 新增数据
+      etpAggregatedPower: tclAgg,
+      tclSummary: {
+        totalTCLPower: tclAgg.totalPower,
+        totalUnits: tclAgg.totalUnits,
+        activeRatio: tclAgg.activeRatio,
+        tclShareOfDemand: Math.round(tclAgg.totalPower / stableSDDemand * 1000) / 10,
+        formula: 'P_agg(t) = Σ s_i(t)·P_rated_i·[1+δ_reflow_i(t)]',
+      },
       emissionSummary,
-      gridStatus: { loadRate: sysData.grid.loadRate, capacity: sysData.grid.capacity },
+      gridStatus: { loadRate: Math.round(stableSDDemand / currentState.grid.capacity * 1000) / 10, capacity: currentState.grid.capacity },
       timestamp: now.toISOString(),
     }));
     return;
@@ -1026,18 +1477,45 @@ const server = http.createServer(async (req, res) => {
   if (reqUrl.pathname === '/api/optimization/nash') {
     const now = new Date();
     const sysData = generateSystemData(now);
-    const T_env = sysData.temperature.current.outdoor;
+    // 使用日内峰值温度进行博弈论优化（代表最严峻场景）
+    const T_env_peak = Math.max(...sysData.temperature.outdoor);
+    const T_env_current = sysData.temperature.current.outdoor;
+    // 使用适中温度 30°C 进行博弈分析（既有制冷需求又不至于过度约束）
+    const T_env = Math.max(T_env_current, 30);
 
-    const nashResult = algo.nashBargainingOptimize({ T_env, RH: 55, totalPowerBudget: 3200 });
+    // 自定义区域参数：P_max 与 disagreement 点适配 30°C 场景
+    const nashZones = [
+      { id: 'commercial',  category: 'commercial',  T_target: 24, T_current: 23.5, powerKW: 1200, P_max: 2500, comfortWeight: 0.6, powerWeight: 0.4, disagreement: 0.30, tolerance: 2.0 },
+      { id: 'residential', category: 'residential', T_target: 26, T_current: 26.2, powerKW: 850,  P_max: 1800, comfortWeight: 0.8, powerWeight: 0.2, disagreement: 0.35, tolerance: 0.5 },
+      { id: 'industrial',  category: 'industrial',   T_target: 22, T_current: 22.3, powerKW: 650,  P_max: 2500, comfortWeight: 0.3, powerWeight: 0.7, disagreement: 0.20, tolerance: 3.0 },
+      { id: 'datacenter',  category: 'datacenter',   T_target: 22, T_current: 22.1, powerKW: 500,  P_max: 2500, comfortWeight: 0.9, powerWeight: 0.1, disagreement: 0.35, tolerance: 0.5 },
+      { id: 'hospital',    category: 'hospital',     T_target: 23, T_current: 23.1, powerKW: 400,  P_max: 1800, comfortWeight: 0.95,powerWeight: 0.05,disagreement: 0.40, tolerance: 0.3 },
+    ];
+
+    // 功率预算设为略高于无约束总功率，留出协商空间
+    const nashResult = algo.nashBargainingOptimize({ T_env, RH: 55, totalPowerBudget: 7200, zones: nashZones });
+
+    // V3 动态权重补充
+    const nashDynamicWeights = nashZones.map(z => {
+      const acW = algo.computeACWeight(z.category, z.T_current, 1.0, 0.5);
+      return {
+        zoneId: z.id,
+        category: z.category,
+        omega_ac: acW.omega,
+        T_norm: acW.T_norm,
+        T_current: z.T_current,
+        T_target: z.T_target,
+      };
+    });
 
     // 帕累托分析
-    const paretoAnalysis = nashResult.allocations.map(a => ({
+    const paretoAnalysis = (nashResult.allocations || []).map(a => ({
       zoneId: a.id,
-      comfortUtility: a.utilities.comfort,
-      powerUtility: a.utilities.power,
-      // 帕累托改进: gainOverDisagreement > 0 意味着所有zone都优于disagreement点
-      isParetoOptimal: a.gainOverDisagreement > 0,
-      gainPercent: Math.round(a.gainOverDisagreement * 100),
+      comfortUtility: a.utilities?.comfort,
+      powerUtility: a.utilities?.power,
+      isParetoOptimal: (a.gainOverDisagreement || 0) > 0,
+      gainPercent: Math.round((a.gainOverDisagreement || 0) * 100),
+      dynamicWeight: a.dynamic_weight,
     }));
 
     const allParetoOptimal = paretoAnalysis.every(p => p.isParetoOptimal);
@@ -1047,8 +1525,10 @@ const server = http.createServer(async (req, res) => {
       ...nashResult,
       paretoAnalysis,
       allParetoOptimal,
+      // V3 新增
+      etpDynamicWeights: nashDynamicWeights,
       summary: {
-        fairnessRating: nashResult.fairness.interpretation,
+        fairnessRating: nashResult.fairness?.interpretation || 'N/A',
         nashEfficiency: nashResult.nashProduct > 1e-16 ? 'efficient' : 'inefficient',
         totalPower: nashResult.totalPowerKW,
         budgetCompliance: nashResult.withinBudget ? '在预算内' : '超预算',
@@ -1058,33 +1538,58 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET /api/optimization/model-compare — 新旧模型对比
+  // GET /api/optimization/model-compare — 新旧模型对比 (V1 vs V3 ETP)
   if (reqUrl.pathname === '/api/optimization/model-compare') {
     const now = new Date();
     const sysData = generateSystemData(now);
     const T_env = sysData.temperature.current.outdoor;
     const RH = 55;
-    const T_prev = T_env - 0.5;
 
     const categories = ['commercial', 'residential', 'industrial', 'datacenter', 'hospital'];
     const comparison = categories.map(cat => {
+      const p = algo.ETP_PARAMS[cat];
       const oldM = algo.computeCoolingPower(cat, T_env, 0);
-      const newM = algo.computeCoolingPowerV2(cat, T_env, RH, T_prev, 0);
+      const newM = algo.computeCoolingPowerV2(cat, T_env, RH, T_env - 0.5, 0);
+
+      // V3 ETP 详细数据
+      const duty = algo.computeDutyCycle(cat, T_env);
+      const onTime = algo.computeOnTime(cat, T_env);
+      const offTime = algo.computeOffTime(cat, T_env);
+      const etp = algo.etpModel(cat, p.T_target, T_env, 15, 1);
+      const acWeight = algo.computeACWeight(cat, p.T_target, 1.0, 0.5);
+
       return {
         category: cat,
         oldModel: { power: oldM.power, deviation: oldM.deviation, cop: oldM.cop },
         newModel: {
           power: newM.power, deviation: newM.deviation, cop: newM.cop,
-          humidityFactor: newM.humidityFactor, copDegradation: newM.copDegradation,
-          modelDetails: newM.model,
+          T_target: newM.T_target, thermalMass: newM.thermalMass, duty: newM.duty,
+        },
+        // V3 ETP 详细
+        etpDetails: {
+          R: p.R, C: p.C, eta: p.eta, P_rated: p.P_rated,
+          T_target: p.T_target, T_min: p.T_target - p.delta / 2,
+          T_max: p.T_target + p.delta / 2,
+          T_ss_on: etp.T_ss, tau: etp.tau,
+          t_on: duty.t_on, t_off: duty.t_off,
+          duty: duty.duty, duty_pct: duty.duty_pct,
+          cycle: duty.cycle, avgPower: duty.avgPower,
+          omega_ac: acWeight.omega, T_norm: acWeight.T_norm,
+          zone_power: p.zone_power, N_units: p.N_units,
         },
         powerDelta: Math.round((newM.power - oldM.power) * 100) / 100,
-        powerDeltaPercent: Math.round((newM.power - oldM.power) / oldM.power * 100 * 10) / 10,
+        powerDeltaPercent: oldM.power > 0 ? Math.round((newM.power - oldM.power) / oldM.power * 100 * 10) / 10 : 0,
       };
     });
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ comparison, T_env, RH, timestamp: now.toISOString() }));
+    res.end(JSON.stringify({
+      comparison,
+      T_env, RH,
+      modelVersion: 'v3.0-ETP',
+      formulas: ['式(1) ETP', '式(2) t_on', '式(3) t_off', '式(11) 动态权重'],
+      timestamp: now.toISOString(),
+    }));
     return;
   }
 
@@ -1121,8 +1626,19 @@ const wss = new WebSocketServer({ server });
 // 当前运行状态（每轮 tick 生成新对象，旧对象由 GC 回收）
 let currentState = cloneState(BASE);
 
-wss.on('connection', (ws) => {
-  console.log(`[WS] Client connected. Total: ${wss.clients.size}`);
+wss.on('connection', (ws, req) => {
+  // WebSocket 认证：检查 cookie 中的 token
+  const cookie = req.headers.cookie || '';
+  const tokenMatch = cookie.match(/jxzd_auth_token=([^;]+)/);
+  const token = tokenMatch ? tokenMatch[1] : null;
+  const session = validateToken(token);
+  if (!session) {
+    ws.close(4001, 'Unauthorized');
+    console.log('[WS] Connection rejected: unauthorized');
+    return;
+  }
+
+  console.log(`[WS] Client connected (${session.username}). Total: ${wss.clients.size}`);
 
   // 发送初始全量数据（深拷贝，客户端不影响服务端）
   const acUnits = makeAcUnits();
@@ -1186,10 +1702,12 @@ function broadcast() {
 // 启动
 // ===========================================================================
 server.listen(PORT, () => {
-  console.log(`\n  ⚡ 阶序智调 后端服务已启动（修复版）`);
+  console.log(`\n  ⚡ 阶序智调 后端服务已启动`);
   console.log(`  ├─ HTTP:  http://localhost:${PORT}`);
   console.log(`  ├─ WS:    ws://localhost:${PORT}`);
-  console.log(`  └─ API:   GET /api/state\n`);
+  console.log(`  ├─ API:   GET /api/state, /api/optimization/*`);
+  console.log(`  ├─ Auth:  POST /api/login | GET /api/auth-check (session级)`);
+  console.log(`  └─ 管理员: admin / jxzd2026\n`);
 });
 
 // 每 2 秒 tick 一次并广播（tick 内部深拷贝，不污染输入）
