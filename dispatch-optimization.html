@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="auth.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>调度优化 — 阶序智调</title>
+<title>调度优化 — 阶序智调 (V3 ETP)</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 :root{
@@ -51,14 +52,13 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .nl.on{color:var(--cyan);background:rgba(0,210,255,.08);border-color:rgba(0,210,255,.16);box-shadow:0 0 8px rgba(0,210,255,.06)}
 .nl i{font-size:7px}
 
-/* ===== MAIN: 2-column grid ===== */
-#mn{flex:1;min-height:0;display:grid;grid-template-columns:6fr 4fr;gap:5px;padding:5px;overflow:hidden}
+/* ===== MAIN: 3-column grid ===== */
+#mn{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;padding:5px;overflow:hidden}
 .col{display:flex;flex-direction:column;gap:5px;min-height:0;overflow:hidden}
 
 /* ===== PANEL ===== */
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:6px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s,box-shadow .3s;box-shadow:0 1px 10px rgba(0,0,0,.3)}
 .panel:hover{border-color:var(--border-h);box-shadow:0 1px 10px rgba(0,0,0,.3),0 0 12px rgba(57,128,255,.06)}
-
 .ph{display:flex;align-items:center;gap:8px;padding:8px 12px 5px;border-bottom:1px solid rgba(0,210,255,.035);flex-shrink:0}
 .phi{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:8px;flex-shrink:0}
 .phi.c{background:rgba(0,210,255,.1);color:var(--cyan)}
@@ -85,6 +85,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .chart-w{flex:1;min-height:0;position:relative;padding:4px 8px}
 .chart-w>div{width:100%;height:100%}
 
+/* ===== ETP Table ===== */
+.etp-table{width:100%;border-collapse:collapse;font-size:9px}
+.etp-table th{padding:4px 3px;text-align:center;color:var(--t2);font-weight:400;border-bottom:1px solid rgba(0,210,255,.08);font-size:8px;white-space:nowrap}
+.etp-table td{padding:3px 2px;text-align:center;font-family:var(--mono);border-bottom:1px solid rgba(0,210,255,.02);font-size:9px}
+.etp-table tr:hover td{background:rgba(0,210,255,.02)}
+.etp-table .cat-name{font-family:inherit;text-align:left;padding-left:4px;font-size:9px;color:var(--t1)}
+.cat-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
 /* ===== J Value Display ===== */
 .j-display{text-align:center;padding:6px 0}
 .j-val{font-family:var(--mono);font-size:38px;font-weight:700;background:linear-gradient(135deg,#00d2ff,#3980ff,#b388ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -92,23 +100,26 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .j-breakdown{display:flex;gap:14px;justify-content:center;margin-top:5px}
 .j-bp{text-align:center}
 .j-bv{font-family:var(--mono);font-size:16px;font-weight:600}
-.j-bv.blue{color:var(--blue)}.j-bv.cyan{color:var(--cyan)}.j-bv.purple{color:var(--purple)}
+.j-bv.blue{color:var(--blue)}.j-bv.cyan{color:var(--cyan)}.j-bv.purple{color:var(--purple)}.j-bv.green{color:var(--green)}
 .j-bl{font-size:8px;color:var(--t2)}
 
-/* ===== Auto-Weight Bars ===== */
-.aw-row{display:flex;align-items:center;gap:8px;margin:3px 0}
-.aw-label{font-size:10px;width:50px;text-align:right;color:var(--t2);flex-shrink:0}
-.aw-bar-wrap{flex:1;height:6px;background:rgba(57,128,255,.04);border-radius:3px;overflow:hidden}
-.aw-bar{height:100%;border-radius:3px;transition:width .6s ease}
-.aw-val{font-family:var(--mono);font-size:10px;width:36px;text-align:right;flex-shrink:0}
-.aw-mode{text-align:center;font-size:10px;margin-top:6px;padding:3px 8px;border-radius:4px;display:inline-block}
+/* ===== Dynamic Weight Bars ===== */
+.dw-row{display:flex;align-items:center;gap:8px;margin:4px 0}
+.dw-label{font-size:9px;width:56px;text-align:right;color:var(--t2);flex-shrink:0}
+.dw-bar-wrap{flex:1;height:8px;background:rgba(57,128,255,.04);border-radius:4px;overflow:hidden;position:relative}
+.dw-bar{height:100%;border-radius:4px;transition:width .6s ease}
+.dw-val{font-family:var(--mono);font-size:10px;width:40px;text-align:right;flex-shrink:0;color:var(--cyan)}
+
+/* ===== Formula Display ===== */
+.formula-box{background:rgba(0,210,255,.02);border:1px solid rgba(0,210,255,.06);border-radius:4px;padding:6px 10px;margin:4px 0;font-family:var(--mono);font-size:9px;color:var(--cyan);text-align:center;line-height:1.6}
+.formula-box .fl{color:var(--t2);font-size:8px;margin-right:4px}
 
 /* ===== Strategy Cards ===== */
 .strat-card{background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;padding:8px 10px;margin-bottom:5px;cursor:pointer;transition:.15s;position:relative}
 .strat-card:hover{background:rgba(57,128,255,.03);border-color:rgba(0,210,255,.1)}
 .strat-card.active{border-color:rgba(0,229,160,.25);background:rgba(0,229,160,.02)}
-.strat-card .sc-row{display:flex;align-items:center;gap:8px}
-.strat-card .sc-icon{width:26px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.sc-row{display:flex;align-items:center;gap:8px}
+.sc-icon{width:26px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
 .sc-icon.precool{background:rgba(0,210,255,.08);color:var(--cyan)}
 .sc-icon.zone{background:rgba(179,136,255,.08);color:var(--purple)}
 .sc-icon.night{background:rgba(0,229,160,.08);color:var(--green)}
@@ -124,18 +135,34 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 .sc-badge.standby{background:rgba(57,128,255,.04);color:var(--t2)}
 
 /* ===== Recovery Plan Cards ===== */
-.plan-card{background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;padding:10px;cursor:pointer;transition:.2s;position:relative}
+.plan-card{background:rgba(57,128,255,.012);border:1px solid rgba(57,128,255,.04);border-radius:4px;padding:8px;cursor:pointer;transition:.2s;position:relative}
 .plan-card:hover{border-color:rgba(0,210,255,.12)}
 .plan-card.recommended{border-color:rgba(0,229,160,.25);background:rgba(0,229,160,.02)}
-.plan-card .pl-ribbon{position:absolute;top:0;right:0;font-size:7px;background:var(--green);color:#000;padding:2px 7px;border-radius:0 4px 0 4px;display:none}
+.pl-ribbon{position:absolute;top:0;right:0;font-size:7px;background:var(--green);color:#000;padding:2px 7px;border-radius:0 4px 0 4px;display:none}
 .plan-card.recommended .pl-ribbon{display:block}
-.pl-name{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:5px}
-.pl-desc{font-size:9px;color:var(--t2);line-height:1.5;margin-bottom:7px}
-.pl-metrics{display:flex;gap:10px}
+.pl-name{font-size:11px;font-weight:600;color:var(--t1);margin-bottom:3px}
+.pl-desc{font-size:8px;color:var(--t2);line-height:1.4;margin-bottom:5px}
+.pl-metrics{display:flex;gap:8px}
 .pl-m{text-align:center}
-.pl-mv{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--cyan)}
-.pl-ml{font-size:8px;color:var(--t2)}
-.pl-j{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--green);margin-top:5px;text-align:right}
+.pl-mv{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--cyan)}
+.pl-ml{font-size:7px;color:var(--t2)}
+.pl-j{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);margin-top:4px;text-align:right}
+
+/* ===== Recovery Time Display ===== */
+.rec-time-row{display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(0,210,255,.02);font-size:9px}
+.rec-time-row:last-child{border-bottom:none}
+.rec-cat{width:50px;font-size:9px;color:var(--t1);flex-shrink:0}
+.rec-bar-wrap{flex:1;height:5px;background:rgba(57,128,255,.04);border-radius:3px;overflow:hidden}
+.rec-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.rec-val{font-family:var(--mono);font-size:9px;width:50px;text-align:right;flex-shrink:0;color:var(--amber)}
+
+/* ===== Auto-Weight Bars ===== */
+.aw-row{display:flex;align-items:center;gap:8px;margin:3px 0}
+.aw-label{font-size:10px;width:50px;text-align:right;color:var(--t2);flex-shrink:0}
+.aw-bar-wrap{flex:1;height:6px;background:rgba(57,128,255,.04);border-radius:3px;overflow:hidden}
+.aw-bar{height:100%;border-radius:3px;transition:width .6s ease}
+.aw-val{font-family:var(--mono);font-size:10px;width:36px;text-align:right;flex-shrink:0}
+.aw-mode{text-align:center;font-size:10px;margin-top:6px;padding:3px 8px;border-radius:4px;display:inline-block}
 
 /* ===== Execution Log ===== */
 .exec-log{font-size:10px}
@@ -173,7 +200,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 <!-- ===== HEADER ===== -->
 <header id="hd">
   <div class="hd-l"><span class="hd-brace">[</span><div class="hd-line"></div><div class="hd-line"></div><span class="hd-brace">]</span></div>
-  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">Multi-level Autonomous Optimizing Algorithm</span></div></div>
+  <div class="hd-c"><div class="hd-title" onclick="location.href='index.html'"><span class="hd-t1">阶序智调</span><span class="hd-t2">ETP V3.0 Multi-level Autonomous Optimizing</span></div></div>
   <div class="hd-r"><div class="hd-st"><span class="hd-dot" id="hdDot"></span>运行正常</div><div class="hd-clock" id="clk">--:--:--</div></div>
 </header>
 
@@ -191,31 +218,84 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
   <a class="nl on" href="dispatch-optimization.html"><i class="fas fa-microchip"></i>调度优化</a>
 </nav>
 
-<!-- ===== MAIN CONTENT ===== -->
+<!-- ===== MAIN CONTENT: 3 columns ===== -->
 <main id="mn">
 
-  <!-- LEFT COLUMN -->
+  <!-- ===== LEFT COLUMN: ETP Model + Objective ===== -->
   <div class="col">
-    <!-- 优化目标函数（含自适应权重） -->
+    <!-- ETP 等效热参数模型 (式1-5) -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi c"><i class="fas fa-temperature-half"></i></div>
+        <span class="pht">ETP 等效热参数模型</span>
+        <span class="phtag">式(1)-(5) V3.0</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--t2)" id="etpTempLabel">T_out: --°C</span>
+      </div>
+      <div class="pb" style="max-height:320px">
+        <div class="formula-box">
+          <span class="fl">式(1)</span>C·dT_in/dt = (T_out-T_in)/R - s·η·P
+          <span style="margin:0 6px;color:var(--t3)">|</span>
+          <span class="fl">式(5)</span>P_agg = Σ s_i·P_rated_i·[1+δ_reflow]
+        </div>
+        <table class="etp-table" id="etpTable">
+          <thead>
+            <tr>
+              <th>区域</th>
+              <th>R</th>
+              <th>C</th>
+              <th>η</th>
+              <th>P(kW)</th>
+              <th>T_target</th>
+              <th>δ</th>
+              <th>t_on(h)</th>
+              <th>t_off(h)</th>
+              <th>duty</th>
+              <th>P_zone(kW)</th>
+            </tr>
+          </thead>
+          <tbody id="etpBody">
+            <tr><td colspan="11" style="color:var(--t2);text-align:center;padding:8px">加载中...</td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:6px;padding:4px 8px;background:rgba(0,210,255,.02);border-radius:4px">
+          <div style="flex:1;text-align:center">
+            <div style="font-size:8px;color:var(--t2)">总聚合功率</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--cyan)" id="etpTotalPower">-- kW</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:8px;color:var(--t2)">活跃单元</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green)" id="etpActiveUnits">--</div>
+          </div>
+          <div style="flex:1;text-align:center">
+            <div style="font-size:8px;color:var(--t2)">活跃率</div>
+            <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--amber)" id="etpActiveRatio">--%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 优化目标函数 V3 (式8-12) -->
     <div class="panel" style="flex:0 0 auto">
       <div class="ph">
         <div class="phi p"><i class="fas fa-bullseye"></i></div>
-        <span class="pht">优化目标函数 <small style="font-size:8px;color:var(--t2)">v2.1</small></span>
-        <span class="phtag" id="jRating" style="color:var(--cyan)">★★良好</span>
+        <span class="pht">综合目标函数 V3</span>
+        <span class="phtag" id="jRating">★★良好</span>
         <span style="margin-left:auto;font-size:9px;color:var(--t2)" id="srcLabel">实时</span>
       </div>
       <div class="pb">
+        <div class="formula-box">
+          <span class="fl">式(8)</span>max J = Σω_i(t)·R_i(t) - Σλ_j·C_j(t)
+        </div>
         <div class="j-display">
-          <div class="j-val" id="Jval">0.6842</div>
-          <div class="j-label">J = w₁E + w₂D + w₃R + w₄C · <span id="jDetail">碳:35.4kg | 越界:0.000 | 舒适:0.010</span></div>
+          <div class="j-val" id="Jval">--</div>
+          <div class="j-label" id="jDetail">J = Σω·R - Σλ·C</div>
         </div>
         <div class="j-breakdown">
-          <div class="j-bp"><div class="j-bv blue" id="jE">0.380</div><div class="j-bl">经济 E</div></div>
-          <div class="j-bp"><div class="j-bv cyan" id="jD">0.217</div><div class="j-bl">稳定 D</div></div>
-          <div class="j-bp"><div class="j-bv purple" id="jR">0.087</div><div class="j-bl">韧性 R</div></div>
-          <div class="j-bp"><div class="j-bv" id="jC" style="color:var(--green)">0.024</div><div class="j-bl">碳 C</div></div>
+          <div class="j-bp"><div class="j-bv green" id="jR">--</div><div class="j-bl">恢复收益 R</div></div>
+          <div class="j-bp"><div class="j-bv" id="jC" style="color:var(--amber)">--</div><div class="j-bl">开关代价 C</div></div>
+          <div class="j-bp"><div class="j-bv cyan" id="jRating2">--</div><div class="j-bl">评级</div></div>
         </div>
-        <!-- 自适应权重（只读） -->
+        <!-- 自适应权重 -->
         <div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(0,210,255,.06)">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
             <span style="font-size:9px;color:var(--t2)">算法自适应权重</span>
@@ -236,11 +316,46 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
             <div class="aw-bar-wrap"><div class="aw-bar" id="awBar3" style="width:25%;background:var(--purple)"></div></div>
             <span class="aw-val" id="awVal3">0.25</span>
           </div>
-          <div class="aw-row">
-            <span class="aw-label" style="color:var(--green)">碳 w₄</span>
-            <div class="aw-bar-wrap"><div class="aw-bar" id="awBar4" style="width:15%;background:var(--green)"></div></div>
-            <span class="aw-val" id="awVal4">0.15</span>
-          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 24h 优化前后对比 -->
+    <div class="panel" style="flex:1">
+      <div class="ph">
+        <div class="phi c"><i class="fas fa-chart-line"></i></div>
+        <span class="pht">优化前后对比 (ETP)</span>
+        <span class="phtag">24h · kW</span>
+        <button onclick="refreshForecast()" class="btn-action" style="margin-left:auto;padding:4px 12px;font-size:9px">刷新</button>
+      </div>
+      <div class="chart-w"><div id="forecastChart" style="min-height:200px;height:100%;width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== MIDDLE COLUMN: Dynamic Weights + Strategy + Recovery ===== -->
+  <div class="col">
+    <!-- 动态权重 (式11/12) -->
+    <div class="panel" style="flex:0 0 auto">
+      <div class="ph">
+        <div class="phi a"><i class="fas fa-scale-balanced"></i></div>
+        <span class="pht">动态权重</span>
+        <span class="phtag">式(11)(12)</span>
+      </div>
+      <div class="pb" style="padding:6px 10px">
+        <div class="formula-box" style="font-size:8px">
+          <span class="fl">式(11)</span>ω = ω_base + κ_T·(T_in-T_min)/(T_max-T_min)
+          <span style="margin:0 4px;color:var(--t3)">|</span>
+          <span class="fl">式(12)</span>ω = ω_base + κ_S·(SOC_max-SOC)/(SOC_max-SOC_min)
+        </div>
+        <div style="font-size:8px;color:var(--t2);margin:4px 0 2px">空调温度状态特征 ω_ac</div>
+        <div id="dwAcContainer">
+          <div class="dw-row"><span class="dw-label">商业区</span><div class="dw-bar-wrap"><div class="dw-bar" style="width:50%;background:var(--cyan)"></div></div><span class="dw-val">1.25</span></div>
+        </div>
+        <div style="font-size:8px;color:var(--t2);margin:6px 0 2px">蓄热状态特征 ω_storage</div>
+        <div class="dw-row">
+          <span class="dw-label">蓄热装置</span>
+          <div class="dw-bar-wrap"><div class="dw-bar" id="dwStorageBar" style="width:50%;background:var(--purple)"></div></div>
+          <span class="dw-val" id="dwStorageVal">1.28</span>
         </div>
       </div>
     </div>
@@ -253,73 +368,40 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
         <span class="phtag">点击激活</span>
         <span style="margin-left:auto;font-size:9px;color:var(--t2)">已激活 <b style="color:var(--green);font-family:var(--mono)" id="activeCount">0</b> 项</span>
       </div>
-      <div class="pb" id="strategyList" style="max-height:260px;overflow-y:auto">
-        <div class="strat-card" onclick="toggleStrategy(0,'precool')">
-          <span class="sc-badge high">推荐</span>
-          <div class="sc-row">
-            <div class="sc-icon precool"><i class="fas fa-snowflake"></i></div>
-            <div class="sc-name">预冷控制</div>
-            <div class="sc-score">92分</div>
-          </div>
-          <div class="sc-trigger">触发条件: 凌晨4:00-7:00预冷窗口</div>
-          <div class="sc-save">预估节能量: 324 kW</div>
-        </div>
-        <div class="strat-card" onclick="toggleStrategy(1,'zone')">
-          <span class="sc-badge medium">可选</span>
-          <div class="sc-row">
-            <div class="sc-icon zone"><i class="fas fa-layer-group"></i></div>
-            <div class="sc-name">分区控制</div>
-            <div class="sc-score">72分</div>
-          </div>
-          <div class="sc-trigger">触发条件: 电网负载率偏高</div>
-          <div class="sc-save">预估节能量: 286 kW</div>
-        </div>
-        <div class="strat-card" onclick="toggleStrategy(2,'night_storage')">
-          <span class="sc-badge medium">可选</span>
-          <div class="sc-row">
-            <div class="sc-icon night"><i class="fas fa-battery-full"></i></div>
-            <div class="sc-name">夜间蓄冷</div>
-            <div class="sc-score">85分</div>
-          </div>
-          <div class="sc-trigger">触发条件: 电价低谷时段</div>
-          <div class="sc-save">预估节能量: 412 kW</div>
-        </div>
-        <div class="strat-card" onclick="toggleStrategy(3,'peak_shift')">
-          <span class="sc-badge medium">可选</span>
-          <div class="sc-row">
-            <div class="sc-icon shift"><i class="fas fa-shuffle"></i></div>
-            <div class="sc-name">错峰运行</div>
-            <div class="sc-score">75分</div>
-          </div>
-          <div class="sc-trigger">触发条件: 高峰时段19:00</div>
-          <div class="sc-save">预估节能量: 198 kW</div>
-        </div>
-        <div class="strat-card" onclick="toggleStrategy(4,'demand_response')">
-          <span class="sc-badge standby">待命</span>
-          <div class="sc-row">
-            <div class="sc-icon demand"><i class="fas fa-bolt"></i></div>
-            <div class="sc-name">需求响应</div>
-            <div class="sc-score">65分</div>
-          </div>
-          <div class="sc-trigger">触发条件: 待命响应，三级联动</div>
-          <div class="sc-save">预估节能量: max 260 kW</div>
-        </div>
+      <div class="pb" id="strategyList" style="max-height:230px;overflow-y:auto">
+        <div style="text-align:center;color:var(--t2);padding:12px;font-size:11px">加载中...</div>
       </div>
     </div>
 
-    <!-- 优化前后对比图表 -->
+    <!-- 故障恢复方案比选 + ETP恢复时间 (式4) -->
     <div class="panel" style="flex:1">
       <div class="ph">
-        <div class="phi c"><i class="fas fa-chart-line"></i></div>
-        <span class="pht">优化前后对比</span>
-        <span class="phtag">24h · kW</span>
-        <button onclick="refreshForecast()" class="btn-action" style="margin-left:auto;padding:4px 12px;font-size:9px">刷新</button>
+        <div class="phi r"><i class="fas fa-triangle-exclamation"></i></div>
+        <span class="pht">故障恢复方案</span>
+        <span class="phtag">式(4)(9)(10)</span>
       </div>
-      <div class="chart-w"><div id="forecastChart" style="min-height:260px;height:100%;width:100%"></div></div>
+      <div class="pb" style="overflow-y:auto">
+        <!-- ETP 恢复时间 -->
+        <div style="margin-bottom:6px">
+          <div style="font-size:8px;color:var(--t2);margin-bottom:3px">
+            <span class="fl">式(4)</span> t_on_rec = R·C·ln[(T_rec-T_ss)/(T_max-T_ss)] — 回流功率恢复时间
+          </div>
+          <div id="recoveryTimeContainer">
+            <div class="rec-time-row"><span class="rec-cat">商业区</span><div class="rec-bar-wrap"><div class="rec-bar" style="width:60%;background:var(--cyan)"></div></div><span class="rec-val">1.62h</span></div>
+          </div>
+        </div>
+        <!-- 方案比选 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px" id="planGrid">
+          <div style="text-align:center;color:var(--t2);padding:8px;font-size:10px;grid-column:span 3">加载中...</div>
+        </div>
+        <div style="margin-top:8px;text-align:center">
+          <button onclick="simulateRecovery()" id="btnSimRecovery" class="btn-action" style="font-size:9px;padding:5px 14px">▶ 模拟恢复最优方案</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT COLUMN -->
+  <!-- ===== RIGHT COLUMN: KPI + Execution Log ===== -->
   <div class="col">
     <!-- 实时指标 -->
     <div class="panel" style="flex:0 0 auto">
@@ -329,59 +411,12 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
         <span class="phtag" id="dataSource">模拟运行</span>
       </div>
       <div class="kpi-grid">
-        <div class="kpi-c"><div class="kpi-cl">室外温度</div><div><span class="kpi-cv a" id="kpiTemp">32.9</span><span style="font-size:9px;color:var(--t2)"> °C</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:75%;background:linear-gradient(90deg,var(--amber),var(--red))"></div></div></div>
-        <div class="kpi-c"><div class="kpi-cl">电价</div><div><span class="kpi-cv c" id="kpiPrice">342</span><span style="font-size:9px;color:var(--t2)"> 元/MWh</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:55%;background:linear-gradient(90deg,var(--cyan),var(--blue))"></div></div></div>
-        <div class="kpi-c"><div class="kpi-cl">电网总负荷</div><div><span class="kpi-cv b" id="kpiTotalLoad">2947</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:80%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div></div>
-        <div class="kpi-c"><div class="kpi-cl">制冷负荷</div><div><span class="kpi-cv c" id="kpiCoolLoad">1563</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:70%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div></div>
-        <div class="kpi-c"><div class="kpi-cl">负载率</div><div><span class="kpi-cv a" id="kpiLoadRate">84.2</span><span style="font-size:9px;color:var(--t2)"> %</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiLoadBar" style="width:84%;background:linear-gradient(90deg,var(--cyan),var(--amber))"></div></div></div>
-        <div class="kpi-c"><div class="kpi-cl">策略节能量</div><div><span class="kpi-cv g" id="kpiSaved">0</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiSaveBar" style="width:0%;background:linear-gradient(90deg,var(--green),var(--green))"></div></div></div>
-      </div>
-    </div>
-
-    <!-- 故障恢复方案比选 -->
-    <div class="panel" style="flex:0 0 auto">
-      <div class="ph">
-        <div class="phi r"><i class="fas fa-triangle-exclamation"></i></div>
-        <span class="pht">故障恢复方案比选</span>
-        <span class="phtag">J值最小最优</span>
-      </div>
-      <div class="pb">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px" id="planGrid">
-          <div class="plan-card recommended" onclick="execRecoveryPlan('plan_a')">
-            <div class="pl-ribbon">推荐</div>
-            <div class="pl-name">方案A：商业优先</div>
-            <div class="pl-desc">优先恢复商业区全供电，居民区轮流供电</div>
-            <div class="pl-metrics">
-              <div class="pl-m"><div class="pl-mv">850</div><div class="pl-ml">影响负荷 kW</div></div>
-              <div class="pl-m"><div class="pl-mv">45min</div><div class="pl-ml">恢复时长</div></div>
-              <div class="pl-m"><div class="pl-mv">120</div><div class="pl-ml">额外功率 kW</div></div>
-            </div>
-            <div class="pl-j">J=0.4715</div>
-          </div>
-          <div class="plan-card" onclick="execRecoveryPlan('plan_b')">
-            <div class="pl-name">方案B：民生优先</div>
-            <div class="pl-desc">保居民基础供电，商业区降容50%</div>
-            <div class="pl-metrics">
-              <div class="pl-m"><div class="pl-mv">650</div><div class="pl-ml">影响负荷 kW</div></div>
-              <div class="pl-m"><div class="pl-mv">35min</div><div class="pl-ml">恢复时长</div></div>
-              <div class="pl-m"><div class="pl-mv">180</div><div class="pl-ml">额外功率 kW</div></div>
-            </div>
-            <div class="pl-j">J=0.6821</div>
-          </div>
-          <div class="plan-card" onclick="execRecoveryPlan('plan_c')">
-            <div class="pl-name">方案C：储能+柴油机</div>
-            <div class="pl-desc">启动光纤储能+柴油发电机，全区域恢复</div>
-            <div class="pl-metrics">
-              <div class="pl-m"><div class="pl-mv">500</div><div class="pl-ml">影响负荷 kW</div></div>
-              <div class="pl-m"><div class="pl-mv">25min</div><div class="pl-ml">恢复时长</div></div>
-              <div class="pl-m"><div class="pl-mv">350</div><div class="pl-ml">额外功率 kW</div></div>
-            </div>
-            <div class="pl-j">J=0.8937</div>
-          </div>
-        </div>
-        <div style="margin-top:10px;text-align:center">
-          <button onclick="simulateRecovery()" id="btnSimRecovery" class="btn-action">▶ 模拟恢复最优方案</button>
-        </div>
+        <div class="kpi-c"><div class="kpi-cl">室外温度</div><div><span class="kpi-cv a" id="kpiTemp">--</span><span style="font-size:9px;color:var(--t2)"> °C</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiTempBar" style="width:75%;background:linear-gradient(90deg,var(--amber),var(--red))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">电价</div><div><span class="kpi-cv c" id="kpiPrice">--</span><span style="font-size:9px;color:var(--t2)"> 元/MWh</span></div><div class="kpi-bar"><div class="kpi-bf" style="width:55%;background:linear-gradient(90deg,var(--cyan),var(--blue))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">电网总负荷</div><div><span class="kpi-cv b" id="kpiTotalLoad">--</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiLoadBar" style="width:80%;background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">TCL聚合功率</div><div><span class="kpi-cv c" id="kpiCoolLoad">--</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiCoolBar" style="width:70%;background:linear-gradient(90deg,var(--cyan),var(--green))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">负载率</div><div><span class="kpi-cv a" id="kpiLoadRate">--</span><span style="font-size:9px;color:var(--t2)"> %</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiLoadBar2" style="width:84%;background:linear-gradient(90deg,var(--cyan),var(--amber))"></div></div></div>
+        <div class="kpi-c"><div class="kpi-cl">策略节能量</div><div><span class="kpi-cv g" id="kpiSaved">0</span><span style="font-size:9px;color:var(--t2)"> kW</span></div><div class="kpi-bar"><div class="kpi-bf" id="kpiSaveBar" style="width:0%;background:var(--green)"></div></div></div>
       </div>
     </div>
 
@@ -406,37 +441,95 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 <script>
 const $=id=>document.getElementById(id);
 const pad=n=>String(n).padStart(2,'0');
+const CAT_COLORS={commercial:'#00d2ff',residential:'#ffb300',industrial:'#b388ff',datacenter:'#00e5a0',hospital:'#ff3d57'};
+const CAT_NAMES={commercial:'商业区',residential:'居民区',industrial:'工业区',datacenter:'数据中心',hospital:'医院'};
 
 // ========== CLOCK ==========
 function updClock(){const d=new Date();$('clk').textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
 updClock();setInterval(updClock,1000);
 
-// ========== AUTO-RENDER WEIGHTS ==========
-function renderAutoWeights(aw){
-  if(!aw){return;}
-  $('#awVal1').textContent=aw.w1.toFixed(2);
-  $('#awVal2').textContent=aw.w2.toFixed(2);
-  $('#awVal3').textContent=aw.w3.toFixed(2);
-  $('#awVal4').textContent=aw.w4.toFixed(2);
-  $('#awBar1').style.width=(aw.w1*100)+'%';
-  $('#awBar2').style.width=(aw.w2*100)+'%';
-  $('#awBar3').style.width=(aw.w3*100)+'%';
-  $('#awBar4').style.width=(aw.w4*100)+'%';
-  $('#awMode').textContent=aw.mode||'均衡优化';
+// ========== ETP MODEL RENDER ==========
+function renderETPTable(data){
+  if(!data||!data.categories)return;
+  $('etpTempLabel').textContent='T_out: '+data.outdoorTemp.toFixed(1)+'°C';
+  let h='';
+  data.categories.forEach(c=>{
+    const color=CAT_COLORS[c.category]||'#00d2ff';
+    const duty=c.dutyCycle.duty;
+    const tOn=c.dutyCycle.t_on===Infinity||c.dutyCycle.t_on===null?'∞':c.dutyCycle.t_on?.toFixed(2);
+    const tOff=c.dutyCycle.t_off===Infinity||c.dutyCycle.t_off===null?'∞':c.dutyCycle.t_off?.toFixed(2);
+    h+=`<tr>
+      <td class="cat-name"><span class="cat-dot" style="background:${color}"></span>${CAT_NAMES[c.category]||c.category}</td>
+      <td>${c.params.R}</td>
+      <td>${c.params.C}</td>
+      <td>${c.params.eta}</td>
+      <td>${c.params.P_rated}</td>
+      <td>${c.params.T_target}°</td>
+      <td>±${c.params.delta/2}</td>
+      <td style="color:${tOn==='∞'?'var(--red)':'var(--cyan)'}">${tOn}</td>
+      <td style="color:var(--amber)">${tOff}</td>
+      <td style="color:${duty>=0.95?'var(--red)':'var(--green)'}">${(duty*100).toFixed(0)}%</td>
+      <td style="color:var(--cyan);font-weight:600">${c.aggregatedPower}</td>
+    </tr>`;
+  });
+  $('etpBody').innerHTML=h;
+
+  const ta=data.totalAggregatedPower;
+  if(ta){
+    $('etpTotalPower').textContent=ta.totalPower+' kW';
+    $('etpActiveUnits').textContent=ta.totalActive+'/'+ta.totalUnits;
+    $('etpActiveRatio').textContent=(ta.activeRatio*100).toFixed(1)+'%';
+  }
 }
 
-// ========== RENDER OBJECTIVE V2 ==========
-function renderObjectiveV2(obj){
+// ========== DYNAMIC WEIGHTS RENDER ==========
+function renderDynamicWeights(weights){
+  if(!weights||!weights.length)return;
+  let h='';
+  weights.forEach(w=>{
+    const color=CAT_COLORS[w.category]||'#00d2ff';
+    const pct=Math.min(100,w.omega_ac*40);
+    h+=`<div class="dw-row">
+      <span class="dw-label">${CAT_NAMES[w.category]||w.category}</span>
+      <div class="dw-bar-wrap"><div class="dw-bar" style="width:${pct}%;background:${color}"></div></div>
+      <span class="dw-val">${w.omega_ac.toFixed(3)}</span>
+    </div>`;
+  });
+  $('dwAcContainer').innerHTML=h;
+}
+
+function renderStorageWeight(sw){
+  if(!sw)return;
+  const pct=Math.min(100,sw.omega*40);
+  $('dwStorageBar').style.width=pct+'%';
+  $('dwStorageVal').textContent=sw.omega.toFixed(3);
+}
+
+// ========== OBJECTIVE V3 RENDER ==========
+function renderObjectiveV3(obj){
   if(!obj)return;
-  $('#Jval').textContent=obj.J.toFixed(4);
-  $('#jE').textContent=(obj.E_norm||0).toFixed(3);
-  $('#jD').textContent=(obj.D_norm||0).toFixed(3);
-  $('#jR').textContent=(obj.R_norm||0).toFixed(3);
-  $('#jC').textContent=(obj.C_norm||0).toFixed(3);
-  const r=obj.rating;
-  $('#jRating').textContent=r==='excellent'?'★优秀':r==='good'?'★★良好':'★★★可接受';
-  $('#jRating').style.color=r==='excellent'?'var(--green)':r==='good'?'var(--cyan)':'var(--amber)';
-  $('#jDetail').textContent='碳:'+(obj.carbonEmission||'--')+'kg | 越界:'+(obj.overflowPenalty||0).toFixed(3)+' | 舒适:'+(obj.comfortPenalty||0).toFixed(3);
+  $('Jval').textContent=obj.J?.toFixed(1)||'--';
+  $('jR').textContent=(obj.recovery_benefit||0).toFixed(1);
+  $('jC').textContent=(obj.switch_cost||0).toFixed(1);
+  const rating=obj.rating||'good';
+  const ratingText=rating==='excellent'?'★优秀':rating==='good'?'★★良好':'★★★可接受';
+  $('jRating').textContent=ratingText;
+  $('jRating').style.color=rating==='excellent'?'var(--green)':rating==='good'?'var(--cyan)':'var(--amber)';
+  $('jRating2').textContent=ratingText;
+  $('jRating2').style.color=rating==='excellent'?'var(--green)':rating==='good'?'var(--cyan)':'var(--amber)';
+  $('jDetail').textContent='J = Σω·R - Σλ·C | 场景: '+(obj.scenario||'normal');
+}
+
+// ========== AUTO-RENDER WEIGHTS ==========
+function renderAutoWeights(aw){
+  if(!aw)return;
+  $('awVal1').textContent=aw.w1.toFixed(2);
+  $('awVal2').textContent=aw.w2.toFixed(2);
+  $('awVal3').textContent=aw.w3.toFixed(2);
+  $('awBar1').style.width=(aw.w1*100)+'%';
+  $('awBar2').style.width=(aw.w2*100)+'%';
+  $('awBar3').style.width=(aw.w3*100)+'%';
+  $('awMode').textContent=aw.mode||'均衡优化';
 }
 
 // ========== STRATEGY CARDS ==========
@@ -450,7 +543,7 @@ const strategyIcons={
 
 function renderStrategyCards(recommendations){
   if(!recommendations||!recommendations.length){
-    $('#strategyList').innerHTML='<div style="text-align:center;color:var(--t2);padding:16px;font-size:11px">等待实时数据...</div>';
+    $('#strategyList').innerHTML='<div style="text-align:center;color:var(--t2);padding:12px;font-size:11px">等待实时数据...</div>';
     return;
   }
   let h='';
@@ -463,8 +556,8 @@ function renderStrategyCards(recommendations){
         <div class="sc-name">${r.name}</div>
         <div class="sc-score">${r.score}分</div>
       </div>
-      <div class="sc-trigger">触发条件: ${r.trigger}</div>
-      <div class="sc-save">预估节能量: ${r.estimated_savings}</div>
+      <div class="sc-trigger">触发: ${r.trigger}</div>
+      <div class="sc-save">节能: ${r.estimated_savings}</div>
     </div>`;
   });
   $('#strategyList').innerHTML=h;
@@ -475,6 +568,7 @@ const execLog=[];
 
 function toggleStrategy(index,id){
   const card=document.querySelectorAll('.strat-card')[index];
+  if(!card)return;
   if(activeStrategies.has(id)){
     activeStrategies.delete(id);
     card.classList.remove('active');
@@ -489,11 +583,11 @@ function toggleStrategy(index,id){
 
 function addLog(stratId,action,detail){
   const now=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  const names={precool:'预冷控制',zone:'分区控制',night_storage:'夜间蓄冷',peak_shift:'错峰运行',demand_response:'需求响应',recovery:'故障恢复'};
+  const names={precool:'预冷控制',zone:'分区控制',night_storage:'夜间蓄冷',peak_shift:'错峰运行',demand_response:'需求响应',recovery:'故障恢复',system:'系统'};
   execLog.unshift({time:now,strategy:names[stratId]||stratId,action,detail});
   if(execLog.length>20)execLog.length=20;
   renderExecLog();
-  $('#logCount').textContent=execLog.length+'条';
+  $('logCount').textContent=execLog.length+'条';
 }
 
 function renderExecLog(){
@@ -509,7 +603,7 @@ function renderExecLog(){
       </div>
     </div>`;
   });
-  $('#execLog').innerHTML=h||'<div style="text-align:center;color:var(--t2);padding:16px;font-size:11px">暂无执行记录</div>';
+  $('execLog').innerHTML=h||'<div style="text-align:center;color:var(--t2);padding:12px;font-size:11px">暂无执行记录</div>';
 }
 
 function updateStrategyStats(){
@@ -519,15 +613,38 @@ function updateStrategyStats(){
   if(activeStrategies.has('night_storage'))saved+=412;
   if(activeStrategies.has('peak_shift'))saved+=198;
   if(activeStrategies.has('demand_response'))saved+=180;
-  $('#kpiSaved').textContent=saved;
-  $('#kpiSaveBar').style.width=Math.min(100,saved/14)+'%';
-  $('#activeCount').textContent=activeStrategies.size;
+  $('kpiSaved').textContent=saved;
+  $('kpiSaveBar').style.width=Math.min(100,saved/14)+'%';
+  $('activeCount').textContent=activeStrategies.size;
+}
+
+// ========== RECOVERY TIME RENDER (式4) ==========
+function renderRecoveryTimes(recoveryTimes){
+  if(!recoveryTimes||!recoveryTimes.length)return;
+  let h='';
+  const maxTime=Math.max(...recoveryTimes.map(r=>r.t_on_recovery||0),1);
+  recoveryTimes.forEach(r=>{
+    const color=CAT_COLORS[r.category]||'#00d2ff';
+    const t=r.t_on_recovery||0;
+    const pct=Math.min(100,t/maxTime*100);
+    const overshoot=r.overshoot_ratio||1;
+    h+=`<div class="rec-time-row">
+      <span class="rec-cat">${CAT_NAMES[r.category]||r.category}</span>
+      <div class="rec-bar-wrap"><div class="rec-bar" style="width:${pct}%;background:${color}"></div></div>
+      <span class="rec-val">${t.toFixed(2)}h (${overshoot.toFixed(2)}x)</span>
+    </div>`;
+  });
+  $('recoveryTimeContainer').innerHTML=h;
 }
 
 // ========== RECOVERY PLANS ==========
 let recoveryPlansData=[];
 function loadRecoveryPlans(){
   fetch('/api/optimization/plans').then(r=>r.json()).then(data=>{
+    // 渲染 ETP 恢复时间
+    if(data.etpRecovery?.recoveryTimes){
+      renderRecoveryTimes(data.etpRecovery.recoveryTimes);
+    }
     if(data.plans){
       const scored=data.plans.map(p=>{
         const energy=p.extra_power_kw*p.duration_min/60;
@@ -543,9 +660,9 @@ function loadRecoveryPlans(){
     }
   }).catch(()=>{
     const plans=[
-      {id:'plan_a',name:'方案A：商业优先',description:'优先恢复商业区全供电，居民区轮流供电',affected_load_kw:850,extra_power_kw:120,duration_min:45},
-      {id:'plan_b',name:'方案B：民生优先',description:'保居民基础供电，商业区降容50%',affected_load_kw:650,extra_power_kw:180,duration_min:35},
-      {id:'plan_c',name:'方案C：储能+柴油机',description:'启动光纤储能+柴油发电机，全区域恢复',affected_load_kw:500,extra_power_kw:350,duration_min:25},
+      {id:'plan_a',name:'方案A：商业优先',description:'优先恢复商业区全供电',affected_load_kw:850,extra_power_kw:120,duration_min:45},
+      {id:'plan_b',name:'方案B：民生优先',description:'保居民基础供电',affected_load_kw:650,extra_power_kw:180,duration_min:35},
+      {id:'plan_c',name:'方案C：储能+柴油机',description:'启动储能+柴油机',affected_load_kw:500,extra_power_kw:350,duration_min:25},
     ];
     plans.forEach(p=>{
       const energy=p.extra_power_kw*p.duration_min/60;
@@ -567,24 +684,23 @@ function renderRecoveryPlans(plans){
       <div class="pl-name">${p.name}</div>
       <div class="pl-desc">${p.description}</div>
       <div class="pl-metrics">
-        <div class="pl-m"><div class="pl-mv">${p.affected_load_kw}</div><div class="pl-ml">影响负荷 kW</div></div>
-        <div class="pl-m"><div class="pl-mv">${p.duration_min}min</div><div class="pl-ml">恢复时长</div></div>
-        <div class="pl-m"><div class="pl-mv">${p.extra_power_kw}</div><div class="pl-ml">额外功率 kW</div></div>
+        <div class="pl-m"><div class="pl-mv">${p.affected_load_kw}</div><div class="pl-ml">影响kW</div></div>
+        <div class="pl-m"><div class="pl-mv">${p.duration_min}m</div><div class="pl-ml">时长</div></div>
+        <div class="pl-m"><div class="pl-mv">${p.extra_power_kw}</div><div class="pl-ml">额外kW</div></div>
       </div>
       <div class="pl-j">J=${p.J}</div>
     </div>`;
   });
-  $('#planGrid').innerHTML=h;
+  $('planGrid').innerHTML=h;
 }
 
 function execRecoveryPlan(id){
   const p=recoveryPlansData.find(x=>x.id===id);
   if(!p)return;
-  showToast(`启动方案: ${p.name}`, 'info');
+  showToast('启动方案: '+p.name,'info');
   const btn=$('btnSimRecovery');
   btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> 执行中...';
   btn.disabled=true;
-
   const steps=['故障隔离','负荷转供','逐步恢复','供电恢复','总结评估'];
   let step=0;
   const timer=setInterval(()=>{
@@ -594,10 +710,10 @@ function execRecoveryPlan(id){
       btn.classList.add('success');
       btn.disabled=false;
       setTimeout(()=>{btn.innerHTML='▶ 模拟恢复最优方案';btn.classList.remove('success');},3000);
-      showToast(`${p.name} 执行完成，J=${p.J}`, 'success');
+      showToast(p.name+' 执行完成, J='+p.J,'success');
       return;
     }
-    addLog('recovery',`步骤${step+1}: ${steps[step]}`, `方案: ${p.name}`);
+    addLog('recovery','步骤'+(step+1)+': '+steps[step],'方案: '+p.name);
     step++;
   },2000);
 }
@@ -619,107 +735,103 @@ function refreshForecast(){
   fetch('/api/optimization/forecast').then(r=>r.json()).then(data=>{
     renderForecastData(data);
   }).catch(()=>{
-    // 内置24h fallback 数据
     const hours=Array.from({length:24},(_,i)=>i);
     const base=[2380,2350,2320,2290,2270,2280,2320,2450,2680,2920,3180,3420,3640,3820,3950,4010,3980,3860,3650,3380,3080,2780,2560,2400];
-    const opt=base.map((v,h)=>{
-      let r=v;
-      if(h>=10&&h<=20)r-=180;
-      if(h>=17&&h<=20&&h%2===0)r-=75;
-      return Math.max(r*0.82,1600);
-    });
-    renderForecastData({
-      hours,baseline:{load:base},optimized:{load:opt},
-      savings:{peak_reduction_kw:721,peak_reduction_pct:14}
-    });
+    const opt=base.map((v,h)=>{let r=v;if(h>=10&&h<=20)r-=180;if(h>=17&&h<=20&&h%2===0)r-=75;return Math.max(r*0.82,1600);});
+    renderForecastData({hours,baseline:{load:base},optimized:{load:opt},etpBaseline:base,etpOptimized:opt,savings:{peak_reduction_kw:721,peak_reduction_pct:14}});
   });
 }
 
 function renderForecastData(data){
   if(!forecastChart||!data.hours)return;
+  const etpBase=data.etpBaseline||data.baseline?.load||[];
+  const etpOpt=data.etpOptimized||data.optimized?.load||[];
+  const baseLoad=data.baseline?.load||etpBase;
+  const optLoad=data.optimized?.load||etpOpt;
+
   forecastChart.setOption({
     backgroundColor:'transparent',
     tooltip:{trigger:'axis',backgroundColor:'rgba(6,13,31,.94)',borderColor:'rgba(57,128,255,.18)',textStyle:{color:'#d8eaf8',fontSize:10}},
-    legend:{data:['基准负荷','优化后负荷','节能量'],textStyle:{color:'#6a8ba8',fontSize:9},top:2,right:8,itemWidth:10,itemHeight:4},
-    grid:{left:'6%',right:'5%',top:'14%',bottom:'8%'},
-    xAxis:{type:'category',data:data.hours.map(h=>pad(h)+':00'),axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:9}},
+    legend:{data:['V2基准','V2优化','ETP基准','ETP优化'],textStyle:{color:'#6a8ba8',fontSize:8},top:2,right:8,itemWidth:8,itemHeight:4},
+    grid:{left:'6%',right:'5%',top:'16%',bottom:'8%'},
+    xAxis:{type:'category',data:data.hours.map(h=>pad(h)+':00'),axisLine:{lineStyle:{color:'rgba(0,210,255,.05)'}},axisLabel:{color:'#6a8ba8',fontSize:8}},
     yAxis:{type:'value',name:'kW',nameTextStyle:{color:'#6a8ba8',fontSize:9},
-      splitLine:{lineStyle:{color:'rgba(0,210,255,.02)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:9}},
+      splitLine:{lineStyle:{color:'rgba(0,210,255,.02)',type:'dashed'}},axisLabel:{color:'#6a8ba8',fontSize:8}},
     series:[
-      {name:'基准负荷',type:'line',smooth:true,symbol:'none',data:data.baseline.load,
-        lineStyle:{color:'rgba(255,61,87,.5)',width:1.5,type:'dashed'}},
-      {name:'优化后负荷',type:'line',smooth:true,symbol:'circle',symbolSize:4,data:data.optimized.load,
+      {name:'V2基准',type:'line',smooth:true,symbol:'none',data:baseLoad,
+        lineStyle:{color:'rgba(255,61,87,.3)',width:1,type:'dashed'}},
+      {name:'V2优化',type:'line',smooth:true,symbol:'none',data:optLoad,
+        lineStyle:{color:'rgba(0,229,160,.3)',width:1,type:'dashed'}},
+      {name:'ETP基准',type:'line',smooth:true,symbol:'none',data:etpBase,
+        lineStyle:{color:'#ff3d57',width:2}},
+      {name:'ETP优化',type:'line',smooth:true,symbol:'circle',symbolSize:3,data:etpOpt,
         lineStyle:{color:'#00e5a0',width:2.5},
-        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.15)'},{offset:1,color:'rgba(0,229,160,.002)'}])}},
-      {name:'节能量',type:'bar',data:data.baseline.load.map((v,i)=>v-data.optimized.load[i]),
-        itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,210,255,.35)'},{offset:1,color:'rgba(57,128,255,.06)'}])},barWidth:'60%'},
+        areaStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(0,229,160,.12)'},{offset:1,color:'rgba(0,229,160,.002)'}])}},
     ]
   });
-  if(data.savings){
-    $('#kpiSaved').textContent=data.savings.peak_reduction_kw;
-    $('#kpiSaveBar').style.width=Math.min(100,data.savings.peak_reduction_pct*2)+'%';
+  if(data.etpSavings){
+    $('kpiSaved').textContent=data.etpSavings.peak_reduction_kw;
+    $('kpiSaveBar').style.width=Math.min(100,data.etpSavings.peak_reduction_pct*2)+'%';
+  }else if(data.savings){
+    $('kpiSaved').textContent=data.savings.peak_reduction_kw;
+    $('kpiSaveBar').style.width=Math.min(100,data.savings.peak_reduction_pct*2)+'%';
   }
 }
 
-// ========== DEFAULT DATA（页面打开立即显示）==========
-const FALLBACK={
-  objective:{J:0.6842,E_norm:0.380,D_norm:0.217,R_norm:0.087,C_norm:0.024,carbonEmission:35.4,overflowPenalty:0,comfortPenalty:0.01,rating:'good'},
-  weights:{w1:0.40,w2:0.35,w3:0.25,w4:0.15,mode:'均衡优化'},
-  strategies:[
-    {id:'precool',name:'预冷控制',score:92,priority:'high',trigger:'凌晨4:00-7:00预冷窗口',estimated_savings:'324 kW'},
-    {id:'zone',name:'分区控制',score:72,priority:'medium',trigger:'电网负载率偏高',estimated_savings:'286 kW'},
-    {id:'night_storage',name:'夜间蓄冷',score:85,priority:'medium',trigger:'电价低谷时段',estimated_savings:'412 kW'},
-    {id:'peak_shift',name:'错峰运行',score:75,priority:'medium',trigger:'高峰时段19:00',estimated_savings:'198 kW'},
-    {id:'demand_response',name:'需求响应',score:65,priority:'standby',trigger:'待命响应，三级联动',estimated_savings:'max 260 kW'}
-  ],
-  kpi:{temp:32.9,totalLoad:2947,coolLoad:1563,loadRate:84.2,price:342},
-};
-
-/** 同步渲染所有面板默认数据 */
-function renderAllDefaults(){
-  renderObjectiveV2(FALLBACK.objective);
-  renderAutoWeights(FALLBACK.weights);
-  renderStrategyCards(FALLBACK.strategies);
-  const k=FALLBACK.kpi;
-  $('#kpiTemp').textContent=k.temp;
-  $('#kpiTotalLoad').textContent=k.totalLoad;
-  $('#kpiCoolLoad').textContent=k.coolLoad;
-  $('#kpiLoadRate').textContent=k.loadRate.toFixed(1);
-  $('#kpiPrice').textContent=k.price;
-  $('#dataSource').textContent='模拟运行';
-  $('#srcLabel').textContent='实时';
+// ========== LOAD ETP DATA ==========
+function loadETPData(){
+  fetch('/api/optimization/etp').then(r=>r.json()).then(data=>{
+    renderETPTable(data);
+    renderStorageWeight(data.storageDynamicWeight);
+    // 更新KPI
+    if(data.totalAggregatedPower){
+      $('kpiCoolLoad').textContent=data.totalAggregatedPower.totalPower;
+      $('kpiTemp').textContent=data.outdoorTemp?.toFixed(1);
+    }
+  }).catch(e=>{
+    console.warn('[ETP API不可用]',e.message);
+  });
 }
 
-// ========== LOAD API DATA ==========
+// ========== LOAD OPTIMIZATION STATE ==========
 function loadOptimizationState(){
   fetch('/api/optimization/state').then(r=>{
     if(!r.ok)throw new Error('HTTP '+r.status);
     return r.json();
   }).then(data=>{
-    console.log('[优化状态]',data);
     if(data.recommendation){
       renderStrategyCards(data.recommendation.recommendations);
-      $('#dataSource').textContent=data.recommendation.mode;
+      $('dataSource').textContent=data.recommendation.mode;
       const dot=$('hdDot');
       if(data.recommendation.mode==='emergency')dot.style.background='var(--red)';
       else if(data.recommendation.mode==='cautious')dot.style.background='var(--amber)';
       else dot.style.background='var(--green)';
     }
     if(data.autoWeights)renderAutoWeights(data.autoWeights);
-    if(data.objectiveV2)renderObjectiveV2(data.objectiveV2);
+    if(data.objectiveV2){
+      // V2 兼容显示
+      $('Jval').textContent=data.objectiveV2.J?.toFixed(4)||'--';
+    }
+    if(data.etpModel){
+      if(data.etpModel.aggregatedPower)renderETPTable({categories:data.etpModel.aggregatedPower.nodes,outdoorTemp:data.etpModel.outdoorTemp,totalAggregatedPower:data.etpModel.aggregatedPower});
+      if(data.etpModel.dynamicWeights)renderDynamicWeights(data.etpModel.dynamicWeights);
+      if(data.etpModel.objectiveV3)renderObjectiveV3(data.etpModel.objectiveV3);
+    }
     if(data.coolingModel){
       const cm=data.coolingModel;
-      $('#kpiTemp').textContent=cm.deviation!==undefined?(Math.round((cm.T_target+cm.deviation)*10)/10).toFixed(1):$('#kpiTemp').textContent;
+      if(cm.deviation!==undefined){
+        $('kpiTemp').textContent=(Math.round((cm.T_target+cm.deviation)*10)/10).toFixed(1);
+      }
     }
   }).catch(e=>{
-    console.warn('[API不可用，使用内置数据]',e.message||e);
-    // 已经在init中渲染了默认数据，这里不需要再处理
+    console.warn('[API不可用，使用内置数据]',e.message);
   });
 }
 
 function pollState(){
   loadOptimizationState();
   loadRecoveryPlans();
+  loadETPData();
 }
 
 // ========== TOAST ==========
@@ -727,7 +839,7 @@ function showToast(msg,type){
   const t=document.createElement('div');
   t.className='tmsg '+(type||'info');
   t.textContent=msg;
-  $('#toast').appendChild(t);
+  $('toast').appendChild(t);
   setTimeout(()=>t.remove(),2500);
 }
 
@@ -735,14 +847,11 @@ function showToast(msg,type){
 function init(){
   updClock();setInterval(updClock,1000);
   initForecastChart();
-
-  // ★ 先同步渲染所有默认数据（不管API是否可用，立即显示内容）
-  renderAllDefaults();
   loadRecoveryPlans();
-
-  // 再异步尝试从API更新（静默失败，不弹窗）
   loadOptimizationState();
+  loadETPData();
   setInterval(loadOptimizationState,10000);
+  setInterval(loadETPData,15000);
 }
 window.addEventListener('resize',()=>{
   if(forecastChart)forecastChart.resize();
@@ -751,7 +860,7 @@ window.addEventListener('beforeunload',()=>{
   if(window.charts){window.charts.forEach(c=>{if(c&&!c.isDisposed())c.dispose();});window.charts=[];}
 });
 init();
-addLog('system','系统启动','优化引擎就绪');
+addLog('system','系统启动','ETP V3.0 优化引擎就绪');
 </script>
 </body>
 </html>

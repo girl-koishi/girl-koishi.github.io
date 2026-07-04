@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>阶序智调 — 管理员登录</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root{
+  --bg:#060d1f;--panel:rgba(8,18,42,.92);--border:rgba(0,210,255,.12);--border-h:rgba(0,210,255,.28);
+  --cyan:#00d2ff;--blue:#3980ff;--green:#00e5a0;--amber:#ffb300;--red:#ff3d57;--purple:#b388ff;
+  --t1:#d8eaf8;--t2:#8ab4d8;--t3:#2e4a66;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;font-family:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;background:var(--bg);color:var(--t1)}
+
+body{display:flex;align-items:center;justify-content:center;position:relative}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 40% at 50% -10%,rgba(0,120,200,.16),transparent 60%),
+    radial-gradient(ellipse 50% 25% at 15% 105%,rgba(0,210,255,.04),transparent 55%),
+    radial-gradient(ellipse 50% 25% at 85% 105%,rgba(57,128,255,.04),transparent 55%);}
+
+/* 背景网格动画 */
+body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.3;
+  background-image:linear-gradient(rgba(0,210,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,210,255,.03) 1px,transparent 1px);
+  background-size:40px 40px;
+  animation:gridMove 20s linear infinite}
+@keyframes gridMove{0%{transform:translate(0,0)}100%{transform:translate(40px,40px)}}
+
+.login-card{
+  position:relative;z-index:1;width:400px;max-width:90vw;
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:40px 36px;box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 60px rgba(0,210,255,.04);
+  backdrop-filter:blur(10px);
+}
+.login-card::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:60%;height:2px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+  border-radius:2px}
+
+/* Logo 区域 */
+.logo-area{text-align:center;margin-bottom:32px}
+.logo-icon{width:56px;height:56px;margin:0 auto 14px;border-radius:14px;
+  background:linear-gradient(135deg,rgba(0,210,255,.12),rgba(57,128,255,.08));
+  border:1px solid rgba(0,210,255,.2);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 24px rgba(0,210,255,.08)}
+.logo-icon i{font-size:26px;background:linear-gradient(135deg,#00d2ff,#3980ff,#b388ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-title{font-size:22px;font-weight:700;letter-spacing:3px;
+  background:linear-gradient(135deg,#00d2ff 0%,#3980ff 50%,#b388ff 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:9px;font-weight:300;letter-spacing:2px;color:rgba(138,180,216,.5);
+  text-transform:uppercase;margin-top:4px}
+
+/* 表单 */
+.form-group{margin-bottom:20px}
+.form-label{display:block;font-size:12px;color:var(--t2);margin-bottom:8px;letter-spacing:.5px}
+.form-label i{margin-right:6px;color:var(--cyan);opacity:.6;font-size:11px}
+.form-input-wrap{position:relative}
+.form-input{
+  width:100%;height:44px;padding:0 16px 0 40px;font-size:14px;color:var(--t1);
+  background:rgba(6,13,31,.6);border:1px solid var(--border);border-radius:8px;
+  outline:none;transition:.25s;font-family:inherit}
+.form-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,210,255,.08)}
+.form-input::placeholder{color:var(--t3)}
+.form-input-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+  color:var(--t3);font-size:14px;transition:.25s}
+.form-input:focus + .form-input-icon{color:var(--cyan)}
+
+/* 错误提示 */
+.error-msg{display:none;align-items:center;gap:6px;padding:10px 14px;margin-bottom:18px;
+  background:rgba(255,61,87,.06);border:1px solid rgba(255,61,87,.2);border-radius:8px;
+  font-size:12px;color:var(--red)}
+.error-msg.show{display:flex;animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.error-msg i{font-size:13px}
+
+/* 登录按钮 */
+.btn-login{
+  width:100%;height:46px;border:none;border-radius:8px;cursor:pointer;
+  font-size:15px;font-weight:600;letter-spacing:2px;color:#fff;font-family:inherit;
+  background:linear-gradient(135deg,#00d2ff 0%,#3980ff 100%);
+  transition:.25s;position:relative;overflow:hidden}
+.btn-login:hover{box-shadow:0 4px 20px rgba(0,210,255,.25);transform:translateY(-1px)}
+.btn-login:active{transform:translateY(0)}
+.btn-login:disabled{opacity:.6;cursor:wait;transform:none}
+.btn-login i{margin-right:8px}
+.btn-login .spinner{display:none;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear inline}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-login.loading .btn-text{display:none}
+.btn-login.loading .spinner{display:inline-block}
+
+/* 底部信息 */
+.login-footer{text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid rgba(0,210,255,.06)}
+.login-footer-info{font-size:10px;color:var(--t3);letter-spacing:1px}
+
+/* 顶部装饰角线 */
+.corner{position:fixed;width:60px;height:60px;z-index:1;pointer-events:none}
+.corner.tl{top:20px;left:20px;border-top:1px solid rgba(0,210,255,.15);border-left:1px solid rgba(0,210,255,.15)}
+.corner.tr{top:20px;right:20px;border-top:1px solid rgba(0,210,255,.15);border-right:1px solid rgba(0,210,255,.15)}
+.corner.bl{bottom:20px;left:20px;border-bottom:1px solid rgba(0,210,255,.15);border-left:1px solid rgba(0,210,255,.15)}
+.corner.br{bottom:20px;right:20px;border-bottom:1px solid rgba(0,210,255,.15);border-right:1px solid rgba(0,210,255,.15)}
+</style>
+</head>
+<body>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div class="login-card">
+  <div class="logo-area">
+    <div class="logo-icon"><i class="fa-solid fa-bolt"></i></div>
+    <div class="logo-title">阶序智调</div>
+    <div class="logo-sub">Smart Dispatch System</div>
+  </div>
+
+  <div class="error-msg" id="errorMsg">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <span id="errorText">登录失败</span>
+  </div>
+
+  <form id="loginForm" autocomplete="off">
+    <div class="form-group">
+      <label class="form-label"><i class="fa-solid fa-user"></i>管理员账号</label>
+      <div class="form-input-wrap">
+        <input type="text" class="form-input" id="username" placeholder="请输入账号" autocomplete="off" required>
+        <i class="fa-solid fa-user form-input-icon"></i>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label"><i class="fa-solid fa-lock"></i>登录密码</label>
+      <div class="form-input-wrap">
+        <input type="password" class="form-input" id="password" placeholder="请输入密码" autocomplete="off" required>
+        <i class="fa-solid fa-lock form-input-icon"></i>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-login" id="loginBtn">
+      <span class="btn-text"><i class="fa-solid fa-right-to-bracket"></i>登 录</span>
+      <span class="spinner"></span>
+    </button>
+  </form>
+
+  <div class="login-footer">
+    <div class="login-footer-info">配电网温控负荷柔性调控与故障恢复管理系统</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var form = document.getElementById('loginForm');
+  var usernameInput = document.getElementById('username');
+  var passwordInput = document.getElementById('password');
+  var loginBtn = document.getElementById('loginBtn');
+  var errorBox = document.getElementById('errorMsg');
+  var errorText = document.getElementById('errorText');
+
+  function showError(msg) {
+    errorText.textContent = msg;
+    errorBox.classList.add('show');
+    setTimeout(function () { errorBox.classList.remove('show'); }, 3000);
+  }
+
+  // 检查是否已登录
+  var existingToken = '';
+  try { existingToken = sessionStorage.getItem('jxzd_auth_token') || ''; } catch (e) {}
+  if (existingToken) {
+    // 验证 token 是否有效
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', '/api/auth-check', false);
+    xhr.setRequestHeader('Authorization', 'Bearer ' + existingToken);
+    try {
+      xhr.send();
+      if (xhr.status === 200) {
+        var resp = JSON.parse(xhr.responseText);
+        if (resp.valid) {
+          // 已登录，跳转
+          var params = new URLSearchParams(window.location.search);
+          var redirect = params.get('redirect') || '/';
+          window.location.href = redirect;
+          return;
+        }
+      }
+    } catch (e) {}
+    // token 无效，清除
+    try { sessionStorage.removeItem('jxzd_auth_token'); } catch (e) {}
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var username = usernameInput.value.trim();
+    var password = passwordInput.value.trim();
+
+    if (!username || !password) {
+      showError('请输入账号和密码');
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.classList.add('loading');
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/login', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      loginBtn.disabled = false;
+      loginBtn.classList.remove('loading');
+
+      if (xhr.status === 200) {
+        var resp = JSON.parse(xhr.responseText);
+        if (resp.success && resp.token) {
+          try { sessionStorage.setItem('jxzd_auth_token', resp.token); } catch (e) {}
+          var params = new URLSearchParams(window.location.search);
+          var redirect = params.get('redirect') || '/';
+          window.location.href = redirect;
+        } else {
+          showError(resp.message || '登录失败');
+        }
+      } else {
+        try {
+          var errResp = JSON.parse(xhr.responseText);
+          showError(errResp.message || '登录失败，请检查账号密码');
+        } catch (e) {
+          showError('网络错误，请稍后重试');
+        }
+      }
+    };
+    xhr.send(JSON.stringify({ username: username, password: password }));
+  });
+
+  // 回车键聚焦切换
+  usernameInput.addEventListener('keypress', function (e) {
+    if (e.key === 'Enter') { passwordInput.focus(); }
+  });
+})();
+</script>
+</body>
+</html>
