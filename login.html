@@ -166,30 +166,34 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     setTimeout(function () { errorBox.classList.remove('show'); }, 3000);
   }
 
+  function generateToken(username) {
+    var timestamp = Date.now().toString(36);
+    var hash = 0;
+    for (var i = 0; i < username.length; i++) {
+      hash = ((hash << 5) - hash) + username.charCodeAt(i);
+      hash |= 0;
+    }
+    return 'local_' + timestamp + '_' + Math.abs(hash).toString(36);
+  }
+
+  function validateToken(token) {
+    if (!token || !token.startsWith('local_')) return false;
+    var parts = token.split('_');
+    if (parts.length !== 3) return false;
+    var timestamp = parseInt(parts[1], 36);
+    return Date.now() - timestamp < 24 * 60 * 60 * 1000;
+  }
+
   // 检查是否已登录
   var existingToken = '';
   try { existingToken = sessionStorage.getItem('jxzd_auth_token') || ''; } catch (e) {}
-  if (existingToken) {
-    // 验证 token 是否有效
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', '/api/auth-check', false);
-    xhr.setRequestHeader('Authorization', 'Bearer ' + existingToken);
-    try {
-      xhr.send();
-      if (xhr.status === 200) {
-        var resp = JSON.parse(xhr.responseText);
-        if (resp.valid) {
-          // 已登录，跳转
-          var params = new URLSearchParams(window.location.search);
-          var redirect = params.get('redirect') || '/';
-          window.location.href = redirect;
-          return;
-        }
-      }
-    } catch (e) {}
-    // token 无效，清除
-    try { sessionStorage.removeItem('jxzd_auth_token'); } catch (e) {}
+  if (existingToken && validateToken(existingToken)) {
+    var params = new URLSearchParams(window.location.search);
+    var redirect = params.get('redirect') || '/';
+    window.location.href = redirect;
+    return;
   }
+  try { sessionStorage.removeItem('jxzd_auth_token'); } catch (e) {}
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -204,37 +208,23 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;opac
     loginBtn.disabled = true;
     loginBtn.classList.add('loading');
 
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/login', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onreadystatechange = function () {
-      if (xhr.readyState !== 4) return;
+    setTimeout(function () {
       loginBtn.disabled = false;
       loginBtn.classList.remove('loading');
 
-      if (xhr.status === 200) {
-        var resp = JSON.parse(xhr.responseText);
-        if (resp.success && resp.token) {
-          try { sessionStorage.setItem('jxzd_auth_token', resp.token); } catch (e) {}
-          var params = new URLSearchParams(window.location.search);
-          var redirect = params.get('redirect') || '/';
-          window.location.href = redirect;
-        } else {
-          showError(resp.message || '登录失败');
-        }
+      if (username === 'admin' && password === 'jxzd2026') {
+        var token = generateToken(username);
+        try { sessionStorage.setItem('jxzd_auth_token', token); } catch (e) {}
+        try { sessionStorage.setItem('jxzd_auth_user', username); } catch (e) {}
+        var params = new URLSearchParams(window.location.search);
+        var redirect = params.get('redirect') || '/';
+        window.location.href = redirect;
       } else {
-        try {
-          var errResp = JSON.parse(xhr.responseText);
-          showError(errResp.message || '登录失败，请检查账号密码');
-        } catch (e) {
-          showError('网络错误，请稍后重试');
-        }
+        showError('账号或密码错误');
       }
-    };
-    xhr.send(JSON.stringify({ username: username, password: password }));
+    }, 800);
   });
 
-  // 回车键聚焦切换
   usernameInput.addEventListener('keypress', function (e) {
     if (e.key === 'Enter') { passwordInput.focus(); }
   });

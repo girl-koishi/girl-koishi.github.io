@@ -7,10 +7,15 @@
   'use strict';
 
   var TOKEN_KEY = 'jxzd_auth_token';
+  var USER_KEY = 'jxzd_auth_user';
   var LOGIN_PAGE = '/login.html';
 
   function getToken() {
     try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+  }
+
+  function getUsername() {
+    try { return sessionStorage.getItem(USER_KEY) || 'admin'; } catch (e) { return 'admin'; }
   }
 
   function setToken(token) {
@@ -19,6 +24,15 @@
 
   function clearToken() {
     try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
+    try { sessionStorage.removeItem(USER_KEY); } catch (e) {}
+  }
+
+  function validateToken(token) {
+    if (!token || !token.startsWith('local_')) return false;
+    var parts = token.split('_');
+    if (parts.length !== 3) return false;
+    var timestamp = parseInt(parts[1], 36);
+    return Date.now() - timestamp < 24 * 60 * 60 * 1000;
   }
 
   function redirectToLogin() {
@@ -29,52 +43,24 @@
     }
   }
 
-  // 同步快速检查：无 token 立即跳转（避免页面闪现）
   var token = getToken();
-  if (!token) {
-    redirectToLogin();
-    return; // 页面停止加载
-  }
-
-  // 异步验证 token 有效性
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/auth-check', false); // 同步请求，确保验证完成前页面不渲染
-  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-  try {
-    xhr.send();
-    if (xhr.status !== 200) {
-      redirectToLogin();
-      return;
-    }
-    var resp = JSON.parse(xhr.responseText);
-    if (!resp.valid) {
-      redirectToLogin();
-      return;
-    }
-  } catch (e) {
+  if (!token || !validateToken(token)) {
     redirectToLogin();
     return;
   }
 
-  // 暴露全局方法
+  var username = getUsername();
+
   window.JXZD_AUTH = {
     token: token,
-    username: (function () {
-      try { return JSON.parse(xhr.responseText).username || 'admin'; } catch (e) { return 'admin'; }
-    })(),
+    username: username,
     logout: function () {
-      var x = new XMLHttpRequest();
-      x.open('POST', '/api/logout', true);
-      x.setRequestHeader('Authorization', 'Bearer ' + getToken());
-      x.send();
       clearToken();
       window.location.href = LOGIN_PAGE;
     },
-    // 给 fetch 请求附加 Authorization 头的辅助方法
     authHeader: function () {
       return { 'Authorization': 'Bearer ' + getToken() };
     },
-    // 带 auth 的 fetch 封装
     fetch: function (url, options) {
       options = options || {};
       options.headers = options.headers || {};
